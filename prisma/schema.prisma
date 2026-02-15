@@ -1,0 +1,44 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  displayName  String?
+  avatarUrl    String?
+  spotifyId    String?  @unique
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  nowPlaying   NowPlaying?
+
+  @@index([email])
+  @@index([spotifyId])
+}
+
+model NowPlaying {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  spotifyTrackId String
+  trackName      String
+  artistName     String
+  albumImageUrl  String?
+  latitude       Float?
+  longitude      Float?
+  startedAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([spotifyTrackId])
+}

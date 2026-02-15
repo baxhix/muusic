@@ -1,0 +1,142 @@
+@media (max-width: 900px) {
+  .live-notif-toast {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    max-width: calc(100vw - 24px);
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  .global-search-wrap {
+    top: 10px;
+    width: calc(100vw - 124px);
+    left: 58%;
+  }
+
+  .global-search-input {
+    height: 52px;
+    font-size: 13px;
+    padding: 0 16px 0 40px;
+  }
+
+  .global-search-wrap:hover .global-search-input,
+  .global-search-wrap:focus-within .global-search-input {
+    width: calc(100vw - 128px);
+  }
+
+  .chat-list-panel,
+  .chat-list-reopen,
+  .notif-panel {
+    display: none;
+  }
+
+  .left-sidebar {
+    top: 10px;
+    bottom: auto;
+    max-height: 75vh;
+  }
+
+  .left-sidebar.expanded {
+    width: min(320px, calc(100vw - 28px));
+  }
+
+  .right-panel {
+    top: auto;
+    bottom: 14px;
+    height: min(52vh, 420px);
+  }
+
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-hero {
+    padding: 28px 20px 8px;
+    align-content: start;
+  }
+
+  .auth-hero h1 {
+    font-size: 42px;
+  }
+
+  .auth-panel {
+    padding: 14px 16px 20px;
+    align-content: start;
+  }
+
+  .auth-modern-card {
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .landing-header {
+    height: 74px;
+  }
+
+  .landing-shell {
+    width: calc(100% - 24px);
+  }
+
+  .landing-logo {
+    width: 46px;
+  }
+
+  .landing-login-btn {
+    width: 100px;
+    min-height: 38px;
+  }
+
+  .landing-main {
+    padding: 102px 0 118px;
+  }
+
+  .landing-main-inner {
+    gap: 20px;
+  }
+
+  .landing-title {
+    gap: 2px;
+  }
+
+  .typed-line {
+    font-size: clamp(34px, 10.2vw, 56px);
+  }
+
+  .landing-subtitle {
+    font-size: 15px;
+    line-height: 1.5;
+    max-width: 94vw;
+  }
+
+  .landing-waitlist {
+    width: min(680px, calc(100vw - 32px));
+    grid-template-columns: 1fr;
+  }
+
+  .landing-waitlist input,
+  .landing-waitlist button {
+    min-height: 48px;
+  }
+
+  .landing-footer {
+    min-height: 104px;
+  }
+
+  .landing-footer-inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 7px;
+    padding: 10px 0 12px;
+    min-height: 104px;
+  }
+
+  .landing-footer-left,
+  .landing-footer-right {
+    justify-content: center;
+  }
+
+  .landing-footer-center {
+    font-size: 12px;
+  }
+}
