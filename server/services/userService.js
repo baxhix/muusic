@@ -137,19 +137,62 @@ class UserService {
     return this.toAppUser(found);
   }
 
-  async listUsers() {
+  async listUsers(options = {}) {
+    const page = Number.isFinite(Number(options.page)) ? Math.max(1, Number(options.page)) : 1;
+    const limit = Number.isFinite(Number(options.limit)) ? Math.min(200, Math.max(1, Number(options.limit))) : 50;
+    const search = String(options.search || '').trim();
+    const skip = (page - 1) * limit;
+
     const prismaClient = await getPrisma();
     if (prismaClient) {
-      const users = await prismaClient.user.findMany({
-        orderBy: { createdAt: 'desc' }
-      });
-      return users.map((user) => this.toAppUser(user));
+      const where = search
+        ? {
+            OR: [
+              { email: { contains: search, mode: 'insensitive' } },
+              { username: { contains: search, mode: 'insensitive' } },
+              { displayName: { contains: search, mode: 'insensitive' } }
+            ]
+          }
+        : undefined;
+
+      const [users, total] = await Promise.all([
+        prismaClient.user.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit
+        }),
+        prismaClient.user.count({ where })
+      ]);
+
+      return {
+        items: users.map((user) => this.toAppUser(user)),
+        total,
+        page,
+        limit
+      };
     }
+
     const users = await this.readJSON();
-    return users
+    const normalizedSearch = search.toLowerCase();
+    const filtered = users
       .slice()
+      .filter((user) => {
+        if (!normalizedSearch) return true;
+        const haystack = `${user.email || ''} ${user.username || ''} ${user.name || ''}`.toLowerCase();
+        return haystack.includes(normalizedSearch);
+      })
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
       .map((user) => this.toAppUser(user));
+
+    const total = filtered.length;
+    const items = filtered.slice(skip, skip + limit);
+    return {
+      items,
+      total,
+      page,
+      limit
+    };
   }
 
   async countUsers() {

@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import App from './App';
-import AdminApp from './AdminApp';
 import './index.css';
 import './styles.css';
-import './styles/admin.css';
+
+const AdminApp = lazy(() => import('./AdminApp'));
 
 function shouldRenderAdminPanel() {
   if (typeof window === 'undefined') return false;
@@ -18,6 +18,8 @@ const RootComponent = shouldRenderAdminPanel() ? AdminApp : App;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <RootComponent />
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>Carregando...</div>}>
+      <RootComponent />
+    </Suspense>
   </React.StrictMode>
 );

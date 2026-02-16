@@ -47,20 +47,69 @@ class ShowService {
     await fs.writeFile(LOCAL_SHOWS_PATH, JSON.stringify(shows, null, 2), 'utf8');
   }
 
-  async listShows() {
+  async listShows(options = {}) {
+    const page = Number.isFinite(Number(options.page)) ? Math.max(1, Number(options.page)) : 1;
+    const limit = Number.isFinite(Number(options.limit)) ? Math.min(200, Math.max(1, Number(options.limit))) : 50;
+    const search = String(options.search || '').trim();
+    const city = String(options.city || '').trim();
+    const upcomingOnly = options.upcomingOnly !== false;
+    const skip = (page - 1) * limit;
+    const now = new Date();
+
     const prismaClient = await getPrisma();
     if (prismaClient?.show) {
-      const shows = await prismaClient.show.findMany({
-        orderBy: { startsAt: 'asc' }
-      });
-      return shows.map((show) => normalizeShow(show));
+      const andFilters = [];
+      if (upcomingOnly) andFilters.push({ startsAt: { gte: now } });
+      if (city) andFilters.push({ city: { contains: city, mode: 'insensitive' } });
+      if (search) {
+        andFilters.push({
+          OR: [
+            { artist: { contains: search, mode: 'insensitive' } },
+            { venue: { contains: search, mode: 'insensitive' } },
+            { city: { contains: search, mode: 'insensitive' } }
+          ]
+        });
+      }
+      const where = andFilters.length ? { AND: andFilters } : undefined;
+
+      const [shows, total] = await Promise.all([
+        prismaClient.show.findMany({
+          where,
+          orderBy: { startsAt: 'asc' },
+          skip,
+          take: limit
+        }),
+        prismaClient.show.count({ where })
+      ]);
+      return {
+        items: shows.map((show) => normalizeShow(show)),
+        total,
+        page,
+        limit
+      };
     }
 
     const shows = await this.readJSON();
-    return shows
+    const filtered = shows
       .map((show) => normalizeShow(show))
       .filter(Boolean)
+      .filter((show) => {
+        if (upcomingOnly && new Date(show.startsAt).getTime() < Date.now()) return false;
+        if (city && !String(show.city || '').toLowerCase().includes(city.toLowerCase())) return false;
+        if (!search) return true;
+        const haystack = `${show.artist || ''} ${show.venue || ''} ${show.city || ''}`.toLowerCase();
+        return haystack.includes(search.toLowerCase());
+      })
       .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+
+    const total = filtered.length;
+    const items = filtered.slice(skip, skip + limit);
+    return {
+      items,
+      total,
+      page,
+      limit
+    };
   }
 
   async createShow(data) {

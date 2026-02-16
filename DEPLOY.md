@@ -43,6 +43,7 @@ Edite `.env` com valores de producao, principalmente:
 - `VITE_API_URL=https://SEU_DOMINIO`
 - `DATABASE_URL=postgresql://...`
 - `REDIS_URL=redis://127.0.0.1:6379`
+- `SHOW_CACHE_TTL_MS=60000`
 - `SPOTIFY_JWT_SECRET` forte
 - `VITE_MAPBOX_TOKEN` valido
 
@@ -146,6 +147,11 @@ sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d SEU_DOMINIO
 sudo certbot --nginx -d painel.muusic.live
 ```
+
+## 3.1) Cache Cloudflare (recomendado)
+- Configure regra para `https://muusic.live/index.html` e `https://painel.muusic.live/index.html` com `Cache Level: Bypass`.
+- Para `/auth/*` e `/admin/*`, mantenha sem cache na borda.
+- Arquivos versionados do Vite (`/assets/*.js` e `/assets/*.css`) podem ficar com cache normal.
 
 ## 4) Segredos no GitHub Actions
 

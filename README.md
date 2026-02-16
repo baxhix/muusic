@@ -46,6 +46,7 @@ Endpoints de mapa:
 - Sem `REDIS_URL`, o app continua funcional:
   - cache desativado automaticamente
   - sessao cai para PostgreSQL (se `DATABASE_URL`) ou memoria local
+- `SHOW_CACHE_TTL_MS` controla o TTL (ms) do cache de leitura de `GET /api/shows`.
 
 Infra local (Postgres + Redis):
 ```bash
@@ -59,6 +60,11 @@ docker compose -f docker-compose.dev.yml up -d
 - `npm run lint`: checagem estática
 - `npm run format`: formatação com Prettier
 - `npm run test`: suíte de testes (Vitest)
+
+## Fluxo rapido de atualizacao
+- Mudancas de dados (usuarios/shows) feitas no painel admin aparecem sem novo deploy.
+- Em desenvolvimento, respostas GET usam `Cache-Control: no-store` para refletir alteracoes imediatamente.
+- No fallback local sem Redis/PostgreSQL, sessoes agora persistem em disco (`server/data/local-sessions.json`), evitando login novamente apos restart do backend.
 
 ## Estado Atual (Sprint 3)
 - Modularização inicial da lógica de simulação de mapa e utilitários.
@@ -78,6 +84,10 @@ docker compose -f docker-compose.dev.yml up -d
   - `POST /admin/users`
   - `PATCH /admin/users/:id`
   - `DELETE /admin/users/:id`
+- Escalabilidade nas listagens:
+  - paginação e busca em `GET /admin/users`
+  - paginação e filtros em `GET /admin/shows` e `GET /api/shows`
+  - cache em memória com invalidação automática para `GET /api/shows`
 - Frontend com modo admin automatico ao acessar host `painel.muusic.live`.
 - Configuração de qualidade de código (ESLint + Prettier).
 - Base de testes unitários com Vitest.

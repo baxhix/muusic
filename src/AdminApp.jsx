@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AuthPage from './components/AuthPage';
 import { API_URL } from './config/appConfig';
 import { useAuthFlow } from './hooks/useAuthFlow';
+import './styles/admin.css';
 
 const EMPTY_NEW_USER = {
   name: '',
@@ -108,6 +109,7 @@ export default function AdminApp() {
 
       const response = await fetch(`${API_URL}${path}`, {
         ...options,
+        cache: 'no-store',
         headers
       });
       const payload = await response.json().catch(() => ({}));
@@ -124,7 +126,7 @@ export default function AdminApp() {
     if (!isAdmin) return;
     setLoadingUsers(true);
     try {
-      const payload = await adminFetch('/admin/users');
+      const payload = await adminFetch('/admin/users?page=1&limit=200');
       const list = Array.isArray(payload.users) ? payload.users : [];
       setUsers(list);
       setEditingUserById(
@@ -149,7 +151,7 @@ export default function AdminApp() {
     if (!isAdmin) return;
     setLoadingShows(true);
     try {
-      const payload = await adminFetch('/admin/shows');
+      const payload = await adminFetch('/admin/shows?page=1&limit=200');
       const list = Array.isArray(payload.shows) ? payload.shows : [];
       setShows(list);
       setEditingShowById(Object.fromEntries(list.map((show) => [show.id, mapShowToDraft(show)])));

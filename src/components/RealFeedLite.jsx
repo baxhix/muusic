@@ -154,7 +154,9 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, collapsed, onTog
 
     const loadShows = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/shows`);
+        const response = await fetch(`${API_URL}/api/shows?page=1&limit=200`, {
+          cache: 'no-store'
+        });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload?.error || 'Falha ao carregar shows.');
         const list = Array.isArray(payload.shows) ? payload.shows : [];
@@ -169,8 +171,10 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, collapsed, onTog
     };
 
     loadShows();
+    const intervalId = window.setInterval(loadShows, 20000);
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, []);
 

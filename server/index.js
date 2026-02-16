@@ -9,6 +9,7 @@ import { customAlphabet } from 'nanoid';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import userService from './services/userService.js';
 import showService from './services/showService.js';
+import showCacheService from './services/showCache.js';
 import redisService from './services/redis.js';
 import sessionService from './services/session.js';
 import passwordResetService from './services/passwordResetService.js';
@@ -63,6 +64,17 @@ if (!isProduction) {
   app.use(cors({ origin: corsOriginValidator, credentials: true }));
 }
 app.use(express.json({ limit: '32kb' }));
+
+app.use((req, res, next) => {
+  const path = String(req.path || '');
+  if (!isProduction && req.method === 'GET') {
+    res.setHeader('Cache-Control', 'no-store');
+  } else if (path.startsWith('/auth/') || path.startsWith('/admin/')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
+
 app.use('/api', mapRoutes);
 
 const rooms = new Map();
@@ -175,6 +187,13 @@ function parseShowPayload(body = {}) {
     thumbUrl: thumbUrl || null,
     ticketUrl: ticketUrl || null
   };
+}
+
+function parseListQuery(query = {}) {
+  const page = Number.isFinite(Number(query.page)) ? Math.max(1, Number(query.page)) : 1;
+  const limit = Number.isFinite(Number(query.limit)) ? Math.min(200, Math.max(1, Number(query.limit))) : 50;
+  const search = String(query.search || '').trim();
+  return { page, limit, search };
 }
 
 async function requireAdmin(req, res) {
@@ -343,9 +362,34 @@ app.get('/api/artists', cacheMiddleware(300), (_req, res) => {
 
 app.get('/api/shows', async (_req, res) => {
   try {
-    const shows = await showService.listShows();
+    const { page, limit, search } = parseListQuery(_req.query || {});
+    const city = String(_req.query?.city || '').trim();
+    const cacheKey = JSON.stringify({ page, limit, search, city, upcomingOnly: true });
+    const cachedPayload = showCacheService.getCachedShows(cacheKey);
+    if (cachedPayload) {
+      res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
+      return res.json(cachedPayload);
+    }
+
+    const result = await showService.listShows({
+      page,
+      limit,
+      search,
+      city,
+      upcomingOnly: true
+    });
+    const payload = {
+      shows: result.items.map((show) => sanitizeShowResponse(show)).filter(Boolean),
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total
+      }
+    };
+    showCacheService.setCachedShows(cacheKey, payload);
+    res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
     return res.json({
-      shows: shows.map((show) => sanitizeShowResponse(show)).filter(Boolean)
+      ...payload
     });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
@@ -519,15 +563,21 @@ app.get('/admin/users', async (req, res) => {
   try {
     const auth = await requireAdmin(req, res);
     if (!auth) return;
-    const users = await userService.listUsers();
+    const { page, limit, search } = parseListQuery(req.query || {});
+    const result = await userService.listUsers({ page, limit, search });
     return res.json({
-      users: users.map((user) => ({
+      users: result.items.map((user) => ({
         id: user.id,
         name: user.name || user.username || 'Usuario',
         email: user.email,
         role: sanitizeRole(user.role),
         createdAt: user.createdAt || null
-      }))
+      })),
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total
+      }
     });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao listar usuarios: ${error.message}` });
@@ -646,9 +696,17 @@ app.get('/admin/shows', async (req, res) => {
   try {
     const auth = await requireAdmin(req, res);
     if (!auth) return;
-    const shows = await showService.listShows();
+    const { page, limit, search } = parseListQuery(req.query || {});
+    const city = String(req.query?.city || '').trim();
+    const upcomingOnly = String(req.query?.upcomingOnly || 'false') === 'true';
+    const result = await showService.listShows({ page, limit, search, city, upcomingOnly });
     return res.json({
-      shows: shows.map((show) => sanitizeShowResponse(show)).filter(Boolean)
+      shows: result.items.map((show) => sanitizeShowResponse(show)).filter(Boolean),
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total
+      }
     });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
@@ -664,6 +722,7 @@ app.post('/admin/shows', async (req, res) => {
       return res.status(400).json({ error: payload.error });
     }
     const show = await showService.createShow(payload);
+    showCacheService.invalidateShowsCache();
     return res.status(201).json({ show: sanitizeShowResponse(show) });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao criar show: ${error.message}` });
@@ -686,6 +745,7 @@ app.patch('/admin/shows/:id', async (req, res) => {
     if (!updated) {
       return res.status(404).json({ error: 'Show nao encontrado.' });
     }
+    showCacheService.invalidateShowsCache();
     return res.json({ show: sanitizeShowResponse(updated) });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao atualizar show: ${error.message}` });
@@ -703,6 +763,7 @@ app.delete('/admin/shows/:id', async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ error: 'Show nao encontrado.' });
     }
+    showCacheService.invalidateShowsCache();
     return res.json({ ok: true });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao excluir show: ${error.message}` });

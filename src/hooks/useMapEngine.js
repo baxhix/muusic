@@ -106,8 +106,37 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
     let disposed = false;
     let map = null;
     let paintSimulated = null;
+    let resizeObserver = null;
+    let bootRaf = 0;
+    const resizeTimers = [];
+    let bootAttempts = 0;
+
+    const scheduleResizeBurst = () => {
+      const instance = mapRef.current;
+      if (!instance) return;
+      [0, 150, 500, 1000].forEach((delay) => {
+        const timer = window.setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.resize();
+          }
+        }, delay);
+        resizeTimers.push(timer);
+      });
+    };
 
     const bootstrapMap = async () => {
+      const container = mapContainerRef.current;
+      if (!container || container.clientWidth === 0 || container.clientHeight === 0) {
+        if (disposed) return;
+        bootAttempts += 1;
+        if (bootAttempts > 30) {
+          setMapWarning('Falha ao preparar container do mapa.');
+          return;
+        }
+        bootRaf = window.requestAnimationFrame(bootstrapMap);
+        return;
+      }
+
       const mapboxModule = await import('mapbox-gl');
       if (disposed) return;
 
@@ -116,7 +145,7 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
       mapboxRef.current = mapboxgl;
 
       map = new mapboxgl.Map({
-        container: mapContainerRef.current,
+        container,
         style: MAPBOX_TOKEN ? 'mapbox://styles/mapbox/dark-v11' : FALLBACK_STYLE,
         center: [0, 18],
         zoom: isMobileDevice ? 1.7 : 2.2
@@ -208,6 +237,25 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
 
       mapRef.current = map;
       window.__MUUSIC_MAP__ = map;
+      scheduleResizeBurst();
+
+      if (typeof window.ResizeObserver === 'function') {
+        resizeObserver = new window.ResizeObserver(() => {
+          if (mapRef.current) mapRef.current.resize();
+        });
+        resizeObserver.observe(container);
+      }
+
+      const onWindowResize = () => {
+        if (mapRef.current) mapRef.current.resize();
+      };
+      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('orientationchange', onWindowResize);
+
+      map.on('remove', () => {
+        window.removeEventListener('resize', onWindowResize);
+        window.removeEventListener('orientationchange', onWindowResize);
+      });
     };
 
     bootstrapMap().catch(() => {
@@ -218,6 +266,9 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
 
     return () => {
       disposed = true;
+      if (bootRaf) window.cancelAnimationFrame(bootRaf);
+      resizeTimers.forEach((timer) => window.clearTimeout(timer));
+      resizeObserver?.disconnect();
       if (map && paintSimulated) {
         map.off('load', paintSimulated);
         map.off('styledata', paintSimulated);

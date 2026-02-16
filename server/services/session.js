@@ -1,15 +1,65 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import redisService from './redis.js';
 import { getPrisma } from './db.js';
 
 const DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOCAL_SESSIONS_PATH = path.join(__dirname, '..', 'data', 'local-sessions.json');
 const memorySessions = new Map();
+let loadedFromDisk = false;
 
 function nowSeconds() {
   return Math.floor(Date.now() / 1000);
 }
 
+function parseSessionsPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.sessions)) return payload.sessions;
+  return [];
+}
+
 class SessionService {
+  async ensureLoaded() {
+    if (loadedFromDisk) return;
+    loadedFromDisk = true;
+
+    try {
+      const raw = await fs.readFile(LOCAL_SESSIONS_PATH, 'utf8');
+      const parsed = JSON.parse(raw);
+      const sessions = parseSessionsPayload(parsed);
+      const now = nowSeconds();
+
+      sessions.forEach((session) => {
+        if (!session?.id || !session?.userId || !Number.isFinite(Number(session.exp))) return;
+        const exp = Number(session.exp);
+        if (exp <= now) return;
+        memorySessions.set(session.id, {
+          userId: session.userId,
+          exp
+        });
+      });
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        // ignore read failures and keep in-memory flow
+      }
+    }
+  }
+
+  async persistMemorySessions() {
+    const sessions = Array.from(memorySessions.entries()).map(([id, value]) => ({
+      id,
+      userId: value.userId,
+      exp: value.exp
+    }));
+
+    await fs.mkdir(path.dirname(LOCAL_SESSIONS_PATH), { recursive: true });
+    await fs.writeFile(LOCAL_SESSIONS_PATH, JSON.stringify({ sessions }, null, 2), 'utf8');
+  }
+
   async create(userId, ttl = DEFAULT_TTL_SECONDS) {
     const sessionId = randomUUID();
     const payload = { userId, exp: nowSeconds() + ttl };
@@ -31,9 +81,11 @@ class SessionService {
       return sessionId;
     }
 
+    await this.ensureLoaded();
     memorySessions.set(sessionId, {
       ...payload
     });
+    await this.persistMemorySessions().catch(() => {});
     return sessionId;
   }
 
@@ -55,10 +107,13 @@ class SessionService {
       return { userId: session.userId };
     }
 
+    await this.ensureLoaded();
+
     const session = memorySessions.get(sessionId);
     if (!session) return null;
     if (session.exp <= nowSeconds()) {
       memorySessions.delete(sessionId);
+      await this.persistMemorySessions().catch(() => {});
       return null;
     }
     return { userId: session.userId };
@@ -78,7 +133,9 @@ class SessionService {
       return;
     }
 
+    await this.ensureLoaded();
     memorySessions.delete(sessionId);
+    await this.persistMemorySessions().catch(() => {});
   }
 
   async destroyByUserId(userId) {
@@ -106,11 +163,13 @@ class SessionService {
       return;
     }
 
+    await this.ensureLoaded();
     for (const [id, session] of memorySessions.entries()) {
       if (session.userId === userId) {
         memorySessions.delete(id);
       }
     }
+    await this.persistMemorySessions().catch(() => {});
   }
 }
 
