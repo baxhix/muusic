@@ -352,6 +352,8 @@
 .shows-list {
   display: grid;
   gap: 12px;
+  align-content: start;
+  grid-auto-rows: max-content;
 }
 
 .show-card {

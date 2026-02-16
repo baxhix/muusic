@@ -19,11 +19,35 @@ Aplicação web com três pilares:
 2. Configure variáveis:
    ```bash
    cp .env.example .env
+   cp .env.local.example .env.local
    ```
 3. Rode frontend + backend:
    ```bash
    npm run dev
    ```
+
+### Isolamento de ambiente (local x producao)
+- Backend agora carrega env nesta ordem de prioridade:
+  - `.env.development.local` (se existir)
+  - `.env.local`
+  - `.env.development` (se existir)
+  - `.env`
+- Em producao (`NODE_ENV=production`), a ordem muda para:
+  - `.env.production.local` (se existir)
+  - `.env.local`
+  - `.env.production`
+  - `.env`
+- Recomendado:
+  - manter base comum em `.env`
+  - manter local em `.env.local` (copie de `.env.local.example`)
+  - manter producao em `.env.production` (copie de `.env.production.example`)
+
+### Se localhost nao abrir
+- Garanta que o comando rodou sem erro: `npm run dev`
+- Teste os dois enderecos:
+  - `http://localhost:5173`
+  - `http://127.0.0.1:5173`
+- Vite foi configurado para aceitar ambos (`host: true`) e proxy local para backend em `127.0.0.1:3001`.
 
 ## Banco de dados (PostgreSQL + Prisma)
 - Com `DATABASE_URL` definido, o backend usa PostgreSQL.
@@ -65,6 +89,7 @@ docker compose -f docker-compose.dev.yml up -d
 - Mudancas de dados (usuarios/shows) feitas no painel admin aparecem sem novo deploy.
 - Em desenvolvimento, respostas GET usam `Cache-Control: no-store` para refletir alteracoes imediatamente.
 - No fallback local sem Redis/PostgreSQL, sessoes agora persistem em disco (`server/data/local-sessions.json`), evitando login novamente apos restart do backend.
+- Deploy em producao executa smoke test automatico (`scripts/post_deploy_smoke.sh`) para validar rotas `/api`, `/auth`, `/admin`, CORS e endpoints criticos antes de concluir.
 
 ## Estado Atual (Sprint 3)
 - Modularização inicial da lógica de simulação de mapa e utilitários.

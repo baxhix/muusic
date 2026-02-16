@@ -1,0 +1,43 @@
+:root {
+  --admin-font-family: 'Satoshi', 'General Sans', 'Segoe UI', sans-serif;
+
+  --color-bg: #07090d;
+  --color-bg-elevated: #0d1118;
+  --color-surface: #121722;
+  --color-surface-2: #181f2c;
+  --color-text: #f5f7fb;
+  --color-text-muted: #97a2b8;
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-accent: #6ee7ff;
+  --color-accent-strong: #9d8cff;
+  --color-danger: #ff6b7a;
+  --color-success: #38d39f;
+  --color-warning: #f5c66b;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.22);
+  --shadow-subtle: 0 4px 14px rgba(0, 0, 0, 0.2);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+
+  --transition-fast: 120ms ease-out;
+  --transition-base: 180ms ease-out;
+}

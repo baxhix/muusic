@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { customAlphabet } from 'nanoid';
@@ -18,7 +20,24 @@ import mapRoutes from './routes/map.js';
 import geolocationService from './services/geolocation.js';
 import { disconnectPrisma } from './services/db.js';
 
-dotenv.config();
+function loadEnvironmentFiles() {
+  const appMode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  const rootDir = process.cwd();
+  const candidates = [
+    `.env.${appMode}.local`,
+    '.env.local',
+    `.env.${appMode}`,
+    '.env'
+  ];
+
+  for (const fileName of candidates) {
+    const filePath = path.join(rootDir, fileName);
+    if (!fs.existsSync(filePath)) continue;
+    dotenv.config({ path: filePath });
+  }
+}
+
+loadEnvironmentFiles();
 
 const PORT = Number(process.env.PORT || 3001);
 const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173')

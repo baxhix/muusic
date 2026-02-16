@@ -33,9 +33,10 @@ cd /var/www
 git clone git@github.com:SEU_USUARIO/SEU_REPO.git muusic2.0
 cd muusic2.0
 cp .env.example .env
+cp .env.production.example .env.production
 ```
 
-Edite `.env` com valores de producao, principalmente:
+Edite `.env.production` com valores de producao, principalmente:
 - `PORT=3001`
 - `FRONTEND_URL=https://SEU_DOMINIO`
 - `FRONTEND_URLS=https://SEU_DOMINIO,https://painel.muusic.live`
@@ -46,6 +47,8 @@ Edite `.env` com valores de producao, principalmente:
 - `SHOW_CACHE_TTL_MS=60000`
 - `SPOTIFY_JWT_SECRET` forte
 - `VITE_MAPBOX_TOKEN` valido
+
+Observacao: o backend carrega `.env.production` automaticamente quando `NODE_ENV=production`.
 
 Primeira subida:
 
@@ -84,6 +87,13 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
+  location /api/ {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
   location /admin/ {
     proxy_pass http://127.0.0.1:3001;
     proxy_set_header Host $host;
@@ -108,6 +118,13 @@ server {
   index index.html;
 
   location /auth/ {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /api/ {
     proxy_pass http://127.0.0.1:3001;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -152,6 +169,11 @@ sudo certbot --nginx -d painel.muusic.live
 - Configure regra para `https://muusic.live/index.html` e `https://painel.muusic.live/index.html` com `Cache Level: Bypass`.
 - Para `/auth/*` e `/admin/*`, mantenha sem cache na borda.
 - Arquivos versionados do Vite (`/assets/*.js` e `/assets/*.css`) podem ficar com cache normal.
+
+## 3.2) Padrao Obrigatorio para CRUD do Painel
+- Rotas reverse proxy obrigatorias em ambos hosts (`muusic.live` e `painel.muusic.live`): `/api/`, `/auth/`, `/admin/`, `/health`.
+- SSL do Cloudflare em `Full (strict)` para evitar loop de redirecionamento.
+- O deploy automatico agora executa `scripts/post_deploy_smoke.sh`; se algo essencial estiver faltando, o deploy falha.
 
 ## 4) Segredos no GitHub Actions
 
