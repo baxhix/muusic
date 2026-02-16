@@ -12,7 +12,7 @@ import SearchInput from '../../components/ui/SearchInput';
 import Select from '../../components/ui/Select';
 import Skeleton from '../../components/ui/Skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
-import { buildCityOptions, DEFAULT_SHOWS_PAGE_SIZE, fetchShowsFromApi, fetchShowsMock, getShowStatus } from '../../mocks/adminShows';
+import { buildCityOptions, DEFAULT_SHOWS_PAGE_SIZE, fetchShowsFromApi, fetchShowsMock, getShowStatus, mockShows } from '../../mocks/adminShows';
 
 function formatDate(value) {
   if (!value) return '-';
@@ -36,7 +36,7 @@ function exportShowsCsv(items) {
 }
 
 export default function ShowsPage({ apiFetch }) {
-  const [shows, setShows] = useState([]);
+  const [shows, setShows] = useState(mockShows);
   const [search, setSearch] = useState('');
   const [cityFilter, setCityFilter] = useState('all');
   const [page, setPage] = useState(1);

@@ -12,7 +12,7 @@ import SearchInput from '../../components/ui/SearchInput';
 import Select from '../../components/ui/Select';
 import Skeleton from '../../components/ui/Skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
-import { DEFAULT_USERS_PAGE_SIZE, fetchUsersFromApi, fetchUsersMock, USER_ROLE_OPTIONS } from '../../mocks/adminUsers';
+import { DEFAULT_USERS_PAGE_SIZE, fetchUsersFromApi, fetchUsersMock, mockUsers, USER_ROLE_OPTIONS } from '../../mocks/adminUsers';
 
 function formatDate(value) {
   if (!value) return '-';
@@ -36,7 +36,7 @@ function exportUsersCsv(items) {
 }
 
 export default function UsersPage({ apiFetch }) {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(mockUsers);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(1);
