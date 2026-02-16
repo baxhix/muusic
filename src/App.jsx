@@ -221,7 +221,6 @@ export default function App() {
       />
 
       <div className="now-playing-card">
-        <p className="now-playing-label">Now Playing</p>
         {activeUser?.spotify && activeUser?.nowPlaying?.trackName ? (
           <div className="now-playing-content">
             {activeUser?.nowPlaying?.artistImage || activeUser?.nowPlaying?.albumImage || activeUser?.spotify?.image ? (
@@ -238,7 +237,6 @@ export default function App() {
             <div className="now-playing-copy">
               <p className="now-playing-title">{activeUser.nowPlaying.trackName}</p>
               <p className="now-playing-artist">{activeUser.nowPlaying.artistName || activeUser.nowPlaying.artists || 'Artista indisponivel'}</p>
-              <p className="now-playing-meta">{activeUser.nowPlaying.isPlaying ? 'Tocando agora' : 'Pausado'}</p>
             </div>
           </div>
         ) : activeUser?.spotify ? (
@@ -252,7 +250,7 @@ export default function App() {
             )}
             <div className="now-playing-copy">
               <p className="now-playing-title">Spotify conectado</p>
-              <p className="now-playing-empty">Nenhuma musica tocando agora.</p>
+              <p className="now-playing-empty">Nenhuma musica no momento.</p>
             </div>
           </div>
         ) : (

@@ -2,6 +2,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { API_URL } from '../config/appConfig';
 import { readSessionUser, STORAGE_SESSION_KEY } from '../lib/storage';
 
+function isSameNowPlaying(prev, next) {
+  if (!prev && !next) return true;
+  if (!prev || !next) return false;
+
+  return (
+    prev.trackName === next.trackName &&
+    prev.artistName === next.artistName &&
+    prev.artists === next.artists &&
+    prev.albumImage === next.albumImage &&
+    prev.artistImage === next.artistImage &&
+    prev.isPlaying === next.isPlaying &&
+    Number(prev.durationMs || 0) === Number(next.durationMs || 0) &&
+    prev.externalUrl === next.externalUrl
+  );
+}
+
 export function useAuthFlow() {
   const initialSession = readSessionUser();
   const [authMode, setAuthMode] = useState('login');
@@ -387,10 +403,15 @@ export function useAuthFlow() {
       }
       setAuthUser((prev) => {
         if (!prev) return prev;
+        const nextNowPlaying = payload.nowPlaying || null;
+        const nextSpotifyToken = payload.spotifyToken || prev.spotifyToken;
+        if (isSameNowPlaying(prev.nowPlaying || null, nextNowPlaying) && prev.spotifyToken === nextSpotifyToken) {
+          return prev;
+        }
         const next = {
           ...prev,
-          nowPlaying: payload.nowPlaying || null,
-          spotifyToken: payload.spotifyToken || prev.spotifyToken
+          nowPlaying: nextNowPlaying,
+          spotifyToken: nextSpotifyToken
         };
         localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(next));
         return next;

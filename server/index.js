@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import { customAlphabet } from 'nanoid';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import userService from './services/userService.js';
+import showService from './services/showService.js';
 import redisService from './services/redis.js';
 import sessionService from './services/session.js';
 import passwordResetService from './services/passwordResetService.js';
@@ -19,13 +20,23 @@ import { disconnectPrisma } from './services/db.js';
 dotenv.config();
 
 const PORT = Number(process.env.PORT || 3001);
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
+const FRONTEND_URL = FRONTEND_URLS[0] || 'http://localhost:5173';
 const JWT_SECRET = process.env.SPOTIFY_JWT_SECRET || 'local-dev-secret';
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 24);
-const allowedOrigins = new Set([FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173']);
+const allowedOrigins = new Set([...FRONTEND_URLS, 'http://localhost:5173', 'http://127.0.0.1:5173']);
 const isProduction = process.env.NODE_ENV === 'production';
 const artistImageCache = new Map();
 const ARTIST_IMAGE_TTL_MS = 10 * 60 * 1000;
+const ADMIN_EMAILS = new Set(
+  String(process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+);
 
 function corsOriginValidator(origin, callback) {
   if (!origin || allowedOrigins.has(origin)) {
@@ -78,11 +89,105 @@ function issueLocalAuthToken(user, sessionId) {
       sessionId,
       userId: user.id,
       name: user.name || user.displayName || user.username || 'Usuario',
-      email: user.email
+      email: user.email,
+      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER'
     },
     JWT_SECRET,
     { expiresIn: '8h' }
   );
+}
+
+async function determineRoleForNewUser(email) {
+  if (ADMIN_EMAILS.has(email)) return 'ADMIN';
+  const totalUsers = await userService.countUsers();
+  return totalUsers === 0 ? 'ADMIN' : 'USER';
+}
+
+function sanitizeRole(rawRole) {
+  return rawRole === 'ADMIN' ? 'ADMIN' : 'USER';
+}
+
+function sanitizeUserResponse(user) {
+  return {
+    id: user.id,
+    name: user.name || user.displayName || user.username || 'Usuario',
+    email: user.email,
+    role: sanitizeRole(user.role)
+  };
+}
+
+function formatShowDateLabel(startsAt) {
+  const date = new Date(startsAt);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString();
+}
+
+function sanitizeShowResponse(show) {
+  if (!show) return null;
+  return {
+    id: show.id,
+    artist: String(show.artist || '').trim(),
+    venue: String(show.venue || '').trim(),
+    city: String(show.city || '').trim(),
+    country: String(show.country || 'Brasil').trim() || 'Brasil',
+    latitude: Number(show.latitude),
+    longitude: Number(show.longitude),
+    startsAt: formatShowDateLabel(show.startsAt),
+    thumbUrl: show.thumbUrl || null,
+    ticketUrl: show.ticketUrl || null,
+    createdAt: show.createdAt || null
+  };
+}
+
+function parseShowPayload(body = {}) {
+  const artist = String(body.artist || '').trim();
+  const venue = String(body.venue || '').trim();
+  const city = String(body.city || '').trim();
+  const country = String(body.country || 'Brasil').trim() || 'Brasil';
+  const startsAt = String(body.startsAt || '').trim();
+  const thumbUrl = String(body.thumbUrl || '').trim();
+  const ticketUrl = String(body.ticketUrl || '').trim();
+  const latitude = Number(body.latitude);
+  const longitude = Number(body.longitude);
+
+  if (!artist || !venue || !city || !startsAt) {
+    return { error: 'Artista, local, cidade e data/hora sao obrigatorios.' };
+  }
+  const startsDate = new Date(startsAt);
+  if (Number.isNaN(startsDate.getTime())) {
+    return { error: 'Data/hora do show invalida.' };
+  }
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+    return { error: 'Latitude invalida.' };
+  }
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    return { error: 'Longitude invalida.' };
+  }
+
+  return {
+    artist,
+    venue,
+    city,
+    country,
+    startsAt: startsDate.toISOString(),
+    latitude,
+    longitude,
+    thumbUrl: thumbUrl || null,
+    ticketUrl: ticketUrl || null
+  };
+}
+
+async function requireAdmin(req, res) {
+  const auth = await readAuthSession(req);
+  if (auth.error) {
+    res.status(401).json({ error: auth.error });
+    return null;
+  }
+  if (sanitizeRole(auth.user.role) !== 'ADMIN') {
+    res.status(403).json({ error: 'Acesso restrito ao painel administrativo.' });
+    return null;
+  }
+  return auth;
 }
 
 async function fetchSpotifyNowPlaying(accessToken) {
@@ -236,6 +341,17 @@ app.get('/api/artists', cacheMiddleware(300), (_req, res) => {
   res.json({ items: artists, count: artists.length });
 });
 
+app.get('/api/shows', async (_req, res) => {
+  try {
+    const shows = await showService.listShows();
+    return res.json({
+      shows: shows.map((show) => sanitizeShowResponse(show)).filter(Boolean)
+    });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
+  }
+});
+
 app.post('/auth/local/register', async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
@@ -266,6 +382,7 @@ app.post('/auth/local/register', async (req, res) => {
       email,
       name,
       displayName: name,
+      role: await determineRoleForNewUser(email),
       passwordHash: hashPassword(password)
     });
 
@@ -274,11 +391,7 @@ app.post('/auth/local/register', async (req, res) => {
     res.status(201).json({
       token,
       sessionId,
-      user: {
-        id: user.id,
-        name: user.name || name,
-        email: user.email
-      }
+      user: sanitizeUserResponse(user)
     });
   } catch (error) {
     res.status(500).json({ error: `Erro ao registrar: ${error.message}` });
@@ -303,11 +416,7 @@ app.post('/auth/local/login', async (req, res) => {
     res.json({
       token,
       sessionId,
-      user: {
-        id: user.id,
-        name: user.name || user.username || 'Usuario',
-        email: user.email
-      }
+      user: sanitizeUserResponse(user)
     });
   } catch (error) {
     res.status(500).json({ error: `Erro ao autenticar: ${error.message}` });
@@ -383,11 +492,7 @@ app.get('/auth/local/me', async (req, res) => {
       return res.status(401).json({ error: auth.error });
     }
     return res.json({
-      user: {
-        id: auth.user.id,
-        name: auth.user.name || auth.user.username || 'Usuario',
-        email: auth.user.email
-      },
+      user: sanitizeUserResponse(auth.user),
       sessionId: auth.sessionId
     });
   } catch {
@@ -407,6 +512,200 @@ app.post('/auth/local/logout', async (req, res) => {
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: 'Falha ao encerrar sessao.' });
+  }
+});
+
+app.get('/admin/users', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const users = await userService.listUsers();
+    return res.json({
+      users: users.map((user) => ({
+        id: user.id,
+        name: user.name || user.username || 'Usuario',
+        email: user.email,
+        role: sanitizeRole(user.role),
+        createdAt: user.createdAt || null
+      }))
+    });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao listar usuarios: ${error.message}` });
+  }
+});
+
+app.post('/admin/users', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+
+    const name = String(req.body?.name || '').trim();
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+    const role = sanitizeRole(req.body?.role);
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Nome, e-mail e senha sao obrigatorios.' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'E-mail invalido.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres.' });
+    }
+    const existingUser = await userService.findByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({ error: 'E-mail ja cadastrado.' });
+    }
+
+    const user = await userService.createUser({
+      id: `u-${Date.now()}-${nanoid(6)}`,
+      email,
+      name,
+      displayName: name,
+      role,
+      passwordHash: hashPassword(password)
+    });
+
+    return res.status(201).json({ user: sanitizeUserResponse(user) });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao criar usuario: ${error.message}` });
+  }
+});
+
+app.patch('/admin/users/:id', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const userId = String(req.params.id || '').trim();
+    if (!userId) return res.status(400).json({ error: 'ID de usuario invalido.' });
+
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const emailRaw = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const role = typeof req.body?.role === 'string' ? sanitizeRole(req.body.role) : undefined;
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+
+    if (!name || !emailRaw) {
+      return res.status(400).json({ error: 'Nome e e-mail sao obrigatorios.' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
+      return res.status(400).json({ error: 'E-mail invalido.' });
+    }
+    if (password && password.length < 6) {
+      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres.' });
+    }
+
+    const existingByEmail = await userService.findByEmail(emailRaw);
+    if (existingByEmail && existingByEmail.id !== userId) {
+      return res.status(409).json({ error: 'E-mail ja cadastrado para outro usuario.' });
+    }
+
+    const userToUpdate = await userService.findById(userId);
+    if (!userToUpdate) {
+      return res.status(404).json({ error: 'Usuario nao encontrado.' });
+    }
+
+    if (userToUpdate.id === auth.user.id && role === 'USER') {
+      return res.status(400).json({ error: 'Nao e permitido remover seu proprio acesso admin.' });
+    }
+
+    const updated = await userService.updateUserById(userId, {
+      email: emailRaw,
+      displayName: name,
+      role,
+      passwordHash: password ? hashPassword(password) : undefined
+    });
+    return res.json({ user: sanitizeUserResponse(updated) });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao atualizar usuario: ${error.message}` });
+  }
+});
+
+app.delete('/admin/users/:id', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const userId = String(req.params.id || '').trim();
+    if (!userId) return res.status(400).json({ error: 'ID de usuario invalido.' });
+    if (userId === auth.user.id) {
+      return res.status(400).json({ error: 'Nao e permitido excluir seu proprio usuario admin.' });
+    }
+
+    const deleted = await userService.deleteUserById(userId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Usuario nao encontrado.' });
+    }
+    await sessionService.destroyByUserId(userId);
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao excluir usuario: ${error.message}` });
+  }
+});
+
+app.get('/admin/shows', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const shows = await showService.listShows();
+    return res.json({
+      shows: shows.map((show) => sanitizeShowResponse(show)).filter(Boolean)
+    });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
+  }
+});
+
+app.post('/admin/shows', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const payload = parseShowPayload(req.body);
+    if (payload.error) {
+      return res.status(400).json({ error: payload.error });
+    }
+    const show = await showService.createShow(payload);
+    return res.status(201).json({ show: sanitizeShowResponse(show) });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao criar show: ${error.message}` });
+  }
+});
+
+app.patch('/admin/shows/:id', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const showId = String(req.params.id || '').trim();
+    if (!showId) return res.status(400).json({ error: 'ID de show invalido.' });
+
+    const payload = parseShowPayload(req.body);
+    if (payload.error) {
+      return res.status(400).json({ error: payload.error });
+    }
+
+    const updated = await showService.updateShowById(showId, payload);
+    if (!updated) {
+      return res.status(404).json({ error: 'Show nao encontrado.' });
+    }
+    return res.json({ show: sanitizeShowResponse(updated) });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao atualizar show: ${error.message}` });
+  }
+});
+
+app.delete('/admin/shows/:id', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const showId = String(req.params.id || '').trim();
+    if (!showId) return res.status(400).json({ error: 'ID de show invalido.' });
+
+    const deleted = await showService.deleteShowById(showId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Show nao encontrado.' });
+    }
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao excluir show: ${error.message}` });
   }
 });
 

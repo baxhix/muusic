@@ -8,6 +8,11 @@ export function useRealtimePresence(authUser) {
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
   const socketRef = useRef(null);
+  const authToken = authUser?.token || '';
+  const authSessionId = authUser?.sessionId || '';
+  const authId = authUser?.id || '';
+  const authName = authUser?.name || '';
+  const authSpotify = authUser?.spotify || null;
 
   useEffect(() => {
     localStorage.setItem('room_id', roomId);
@@ -23,7 +28,7 @@ export function useRealtimePresence(authUser) {
 
   useEffect(() => {
     if (!ENABLE_REALTIME) return undefined;
-    if (!authUser) return undefined;
+    if (!authToken) return undefined;
 
     let cancelled = false;
     let socket = null;
@@ -44,16 +49,16 @@ export function useRealtimePresence(authUser) {
       });
 
       socket.on('connect', () => {
-        const isGuest = authUser?.token === 'guest-local';
+        const isGuest = authToken === 'guest-local';
         socket.emit(
           'room:join',
           {
             roomId,
-            userId: authUser.id || userId,
-            name: authUser.name || username,
-            spotify: authUser.spotify || null,
-            token: isGuest ? undefined : authUser.token,
-            sessionId: isGuest ? '' : authUser.sessionId || ''
+            userId: authId || userId,
+            name: authName || username,
+            spotify: authSpotify,
+            token: isGuest ? undefined : authToken,
+            sessionId: isGuest ? '' : authSessionId
           },
           (result) => {
             if (result?.ok) {
@@ -76,7 +81,7 @@ export function useRealtimePresence(authUser) {
       cancelled = true;
       socket?.disconnect();
     };
-  }, [roomId, userId, username, authUser]);
+  }, [roomId, userId, username, authToken, authSessionId, authId, authName, authSpotify]);
 
   return {
     roomId,

@@ -56,6 +56,7 @@ class UserService {
       email: user.email,
       name: user.displayName || user.name || user.username || 'Usuario',
       username: user.username,
+      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
       passwordHash: user.passwordHash,
       createdAt: user.createdAt
     };
@@ -86,6 +87,7 @@ class UserService {
         data: {
           email: data.email,
           username,
+          role: data.role === 'ADMIN' ? 'ADMIN' : 'USER',
           passwordHash: data.passwordHash,
           displayName: data.displayName || data.name || null,
           avatarUrl: data.avatarUrl || null,
@@ -102,6 +104,7 @@ class UserService {
       name: data.name || data.displayName || username,
       username,
       email: data.email,
+      role: data.role === 'ADMIN' ? 'ADMIN' : 'USER',
       passwordHash: data.passwordHash,
       createdAt: new Date().toISOString()
     };
@@ -132,6 +135,76 @@ class UserService {
     const users = await this.readJSON();
     const found = users.find((user) => user.id === id);
     return this.toAppUser(found);
+  }
+
+  async listUsers() {
+    const prismaClient = await getPrisma();
+    if (prismaClient) {
+      const users = await prismaClient.user.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
+      return users.map((user) => this.toAppUser(user));
+    }
+    const users = await this.readJSON();
+    return users
+      .slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .map((user) => this.toAppUser(user));
+  }
+
+  async countUsers() {
+    const prismaClient = await getPrisma();
+    if (prismaClient) {
+      return prismaClient.user.count();
+    }
+    const users = await this.readJSON();
+    return users.length;
+  }
+
+  async updateUserById(id, data) {
+    const prismaClient = await getPrisma();
+    const nextRole = data.role === 'ADMIN' ? 'ADMIN' : data.role === 'USER' ? 'USER' : undefined;
+
+    if (prismaClient) {
+      const payload = {};
+      if (typeof data.email === 'string') payload.email = data.email;
+      if (typeof data.displayName === 'string') payload.displayName = data.displayName;
+      if (typeof data.passwordHash === 'string') payload.passwordHash = data.passwordHash;
+      if (typeof nextRole === 'string') payload.role = nextRole;
+
+      const updated = await prismaClient.user.update({
+        where: { id },
+        data: payload
+      });
+      return this.toAppUser(updated);
+    }
+
+    const users = await this.readJSON();
+    const index = users.findIndex((user) => user.id === id);
+    if (index === -1) return null;
+
+    if (typeof data.email === 'string') users[index].email = data.email;
+    if (typeof data.displayName === 'string') users[index].name = data.displayName;
+    if (typeof data.passwordHash === 'string') users[index].passwordHash = data.passwordHash;
+    if (typeof nextRole === 'string') users[index].role = nextRole;
+
+    await this.writeJSON(users);
+    return this.toAppUser(users[index]);
+  }
+
+  async deleteUserById(id) {
+    const prismaClient = await getPrisma();
+    if (prismaClient) {
+      const deleted = await prismaClient.user.delete({ where: { id } });
+      return this.toAppUser(deleted);
+    }
+
+    const users = await this.readJSON();
+    const index = users.findIndex((user) => user.id === id);
+    if (index === -1) return null;
+    const [deleted] = users.splice(index, 1);
+    await this.writeJSON(users);
+    return this.toAppUser(deleted);
   }
 
   async updatePasswordById(id, passwordHash) {

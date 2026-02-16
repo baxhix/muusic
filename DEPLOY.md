@@ -38,6 +38,8 @@ cp .env.example .env
 Edite `.env` com valores de producao, principalmente:
 - `PORT=3001`
 - `FRONTEND_URL=https://SEU_DOMINIO`
+- `FRONTEND_URLS=https://SEU_DOMINIO,https://painel.muusic.live`
+- `ADMIN_EMAILS=admin@seu_dominio.com`
 - `VITE_API_URL=https://SEU_DOMINIO`
 - `DATABASE_URL=postgresql://...`
 - `REDIS_URL=redis://127.0.0.1:6379`
@@ -81,6 +83,43 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
+  location /admin/ {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /health {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+  }
+
+  location / {
+    try_files $uri /index.html;
+  }
+}
+
+server {
+  server_name painel.muusic.live;
+
+  root /var/www/muusic2.0/dist;
+  index index.html;
+
+  location /auth/ {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /admin/ {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
   location /health {
     proxy_pass http://127.0.0.1:3001;
     proxy_set_header Host $host;
@@ -105,6 +144,7 @@ TLS (HTTPS):
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d SEU_DOMINIO
+sudo certbot --nginx -d painel.muusic.live
 ```
 
 ## 4) Segredos no GitHub Actions

@@ -7,10 +7,16 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
   username     String   @unique
+  role         UserRole @default(USER)
   passwordHash String
   displayName  String?
   avatarUrl    String?
@@ -25,6 +31,24 @@ model User {
 
   @@index([email])
   @@index([spotifyId])
+}
+
+model Show {
+  id        String   @id @default(uuid())
+  artist    String
+  venue     String
+  city      String
+  country   String   @default("Brasil")
+  latitude  Float
+  longitude Float
+  startsAt  DateTime
+  thumbUrl  String?
+  ticketUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startsAt])
+  @@index([city])
 }
 
 model Session {

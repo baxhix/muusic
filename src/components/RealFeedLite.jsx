@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Heart, MessageCircle } from 'lucide-react';
+import { API_URL } from '../config/appConfig';
 
 function buildInitialPosts() {
   const base = [
@@ -110,58 +111,86 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, collapsed, onTog
   const [replyDrafts, setReplyDrafts] = useState({});
   const [replyOpen, setReplyOpen] = useState({});
 
-  const shows = useMemo(() => {
-    const artists = [
-      'Jorge & Mateus',
-      'Zé Neto & Cristiano',
-      'Henrique & Juliano',
-      'Gusttavo Lima',
-      'Luan Santana',
-      'Maiara & Maraisa',
-      'Marília Tavares',
-      'Matheus & Kauan',
-      'Israel & Rodolffo',
-      'Murilo Huff',
-      'Simone Mendes',
-      'Fernando & Sorocaba',
-      'Bruno & Marrone',
-      'Léo & Raphael',
-      'Felipe Araújo',
-      'Diego & Victor Hugo',
-      'Clayton & Romário',
-      'João Bosco & Vinícius',
-      'César Menotti & Fabiano',
-      'Eduardo Costa'
-    ];
-    const venues = [
-      { name: 'Villa Country - SP', coords: [-46.664, -23.536] },
-      { name: 'Arena Petry - São José', coords: [-48.6407, -27.6137] },
-      { name: 'Espaço Hall - RJ', coords: [-43.364, -22.874] },
-      { name: 'Pedra do Canto - Goiânia', coords: [-49.2643, -16.6869] },
-      { name: 'Chevrolet Hall - BH', coords: [-43.9409, -19.9167] },
-      { name: 'Arpoador Arena - Fortaleza', coords: [-38.5434, -3.7172] },
-      { name: 'Armazém Convention - Recife', coords: [-34.8808, -8.0476] },
-      { name: 'Live Curitiba - Curitiba', coords: [-49.2733, -25.4284] },
-      { name: 'Pavilhão Vera Cruz - SBC', coords: [-46.5548, -23.6939] },
-      { name: 'Parque de Exposições - Londrina', coords: [-51.1596, -23.3045] }
-    ];
-    const monthAbbr = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
+  const [shows, setShows] = useState([]);
 
-    return artists.map((artist, idx) => {
-      const venue = venues[idx % venues.length];
-      const date = new Date(Date.now() + (idx + 3) * 86400000 * 2);
-      const day = date.getDate();
-      const month = monthAbbr[date.getMonth()];
+  useEffect(() => {
+    let cancelled = false;
+
+    const fallbackShows = [
+      {
+        id: 'fallback-show-1',
+        artist: 'Jorge & Mateus',
+        venue: 'Villa Country',
+        city: 'Sao Paulo',
+        country: 'Brasil',
+        latitude: -23.536,
+        longitude: -46.664,
+        startsAt: new Date(Date.now() + 4 * 86400000).toISOString(),
+        thumbUrl: 'https://picsum.photos/seed/fallback-show-1/112/112'
+      },
+      {
+        id: 'fallback-show-2',
+        artist: 'Henrique & Juliano',
+        venue: 'Espaco Hall',
+        city: 'Rio de Janeiro',
+        country: 'Brasil',
+        latitude: -22.874,
+        longitude: -43.364,
+        startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+        thumbUrl: 'https://picsum.photos/seed/fallback-show-2/112/112'
+      },
+      {
+        id: 'fallback-show-3',
+        artist: 'Maiara & Maraisa',
+        venue: 'Pedra do Canto',
+        city: 'Goiania',
+        country: 'Brasil',
+        latitude: -16.6869,
+        longitude: -49.2643,
+        startsAt: new Date(Date.now() + 10 * 86400000).toISOString(),
+        thumbUrl: 'https://picsum.photos/seed/fallback-show-3/112/112'
+      }
+    ];
+
+    const loadShows = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/shows`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error || 'Falha ao carregar shows.');
+        const list = Array.isArray(payload.shows) ? payload.shows : [];
+        if (!cancelled) {
+          setShows(list.length ? list : fallbackShows);
+        }
+      } catch {
+        if (!cancelled) {
+          setShows(fallbackShows);
+        }
+      }
+    };
+
+    loadShows();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const showsForRender = useMemo(() => {
+    const monthAbbr = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
+    return shows.map((show) => {
+      const date = new Date(show.startsAt);
+      const dateLabel = Number.isNaN(date.getTime()) ? 'Data a confirmar' : `${date.getDate()} de ${monthAbbr[date.getMonth()]}`;
       return {
-        id: `show-${idx + 1}`,
-        artist,
-        venue: venue.name,
-        coords: venue.coords,
-        dateLabel: `${day} de ${month}`,
-        thumb: `https://picsum.photos/seed/sertanejo-${idx + 1}/112/112`
+        id: show.id,
+        artist: show.artist,
+        venue: show.venue,
+        city: show.city,
+        country: show.country || 'Brasil',
+        coords: [Number(show.longitude), Number(show.latitude)],
+        dateLabel,
+        thumb: show.thumbUrl || `https://picsum.photos/seed/${encodeURIComponent(show.artist || show.id)}/112/112`
       };
     });
-  }, []);
+  }, [shows]);
 
   function toggleLike(postId) {
     setFeedPosts((prev) =>
@@ -378,27 +407,28 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, collapsed, onTog
 
         {activeTab === 'shows' && (
           <div className="shows-list">
-            {shows.map((show) => (
+            {showsForRender.map((show) => (
               <div key={show.id} className="show-card">
                 <img src={show.thumb} alt={show.artist} width="56" height="56" className="show-thumb" />
                 <div className="show-copy">
                   <p className="show-artist">{show.artist}</p>
                   <p className="show-meta">
                     {show.dateLabel} •{' '}
-                    <button type="button" className="show-venue-link" onClick={() => onFocusItem({ coords: show.coords, city: show.venue, country: 'Brasil' })}>
-                      {show.venue}
+                    <button type="button" className="show-venue-link" onClick={() => onFocusItem({ coords: show.coords, city: show.city, country: show.country })}>
+                      {show.venue} - {show.city}
                     </button>
                   </p>
                 </div>
                 <button
                   type="button"
                   className="show-ticket-btn"
-                  onClick={() => onOpenItem({ artist: show.artist, city: show.venue, country: 'Brasil', coords: show.coords, listeners: 0, likes: 0, comments: 0 })}
+                  onClick={() => onOpenItem({ artist: show.artist, city: show.city, country: show.country, coords: show.coords, listeners: 0, likes: 0, comments: 0 })}
                 >
                   Ingressos
                 </button>
               </div>
             ))}
+            {showsForRender.length === 0 && <div className="feed-empty">Nenhum show cadastrado.</div>}
           </div>
         )}
       </div>

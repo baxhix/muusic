@@ -4,6 +4,7 @@ Aplicação web com três pilares:
 - Interface centrada no mapa (Mapbox).
 - Identidade de usuário com fluxo de autenticação básico.
 - Presença geográfica e interação social em tempo real.
+- Painel administrativo por subdomínio (`painel.muusic.live`) para gestão de usuários.
 
 ## Stack
 - Frontend: React + Vite + Mapbox GL JS
@@ -72,6 +73,12 @@ docker compose -f docker-compose.dev.yml up -d
   - Sessao persistida (Redis/PostgreSQL/memoria fallback)
   - Recuperacao e redefinicao real de senha por token com expiracao
   - Logout com revogacao de sessao
+- RBAC inicial (roles `ADMIN` e `USER`) com APIs administrativas:
+  - `GET /admin/users`
+  - `POST /admin/users`
+  - `PATCH /admin/users/:id`
+  - `DELETE /admin/users/:id`
+- Frontend com modo admin automatico ao acessar host `painel.muusic.live`.
 - Configuração de qualidade de código (ESLint + Prettier).
 - Base de testes unitários com Vitest.
 - Otimização de bundle via `manualChunks` no Vite.
