@@ -2,6 +2,7 @@
   min-height: 100vh;
   background: radial-gradient(circle at top right, #f6f4ff 0%, #edf8ff 45%, #f8fafc 100%);
   color: #0f172a;
+  color-scheme: light;
   padding: 32px 20px 40px;
 }
 
@@ -96,6 +97,19 @@
   font-size: 0.9rem;
   width: 100%;
   background: #fff;
+  color: #0f172a;
+  caret-color: #0f172a;
+}
+
+.admin-page input::placeholder,
+.admin-page textarea::placeholder {
+  color: #64748b;
+}
+
+.admin-page select,
+.admin-page option {
+  color: #0f172a;
+  background: #ffffff;
 }
 
 .admin-grid input:focus,
