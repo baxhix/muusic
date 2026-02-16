@@ -1,13 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
-  ArrowUpRight,
-  BarChart3,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
   Menu,
-  Megaphone,
-  Shield,
   Ticket,
   Users
 } from 'lucide-react';
@@ -20,16 +17,8 @@ const navSections = [
     label: 'Management',
     items: [
       { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { key: 'feedbacks', label: 'Feedbacks', icon: Shield },
-      { key: 'usuarios', label: 'Usuarios', icon: Users }
-    ]
-  },
-  {
-    label: 'Growth',
-    items: [
-      { key: 'waitlist', label: 'Lista de Espera', icon: ArrowUpRight },
-      { key: 'campanhas', label: 'Campanhas', icon: Megaphone },
-      { key: 'analytics', label: 'Analytics', icon: BarChart3 }
+      { key: 'usuarios', label: 'Usuarios', icon: Users },
+      { key: 'shows', label: 'Shows', icon: CalendarDays }
     ]
   }
 ];
@@ -93,7 +82,7 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
   );
 }
 
-export default function AdminLayout({ children, activeItem = 'waitlist', userName, onLogout, onNavigate }) {
+export default function AdminLayout({ children, activeItem = 'usuarios', userName, onLogout, onNavigate }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 

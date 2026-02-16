@@ -4,12 +4,6 @@ export const dashboardKpis = [
   { key: 'conversao', label: 'Taxa de Conversao', value: '31.7%', delta: '+2.4%' }
 ];
 
-export const recentAdminEvents = [
-  { id: 'evt1', title: 'Lote de convites enviado', detail: '145 contatos foram processados', when: 'Hoje, 09:48' },
-  { id: 'evt2', title: 'Nova campanha ativa', detail: 'Campanha Carnaval Early Access', when: 'Hoje, 08:12' },
-  { id: 'evt3', title: 'Ajuste de permissao', detail: 'Perfil admin atualizado para equipe Growth', when: 'Ontem, 18:03' }
-];
-
 export const originPerformance = [
   { origin: 'Homepage', leads: 763, conversion: '36%' },
   { origin: 'Instagram', leads: 421, conversion: '29%' },

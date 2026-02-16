@@ -3,9 +3,9 @@ import AuthPage from './components/AuthPage';
 import AdminLayout from './components/admin/AdminLayout';
 import Button from './components/ui/Button';
 import { API_URL } from './config/appConfig';
-import AnalyticsPage from './pages/admin/AnalyticsPage';
 import DashboardPage from './pages/admin/DashboardPage';
-import WaitlistPage from './pages/admin/WaitlistPage';
+import ShowsPage from './pages/admin/ShowsPage';
+import UsersPage from './pages/admin/UsersPage';
 import { useAuthFlow } from './hooks/useAuthFlow';
 import './styles/global.css';
 
@@ -30,7 +30,7 @@ export default function AdminApp() {
   } = useAuthFlow();
 
   const isAdmin = authUser?.role === 'ADMIN';
-  const [activePage, setActivePage] = useState('waitlist');
+  const [activePage, setActivePage] = useState('usuarios');
 
   const adminFetch = useCallback(
     async (path, options = {}) => {
@@ -103,11 +103,8 @@ export default function AdminApp() {
 
   const pageByNav = {
     dashboard: <DashboardPage />,
-    feedbacks: <DashboardPage />,
-    usuarios: <DashboardPage />,
-    waitlist: <WaitlistPage apiFetch={adminFetch} />,
-    campanhas: <AnalyticsPage />,
-    analytics: <AnalyticsPage />
+    usuarios: <UsersPage apiFetch={adminFetch} />,
+    shows: <ShowsPage apiFetch={adminFetch} />
   };
 
   return (
@@ -117,7 +114,7 @@ export default function AdminApp() {
       userName={authUser.name}
       onLogout={() => logout().catch(() => {})}
     >
-      {pageByNav[activePage] || <WaitlistPage apiFetch={adminFetch} />}
+      {pageByNav[activePage] || <UsersPage apiFetch={adminFetch} />}
     </AdminLayout>
   );
 }

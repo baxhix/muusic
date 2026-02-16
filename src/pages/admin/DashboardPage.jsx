@@ -1,9 +1,8 @@
 import { Activity, Sparkles, Users2 } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
-import Badge from '../../components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import KpiCard from '../../components/ui/KpiCard';
-import { dashboardKpis, recentAdminEvents } from '../../mocks/adminData';
+import { dashboardKpis } from '../../mocks/adminData';
 
 const icons = {
   usuarios: Users2,
@@ -23,7 +22,7 @@ export default function DashboardPage() {
         })}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.4fr,1fr]">
+      <section className="grid gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Resumo do Dia</CardTitle>
@@ -33,23 +32,6 @@ export default function DashboardPage() {
               <div key={kpi.key} className="flex items-center justify-between rounded-lg border border-border bg-background/40 px-4 py-3">
                 <span className="text-sm text-muted-foreground">{kpi.label}</span>
                 <span className="text-sm font-semibold">{kpi.delta}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Atividade Recente</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            {recentAdminEvents.map((item) => (
-              <div key={item.id} className="rounded-lg border border-border bg-background/30 p-3">
-                <p className="text-sm font-medium">{item.title}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
-                <Badge variant="outline" className="mt-2">
-                  {item.when}
-                </Badge>
               </div>
             ))}
           </CardContent>
