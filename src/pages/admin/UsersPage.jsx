@@ -62,12 +62,14 @@ export default function UsersPage({ apiFetch }) {
             setSource('api');
             setUsers(payload.users || []);
           } catch {
-            payload = await fetchUsersMock({ users, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
+            payload = await fetchUsersMock({ users: mockUsers, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
             setSource('mock');
+            setUsers(mockUsers);
           }
         } else {
-          payload = await fetchUsersMock({ users, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
+          payload = await fetchUsersMock({ users: mockUsers, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
           setSource('mock');
+          setUsers(mockUsers);
         }
 
         setKpis(payload.kpis);
@@ -81,7 +83,7 @@ export default function UsersPage({ apiFetch }) {
         setLoading(false);
       }
     },
-    [apiFetch, page, roleFilter, search, shouldFail, users]
+    [apiFetch, page, roleFilter, search, shouldFail]
   );
 
   useEffect(() => {

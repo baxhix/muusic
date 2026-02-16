@@ -63,12 +63,14 @@ export default function ShowsPage({ apiFetch }) {
             setSource('api');
             setShows(payload.shows || []);
           } catch {
-            payload = await fetchShowsMock({ shows, search, city: cityFilter, page: nextPage, pageSize: DEFAULT_SHOWS_PAGE_SIZE, shouldFail });
+            payload = await fetchShowsMock({ shows: mockShows, search, city: cityFilter, page: nextPage, pageSize: DEFAULT_SHOWS_PAGE_SIZE, shouldFail });
             setSource('mock');
+            setShows(mockShows);
           }
         } else {
-          payload = await fetchShowsMock({ shows, search, city: cityFilter, page: nextPage, pageSize: DEFAULT_SHOWS_PAGE_SIZE, shouldFail });
+          payload = await fetchShowsMock({ shows: mockShows, search, city: cityFilter, page: nextPage, pageSize: DEFAULT_SHOWS_PAGE_SIZE, shouldFail });
           setSource('mock');
+          setShows(mockShows);
         }
 
         setKpis(payload.kpis);
@@ -82,7 +84,7 @@ export default function ShowsPage({ apiFetch }) {
         setLoading(false);
       }
     },
-    [apiFetch, cityFilter, page, search, shouldFail, shows]
+    [apiFetch, cityFilter, page, search, shouldFail]
   );
 
   useEffect(() => {
