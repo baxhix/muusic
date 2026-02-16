@@ -24,6 +24,8 @@ const JWT_SECRET = process.env.SPOTIFY_JWT_SECRET || 'local-dev-secret';
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 24);
 const allowedOrigins = new Set([FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173']);
 const isProduction = process.env.NODE_ENV === 'production';
+const artistImageCache = new Map();
+const ARTIST_IMAGE_TTL_MS = 10 * 60 * 1000;
 
 function corsOriginValidator(origin, callback) {
   if (!origin || allowedOrigins.has(origin)) {
@@ -94,15 +96,44 @@ async function fetchSpotifyNowPlaying(accessToken) {
     if (playbackRes.status >= 400) return null;
     const item = playbackRes.data?.item;
     if (!item) return null;
+    const primaryArtist = Array.isArray(item.artists) ? item.artists[0] : null;
+    const primaryArtistId = primaryArtist?.id || null;
+    const artistImage = await fetchSpotifyArtistImage(accessToken, primaryArtistId);
+    const artists = Array.isArray(item.artists) ? item.artists.map((artist) => artist.name).join(', ') : null;
 
     return {
       trackId: item.id || null,
       trackName: item.name || null,
-      artists: Array.isArray(item.artists) ? item.artists.map((artist) => artist.name).join(', ') : null,
+      artistId: primaryArtistId,
+      artistName: primaryArtist?.name || artists || null,
+      artists,
+      artistImage,
       albumImage: item.album?.images?.[0]?.url || null,
       isPlaying: Boolean(playbackRes.data?.is_playing),
-      progressMs: typeof playbackRes.data?.progress_ms === 'number' ? playbackRes.data.progress_ms : null
+      progressMs: typeof playbackRes.data?.progress_ms === 'number' ? playbackRes.data.progress_ms : null,
+      durationMs: typeof item.duration_ms === 'number' ? item.duration_ms : null
     };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSpotifyArtistImage(accessToken, artistId) {
+  if (!artistId) return null;
+  const cached = artistImageCache.get(artistId);
+  if (cached?.expiresAt > Date.now()) {
+    return cached.image || null;
+  }
+
+  try {
+    const response = await axios.get(`https://api.spotify.com/v1/artists/${artistId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      validateStatus: () => true
+    });
+    if (response.status >= 400) return null;
+    const image = response.data?.images?.[0]?.url || null;
+    artistImageCache.set(artistId, { image, expiresAt: Date.now() + ARTIST_IMAGE_TTL_MS });
+    return image;
   } catch {
     return null;
   }

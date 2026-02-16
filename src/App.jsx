@@ -14,6 +14,20 @@ import { useAuthFlow } from './hooks/useAuthFlow';
 import { useRealtimePresence } from './hooks/useRealtimePresence';
 import { useMapEngine } from './hooks/useMapEngine';
 
+function getAdaptivePollingDelay(nowPlaying) {
+  if (!nowPlaying) return 30000;
+  if (!nowPlaying.isPlaying) return 25000;
+
+  const progress = Number(nowPlaying.progressMs || 0);
+  const duration = Number(nowPlaying.durationMs || 0);
+  const remaining = duration > progress ? duration - progress : 0;
+
+  if (remaining > 0 && remaining <= 15000) {
+    return Math.max(3000, remaining + 1000);
+  }
+  return 7000;
+}
+
 export default function App() {
   const {
     authMode,
@@ -98,10 +112,33 @@ export default function App() {
 
   useEffect(() => {
     if (!activeUser?.spotifyToken) return undefined;
-    const timer = setInterval(() => {
-      refreshSpotifyNowPlaying().catch(() => {});
-    }, 45_000);
-    return () => clearInterval(timer);
+    let cancelled = false;
+    let timerId = null;
+
+    const schedule = (delay) => {
+      timerId = window.setTimeout(async () => {
+        const nowPlaying = await refreshSpotifyNowPlaying();
+        if (cancelled) return;
+        schedule(getAdaptivePollingDelay(nowPlaying));
+      }, delay);
+    };
+
+    refreshSpotifyNowPlaying()
+      .then((nowPlaying) => {
+        if (!cancelled) {
+          schedule(getAdaptivePollingDelay(nowPlaying));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          schedule(30000);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (timerId) window.clearTimeout(timerId);
+    };
   }, [activeUser?.spotifyToken, refreshSpotifyNowPlaying]);
 
   function handleLogout() {
@@ -183,11 +220,58 @@ export default function App() {
         onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
       />
 
+      <div className="now-playing-card">
+        <p className="now-playing-label">Now Playing</p>
+        {activeUser?.spotify && activeUser?.nowPlaying?.trackName ? (
+          <div className="now-playing-content">
+            {activeUser?.nowPlaying?.artistImage || activeUser?.nowPlaying?.albumImage || activeUser?.spotify?.image ? (
+              <img
+                src={activeUser.nowPlaying.artistImage || activeUser.nowPlaying.albumImage || activeUser.spotify.image}
+                alt={activeUser.nowPlaying.artistName || activeUser.nowPlaying.artists || activeUser.nowPlaying.trackName}
+                className="now-playing-cover"
+              />
+            ) : (
+              <div className="now-playing-cover now-playing-cover-fallback" aria-hidden="true">
+                ♪
+              </div>
+            )}
+            <div className="now-playing-copy">
+              <p className="now-playing-title">{activeUser.nowPlaying.trackName}</p>
+              <p className="now-playing-artist">{activeUser.nowPlaying.artistName || activeUser.nowPlaying.artists || 'Artista indisponivel'}</p>
+              <p className="now-playing-meta">{activeUser.nowPlaying.isPlaying ? 'Tocando agora' : 'Pausado'}</p>
+            </div>
+          </div>
+        ) : activeUser?.spotify ? (
+          <div className="now-playing-content">
+            {activeUser?.spotify?.image ? (
+              <img src={activeUser.spotify.image} alt={activeUser.spotify.display_name || 'Spotify'} className="now-playing-cover" />
+            ) : (
+              <div className="now-playing-cover now-playing-cover-fallback" aria-hidden="true">
+                ♪
+              </div>
+            )}
+            <div className="now-playing-copy">
+              <p className="now-playing-title">Spotify conectado</p>
+              <p className="now-playing-empty">Nenhuma musica tocando agora.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="now-playing-content">
+            <div className="now-playing-cover now-playing-cover-fallback" aria-hidden="true">
+              ♪
+            </div>
+            <div className="now-playing-copy">
+              <p className="now-playing-title">Conecte seu Spotify</p>
+              <p className="now-playing-empty">Clique no icone do Spotify na barra lateral.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="perf-box">
         <p>FPS: {fps}</p>
         <p>{isMobileDevice ? 'Modo mobile otimizado ativo' : 'Modo desktop padrão'}</p>
         {activeUser?.spotify?.display_name && <p>Spotify: {activeUser.spotify.display_name}</p>}
-        {activeUser?.nowPlaying?.trackName && <p>Tocando: {activeUser.nowPlaying.trackName}</p>}
         {spotifyError && <p>{spotifyError}</p>}
         <button type="button" className="bench-btn" onClick={runBenchmark} disabled={benchmarkRunning}>
           {benchmarkRunning ? 'Benchmark em execução...' : 'Rodar benchmark (60s)'}

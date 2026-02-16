@@ -47,6 +47,14 @@
     height: min(52vh, 420px);
   }
 
+  .now-playing-card {
+    left: 50%;
+    right: auto;
+    width: min(460px, calc(100vw - 24px));
+    bottom: 12px;
+    top: auto;
+  }
+
   .auth-page {
     grid-template-columns: 1fr;
   }
