@@ -1,0 +1,26 @@
+[
+  {
+    "id": "u-1771204270692-d91a11",
+    "name": "Teste",
+    "username": "teste",
+    "email": "teste1@exemplo.com",
+    "passwordHash": "abf0c214f0f59cfc1621367a47f8754d:00644ef1096a681b1f00376135485957cb8cb39a470fe470c9d8f857ad90eb5382f20af8b770c01be49b87ff15b961e9444c023d6f6036b655533ac37068ad77",
+    "createdAt": "2026-02-16T01:11:10.733Z"
+  },
+  {
+    "id": "u-1771205982910-w34s5l",
+    "name": "marcelo",
+    "username": "marcelo",
+    "email": "marcelo.demari@leanwork.com.br",
+    "passwordHash": "2901689e68ca081c3afbfef391906f78:3bf3729fb4184744b961177aa09e0e50d05011c1987e2437ec102492e6b182429e32987a03b38fff1c7870de9114079918bc3b3d90d213402fc57fc5747e39ad",
+    "createdAt": "2026-02-16T01:39:42.961Z"
+  },
+  {
+    "id": "u-1771206055632-dgmu2z",
+    "name": "marcelo",
+    "username": "marcelo_1",
+    "email": "demari.lets@gmail.com",
+    "passwordHash": "5f64f502442c4a3d38bcd74c0ff7e877:a6f9581b25be0da18be58f25e17c60f567bb6f9c9ce5882c60ff1ebbd2131ab8bd26c88280a1fe71790260c4c0b89b145f79f06085bfb2027fc121a96090179f",
+    "createdAt": "2026-02-16T01:40:55.696Z"
+  }
+]

@@ -44,12 +44,16 @@ export function useRealtimePresence(authUser) {
       });
 
       socket.on('connect', () => {
+        const isGuest = authUser?.token === 'guest-local';
         socket.emit(
           'room:join',
           {
             roomId,
-            userId,
-            name: username
+            userId: authUser.id || userId,
+            name: authUser.name || username,
+            spotify: authUser.spotify || null,
+            token: isGuest ? undefined : authUser.token,
+            sessionId: isGuest ? '' : authUser.sessionId || ''
           },
           (result) => {
             if (result?.ok) {

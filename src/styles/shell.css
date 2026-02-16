@@ -134,6 +134,16 @@
   background: var(--brand-red);
 }
 
+.rail-btn.spotify-connected {
+  background: rgba(29, 185, 84, 0.2);
+  color: #7ef6ad;
+  border: 1px solid rgba(29, 185, 84, 0.45);
+}
+
+.rail-btn.spotify-connected:hover {
+  background: rgba(29, 185, 84, 0.3);
+}
+
 .chat-list-panel {
   position: absolute;
   left: 64px;

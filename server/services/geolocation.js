@@ -1,19 +1,4 @@
-let prismaClient = null;
-let prismaDisabled = false;
-
-async function getPrisma() {
-  if (prismaDisabled || !process.env.DATABASE_URL) return null;
-  if (prismaClient) return prismaClient;
-  try {
-    const prismaModule = await import('@prisma/client');
-    const { PrismaClient } = prismaModule;
-    prismaClient = new PrismaClient();
-    return prismaClient;
-  } catch {
-    prismaDisabled = true;
-    return null;
-  }
-}
+import { getPrisma } from './db.js';
 
 function toFiniteNumber(value) {
   const parsed = Number(value);
@@ -95,12 +80,7 @@ class GeolocationService {
     return prisma.$queryRawUnsafe(query, n, s, e, w);
   }
 
-  async disconnect() {
-    if (prismaClient) {
-      await prismaClient.$disconnect();
-      prismaClient = null;
-    }
-  }
+  async disconnect() {}
 }
 
 const geolocationService = new GeolocationService();

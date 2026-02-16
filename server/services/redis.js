@@ -59,6 +59,16 @@ class RedisService {
     return (await client.exists(key)) === 1;
   }
 
+  async keys(pattern) {
+    if (!this.enabled) return [];
+    return client.keys(pattern);
+  }
+
+  async deleteMany(keys) {
+    if (!this.enabled || !Array.isArray(keys) || keys.length === 0) return;
+    await client.del(...keys);
+  }
+
   async disconnect() {
     if (!client) return;
     try {

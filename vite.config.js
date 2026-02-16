@@ -6,7 +6,26 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 5173,
-    strictPort: true
+    strictPort: true,
+    proxy: {
+      '/health': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
+      '/auth': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      },
+      '/socket.io': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        ws: true
+      }
+    }
   },
   build: {
     sourcemap: true,

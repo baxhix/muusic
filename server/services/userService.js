@@ -1,13 +1,11 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
+import { getPrisma } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_USERS_PATH = path.join(__dirname, '..', 'data', 'local-users.json');
-
-let prismaClientInstance = null;
-let prismaDisabled = false;
 
 function parseUsersPayload(payload) {
   if (Array.isArray(payload)) return payload;
@@ -32,20 +30,6 @@ function deriveUsername(name, email) {
   const fromEmail = sanitizeUsername(String(email || '').split('@')[0]);
   if (fromEmail.length >= 3) return fromEmail;
   return `user_${Date.now().toString().slice(-6)}`;
-}
-
-async function createPrismaClient() {
-  if (prismaDisabled || !process.env.DATABASE_URL) return null;
-  if (prismaClientInstance) return prismaClientInstance;
-  try {
-    const prismaModule = await import('@prisma/client');
-    const { PrismaClient } = prismaModule;
-    prismaClientInstance = new PrismaClient();
-    return prismaClientInstance;
-  } catch {
-    prismaDisabled = true;
-    return null;
-  }
 }
 
 class UserService {
@@ -95,7 +79,7 @@ class UserService {
   }
 
   async createUser(data) {
-    const prismaClient = await createPrismaClient();
+    const prismaClient = await getPrisma();
     if (prismaClient) {
       const username = await this.ensureUniqueUsername(data.username || deriveUsername(data.displayName || data.name, data.email), prismaClient);
       const created = await prismaClient.user.create({
@@ -128,7 +112,7 @@ class UserService {
 
   async findByEmail(email) {
     const normalized = String(email || '').trim().toLowerCase();
-    const prismaClient = await createPrismaClient();
+    const prismaClient = await getPrisma();
     if (prismaClient) {
       const user = await prismaClient.user.findUnique({ where: { email: normalized } });
       return this.toAppUser(user);
@@ -140,7 +124,7 @@ class UserService {
   }
 
   async findById(id) {
-    const prismaClient = await createPrismaClient();
+    const prismaClient = await getPrisma();
     if (prismaClient) {
       const user = await prismaClient.user.findUnique({ where: { id } });
       return this.toAppUser(user);
@@ -150,11 +134,22 @@ class UserService {
     return this.toAppUser(found);
   }
 
-  async disconnect() {
-    if (prismaClientInstance) {
-      await prismaClientInstance.$disconnect();
-      prismaClientInstance = null;
+  async updatePasswordById(id, passwordHash) {
+    const prismaClient = await getPrisma();
+    if (prismaClient) {
+      const updated = await prismaClient.user.update({
+        where: { id },
+        data: { passwordHash }
+      });
+      return this.toAppUser(updated);
     }
+
+    const users = await this.readJSON();
+    const index = users.findIndex((user) => user.id === id);
+    if (index === -1) return null;
+    users[index].passwordHash = passwordHash;
+    await this.writeJSON(users);
+    return this.toAppUser(users[index]);
   }
 }
 

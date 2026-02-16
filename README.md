@@ -44,7 +44,7 @@ Endpoints de mapa:
 - Com `REDIS_URL` definido, cache e sessoes usam Redis.
 - Sem `REDIS_URL`, o app continua funcional:
   - cache desativado automaticamente
-  - sessao cai para memoria local
+  - sessao cai para PostgreSQL (se `DATABASE_URL`) ou memoria local
 
 Infra local (Postgres + Redis):
 ```bash
@@ -67,6 +67,11 @@ docker compose -f docker-compose.dev.yml up -d
   - `useAuthFlow`
   - `useRealtimePresence`
   - `useMapEngine`
+- Autenticacao local real:
+  - JWT assinado + `sessionId` validado no backend
+  - Sessao persistida (Redis/PostgreSQL/memoria fallback)
+  - Recuperacao e redefinicao real de senha por token com expiracao
+  - Logout com revogacao de sessao
 - Configuração de qualidade de código (ESLint + Prettier).
 - Base de testes unitários com Vitest.
 - Otimização de bundle via `manualChunks` no Vite.
@@ -74,5 +79,5 @@ docker compose -f docker-compose.dev.yml up -d
 ## Próximos passos para produção
 - Persistência real de chat/presença (DB + Redis adapter do Socket.IO).
 - Observabilidade (logs estruturados, tracing e métricas).
-- Hardening de segurança (rate-limit, validação de payload, auth real).
+- Hardening de segurança (rate-limit, validacao de payload e antifraude).
 - Revisão de estratégia de caching e carregamento incremental.

@@ -22,20 +22,24 @@ export default function App() {
     authError,
     authBooting,
     authUser,
-    setAuthUser,
     updateAuthField,
     submitAuth,
     submitForgotPassword,
+    submitResetPassword,
     forgotMode,
+    resetMode,
     forgotMessage,
     openForgotMode,
     closeForgotMode,
-    quickEnter,
-    logout
+    logout,
+    connectSpotify,
+    applySpotifyToken,
+    refreshSpotifyNowPlaying,
+    spotifyError,
+    spotifyConnecting
   } = useAuthFlow();
 
-  const [hasEnteredApp, setHasEnteredApp] = useState(() => Boolean(readSessionStorageSafe()));
-  const activeUser = authUser || (hasEnteredApp ? { id: 'guest-runtime', name: 'Convidado', email: '', token: 'guest-local' } : null);
+  const activeUser = authUser;
 
   const { setUsername, users, socketRef } = useRealtimePresence(activeUser);
 
@@ -77,22 +81,31 @@ export default function App() {
     }
   }, [activeUser, setUsername]);
 
-  function handleQuickEnter() {
-    const session = {
-      id: `guest-${Date.now()}`,
-      name: 'Convidado',
-      email: '',
-      token: 'guest-local'
-    };
-    setHasEnteredApp(true);
-    setAuthUser(session);
-    localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
-    quickEnter();
-  }
+  useEffect(() => {
+    if (!activeUser) return;
+    const url = new window.URL(window.location.href);
+    const spotifyToken = url.searchParams.get('spotify_token');
+    if (!spotifyToken) return;
+
+    applySpotifyToken(spotifyToken).finally(() => {
+      url.searchParams.delete('spotify_token');
+      url.searchParams.delete('spotify_connected');
+      url.searchParams.delete('room');
+      url.searchParams.delete('user');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+    });
+  }, [activeUser, applySpotifyToken]);
+
+  useEffect(() => {
+    if (!activeUser?.spotifyToken) return undefined;
+    const timer = setInterval(() => {
+      refreshSpotifyNowPlaying().catch(() => {});
+    }, 45_000);
+    return () => clearInterval(timer);
+  }, [activeUser?.spotifyToken, refreshSpotifyNowPlaying]);
 
   function handleLogout() {
-    setHasEnteredApp(false);
-    logout();
+    logout().catch(() => {});
   }
 
   function openFeedItem(item) {
@@ -107,20 +120,20 @@ export default function App() {
     );
   }
 
-  if (!hasEnteredApp) {
+  if (!activeUser) {
     return (
       <AuthPage
-        simpleAccess
-        onQuickEnter={handleQuickEnter}
         authMode={authMode}
         setAuthMode={setAuthMode}
         authForm={authForm}
         authError={authError}
         forgotMode={forgotMode}
+        resetMode={resetMode}
         forgotMessage={forgotMessage}
         updateAuthField={updateAuthField}
         submitAuth={submitAuth}
         submitForgotPassword={submitForgotPassword}
+        submitResetPassword={submitResetPassword}
         openForgotMode={openForgotMode}
         closeForgotMode={closeForgotMode}
       />
@@ -138,6 +151,9 @@ export default function App() {
 
       <SidebarNavLite
         onLogout={handleLogout}
+        onSpotifyConnect={() => connectSpotify('duo-room')}
+        spotifyConnected={Boolean(activeUser?.spotify)}
+        spotifyConnecting={spotifyConnecting}
         chatOpen={chatPanelOpen}
         onChatToggle={() => {
           setChatPanelOpen((prev) => {
@@ -170,6 +186,9 @@ export default function App() {
       <div className="perf-box">
         <p>FPS: {fps}</p>
         <p>{isMobileDevice ? 'Modo mobile otimizado ativo' : 'Modo desktop padrão'}</p>
+        {activeUser?.spotify?.display_name && <p>Spotify: {activeUser.spotify.display_name}</p>}
+        {activeUser?.nowPlaying?.trackName && <p>Tocando: {activeUser.nowPlaying.trackName}</p>}
+        {spotifyError && <p>{spotifyError}</p>}
         <button type="button" className="bench-btn" onClick={runBenchmark} disabled={benchmarkRunning}>
           {benchmarkRunning ? 'Benchmark em execução...' : 'Rodar benchmark (60s)'}
         </button>
@@ -187,12 +206,4 @@ export default function App() {
       <EventFeedLite event={selectedEventFeed} onClose={() => setSelectedEventFeed(null)} onGoToMap={focusFeedItem} />
     </div>
   );
-}
-
-function readSessionStorageSafe() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_SESSION_KEY) || 'null');
-  } catch {
-    return null;
-  }
 }
