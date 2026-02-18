@@ -2,7 +2,9 @@ import { Music2, Radio, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/admin/PageHeader';
 import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
 import { trendingsService } from '../../services/trendingsService';
 
 function TrendList({ title, icon: Icon, items = [], totalPlays = 0, emptyText = 'Sem dados de reprodução ainda.' }) {
@@ -46,6 +48,9 @@ export default function TrendingsPage({ apiFetch }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('artists');
+  const [artistQuery, setArtistQuery] = useState('');
+  const [trackQuery, setTrackQuery] = useState('');
+  const [fanQuery, setFanQuery] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -74,6 +79,24 @@ export default function TrendingsPage({ apiFetch }) {
   const topArtists = useMemo(() => snapshot.artists.slice(0, 20), [snapshot.artists]);
   const topTracks = useMemo(() => snapshot.tracks.slice(0, 20), [snapshot.tracks]);
   const topFans = useMemo(() => snapshot.topFans.slice(0, 20), [snapshot.topFans]);
+  const artistSuggestions = useMemo(() => topArtists.map((item) => item.name).filter(Boolean), [topArtists]);
+  const trackSuggestions = useMemo(() => topTracks.map((item) => item.name).filter(Boolean), [topTracks]);
+  const fanSuggestions = useMemo(() => topFans.map((item) => item.name).filter(Boolean), [topFans]);
+  const filteredArtists = useMemo(() => {
+    const q = artistQuery.trim().toLowerCase();
+    if (!q) return topArtists;
+    return topArtists.filter((item) => String(item.name || '').toLowerCase().includes(q));
+  }, [artistQuery, topArtists]);
+  const filteredTracks = useMemo(() => {
+    const q = trackQuery.trim().toLowerCase();
+    if (!q) return topTracks;
+    return topTracks.filter((item) => String(item.name || '').toLowerCase().includes(q));
+  }, [trackQuery, topTracks]);
+  const filteredFans = useMemo(() => {
+    const q = fanQuery.trim().toLowerCase();
+    if (!q) return topFans;
+    return topFans.filter((item) => String(item.name || '').toLowerCase().includes(q));
+  }, [fanQuery, topFans]);
 
   const tabItems = [
     { key: 'artists', label: 'Top Artistas', icon: Radio },
@@ -83,7 +106,15 @@ export default function TrendingsPage({ apiFetch }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Trendings" subtitle="Captura de reproduções para análise de tendências da plataforma" />
+      <PageHeader
+        title="Trendings"
+        subtitle="Captura de reproduções para análise de tendências da plataforma"
+        actions={
+          <Button variant="outline" type="button">
+            Análise Comparativa
+          </Button>
+        }
+      />
       {error ? <Alert>{error}</Alert> : null}
       {loading ? <p className="text-sm text-muted-foreground">Carregando trendings...</p> : null}
 
@@ -113,19 +144,64 @@ export default function TrendingsPage({ apiFetch }) {
         </div>
 
         {activeTab === 'artists' ? (
-          <TrendList title="Artistas mais reproduzidos" icon={Radio} items={topArtists} totalPlays={snapshot.totalPlays} />
+          <>
+            <Input
+              type="search"
+              value={artistQuery}
+              onChange={(event) => setArtistQuery(event.target.value)}
+              list="trendings-artists-suggestions"
+              placeholder="Pesquisar artista..."
+              aria-label="Pesquisar artista"
+            />
+            <datalist id="trendings-artists-suggestions">
+              {artistSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <TrendList title="Artistas mais reproduzidos" icon={Radio} items={filteredArtists} totalPlays={snapshot.totalPlays} />
+          </>
         ) : null}
         {activeTab === 'tracks' ? (
-          <TrendList title="Músicas mais reproduzidas" icon={Music2} items={topTracks} totalPlays={snapshot.totalPlays} />
+          <>
+            <Input
+              type="search"
+              value={trackQuery}
+              onChange={(event) => setTrackQuery(event.target.value)}
+              list="trendings-tracks-suggestions"
+              placeholder="Pesquisar música..."
+              aria-label="Pesquisar música"
+            />
+            <datalist id="trendings-tracks-suggestions">
+              {trackSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <TrendList title="Músicas mais reproduzidas" icon={Music2} items={filteredTracks} totalPlays={snapshot.totalPlays} />
+          </>
         ) : null}
         {activeTab === 'fans' ? (
-          <TrendList
-            title="Top fãs"
-            icon={Users}
-            items={topFans}
-            totalPlays={snapshot.totalPlays}
-            emptyText="Sem ouvintes ativos suficientes para gerar ranking."
-          />
+          <>
+            <Input
+              type="search"
+              value={fanQuery}
+              onChange={(event) => setFanQuery(event.target.value)}
+              list="trendings-fans-suggestions"
+              placeholder="Pesquisar fã..."
+              aria-label="Pesquisar fã"
+            />
+            <datalist id="trendings-fans-suggestions">
+              {fanSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <TrendList
+              title="Top fãs"
+              icon={Users}
+              items={filteredFans}
+              totalPlays={snapshot.totalPlays}
+              emptyText="Sem ouvintes ativos suficientes para gerar ranking."
+            />
+          </>
         ) : null}
       </section>
     </div>
