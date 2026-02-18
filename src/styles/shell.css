@@ -921,6 +921,10 @@
   text-overflow: ellipsis;
 }
 
+.now-playing-artist {
+  font-weight: 700;
+}
+
 .spotify-eq {
   display: inline-flex;
   align-items: flex-end;
