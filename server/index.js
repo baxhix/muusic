@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
-import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
@@ -17,11 +16,16 @@ import sessionService from './services/session.js';
 import passwordResetService from './services/passwordResetService.js';
 import cacheMiddleware from './middleware/cache.js';
 import { createLocalAuth } from './middleware/localAuth.js';
+import { createAdminRouter } from './routes/admin.js';
 import mapRoutes from './routes/map.js';
+import { createLocalAuthRouter } from './routes/localAuth.js';
+import { createPublicRouter } from './routes/public.js';
+import { createSpotifyRouter } from './routes/spotify.js';
 import geolocationService from './services/geolocation.js';
 import accountSettingsService from './services/accountSettingsService.js';
 import trendingPlaybackService from './services/trendingPlaybackService.js';
 import performanceService from './services/performanceService.js';
+import { createRealtimeClusterService } from './services/realtimeClusterService.js';
 import { createSpotifyApiService } from './services/spotifyApiService.js';
 import { disconnectPrisma } from './services/db.js';
 import {
@@ -129,7 +133,6 @@ app.use((req, res, next) => {
 
 app.use('/api', mapRoutes);
 
-const rooms = new Map();
 const { readAuthSession, requireAdmin } = createLocalAuth({
   jwtSecret: JWT_SECRET,
   sessionService,
@@ -149,904 +152,87 @@ function cleanupSpotifyExchangeCodes() {
     }
   }
 }
-
-function getRoom(roomId) {
-  if (!rooms.has(roomId)) {
-    rooms.set(roomId, {
-      users: new Map(),
-      messages: []
-    });
-  }
-  return rooms.get(roomId);
-}
-
-function buildPresence(room) {
-  return Array.from(room.users.values()).map((user) => ({
-    id: user.id,
-    name: user.name,
-    spotify: user.spotify,
-    location: user.location,
-    connectedAt: user.connectedAt
-  }));
-}
-
-app.get('/health', (_req, res) => {
-  res.json({ ok: true, time: new Date().toISOString() });
+const realtimeCluster = createRealtimeClusterService({
+  instanceId: `api-${nanoid(10)}`,
+  maxMessages: 200
 });
-
-app.get('/api/artists', cacheMiddleware(300), (_req, res) => {
-  const artists = [
-    { id: 'a-1', name: 'Jorge e Mateus', trend: 'high' },
-    { id: 'a-2', name: 'Marilia Mendonca', trend: 'high' },
-    { id: 'a-3', name: 'Henrique e Juliano', trend: 'medium' },
-    { id: 'a-4', name: 'Gusttavo Lima', trend: 'medium' },
-    { id: 'a-5', name: 'Maiara e Maraisa', trend: 'up' }
-  ];
-  res.json({ items: artists, count: artists.length });
-});
-
-app.get('/api/shows', async (_req, res) => {
-  try {
-    const { page, limit, search } = parseListQuery(_req.query || {});
-    const city = String(_req.query?.city || '').trim();
-    const cacheKey = JSON.stringify({ page, limit, search, city, upcomingOnly: true });
-    const cachedPayload = showCacheService.getCachedShows(cacheKey);
-    if (cachedPayload) {
-      res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
-      return res.json(cachedPayload);
-    }
-
-    const result = await showService.listShows({
-      page,
-      limit,
-      search,
-      city,
-      upcomingOnly: true
-    });
-    const payload = {
-      shows: result.items.map((show) => sanitizeShowResponse(show)).filter(Boolean),
-      pagination: {
-        page: result.page,
-        limit: result.limit,
-        total: result.total
-      }
-    };
-    showCacheService.setCachedShows(cacheKey, payload);
-    res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
-    return res.json({
-      ...payload
-    });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
-  }
-});
-
-app.post('/auth/local/register', async (req, res) => {
-  try {
-    const name = String(req.body?.name || '').trim();
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-    const confirmPassword = String(req.body?.confirmPassword || '');
-
-    if (!name || !email || !password || !confirmPassword) {
-      return res.status(400).json({ error: 'Campos obrigatorios ausentes.' });
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: 'E-mail invalido.' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres.' });
-    }
-    if (password !== confirmPassword) {
-      return res.status(400).json({ error: 'Confirmacao de senha invalida.' });
-    }
-
-    const existingUser = await userService.findByEmail(email);
-    if (existingUser) {
-      return res.status(409).json({ error: 'E-mail ja cadastrado.' });
-    }
-
-    const user = await userService.createUser({
-      id: `u-${Date.now()}-${nanoid(6)}`,
-      email,
-      name,
-      displayName: name,
-      role: await determineRoleForNewUser(email, ADMIN_EMAILS, userService),
-      passwordHash: hashPassword(password)
-    });
-
-    const sessionId = await sessionService.create(user.id);
-    const token = issueLocalAuthToken(user, sessionId, JWT_SECRET);
-    res.status(201).json({
-      token,
-      sessionId,
-      user: sanitizeUserResponse(user)
-    });
-  } catch (error) {
-    res.status(500).json({ error: `Erro ao registrar: ${error.message}` });
-  }
-});
-
-app.post('/auth/local/login', async (req, res) => {
-  try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-    if (!email || !password) {
-      return res.status(400).json({ error: 'E-mail e senha sao obrigatorios.' });
-    }
-
-    const user = await userService.findByEmail(email);
-    if (!user || !verifyPassword(password, user.passwordHash)) {
-      return res.status(401).json({ error: 'Credenciais invalidas.' });
-    }
-
-    const sessionId = await sessionService.create(user.id);
-    const token = issueLocalAuthToken(user, sessionId, JWT_SECRET);
-    res.json({
-      token,
-      sessionId,
-      user: sanitizeUserResponse(user)
-    });
-  } catch (error) {
-    res.status(500).json({ error: `Erro ao autenticar: ${error.message}` });
-  }
-});
-
-app.post('/auth/local/forgot-password', async (req, res) => {
-  try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    if (!email) {
-      return res.status(400).json({ error: 'Informe o e-mail.' });
-    }
-
-    const user = await userService.findByEmail(email);
-    if (!user) {
-      return res.json({
-        ok: true,
-        message: 'Se o e-mail existir, enviaremos instrucoes de recuperacao.'
-      });
-    }
-
-    await passwordResetService.deleteByUserId(user.id);
-    const { token } = await passwordResetService.issue(user.id);
-
-    const response = {
-      ok: true,
-      message: 'Se o e-mail existir, enviaremos instrucoes de recuperacao.'
-    };
-
-    if (process.env.NODE_ENV !== 'production') {
-      response.resetToken = token;
-    }
-    res.json(response);
-  } catch (error) {
-    res.status(500).json({ error: `Erro ao processar recuperacao: ${error.message}` });
-  }
-});
-
-app.post('/auth/local/reset-password', async (req, res) => {
-  try {
-    const token = String(req.body?.token || '').trim();
-    const password = String(req.body?.password || '');
-    const confirmPassword = String(req.body?.confirmPassword || '');
-
-    if (!token || !password || !confirmPassword) {
-      return res.status(400).json({ error: 'Campos obrigatorios ausentes.' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres.' });
-    }
-    if (password !== confirmPassword) {
-      return res.status(400).json({ error: 'Confirmacao de senha invalida.' });
-    }
-
-    const payload = await passwordResetService.consume(token);
-    if (!payload?.userId) {
-      return res.status(400).json({ error: 'Token de recuperacao invalido ou expirado.' });
-    }
-
-    await userService.updatePasswordById(payload.userId, hashPassword(password));
-    await sessionService.destroyByUserId(payload.userId);
-
-    res.json({ ok: true, message: 'Senha atualizada com sucesso.' });
-  } catch (error) {
-    res.status(500).json({ error: `Erro ao redefinir senha: ${error.message}` });
-  }
-});
-
-app.post('/auth/local/change-password', async (req, res) => {
-  try {
-    const auth = await readAuthSession(req);
-    if (auth.error) return res.status(401).json({ error: auth.error });
-
-    const currentPassword = String(req.body?.currentPassword || '');
-    const newPassword = String(req.body?.newPassword || '');
-    const confirmPassword = String(req.body?.confirmPassword || '');
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return res.status(400).json({ error: 'Campos obrigatorios ausentes.' });
-    }
-    if (!verifyPassword(currentPassword, auth.user.passwordHash)) {
-      return res.status(401).json({ error: 'Senha atual invalida.' });
-    }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'Nova senha deve ter pelo menos 8 caracteres.' });
-    }
-    if (newPassword !== confirmPassword) {
-      return res.status(400).json({ error: 'Confirmacao de senha invalida.' });
-    }
-    if (newPassword === currentPassword) {
-      return res.status(400).json({ error: 'Nova senha deve ser diferente da atual.' });
-    }
-
-    await userService.updatePasswordById(auth.user.id, hashPassword(newPassword));
-    return res.json({ ok: true });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao alterar senha: ${error.message}` });
-  }
-});
-
-app.get('/auth/local/me', async (req, res) => {
-  try {
-    const auth = await readAuthSession(req);
-    if (auth.error) {
-      return res.status(401).json({ error: auth.error });
-    }
-    return res.json({
-      user: sanitizeUserResponse(auth.user),
-      sessionId: auth.sessionId
-    });
-  } catch {
-    return res.status(401).json({ error: 'Sessao invalida.' });
-  }
-});
-
-app.get('/auth/local/account-settings', async (req, res) => {
-  try {
-    const auth = await readAuthSession(req);
-    if (auth.error) return res.status(401).json({ error: auth.error });
-    const settings = await accountSettingsService.getByUserId(auth.user.id);
-    return res.json({
-      settings,
-      avatarUrl: auth.user.avatarUrl || null
-    });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao carregar configuracoes: ${error.message}` });
-  }
-});
-
-app.patch('/auth/local/account-settings', async (req, res) => {
-  try {
-    const auth = await readAuthSession(req);
-    if (auth.error) return res.status(401).json({ error: auth.error });
-
-    const city = String(req.body?.city || '').trim();
-    const bio = String(req.body?.bio || '');
-    const avatarUrl = typeof req.body?.avatarUrl === 'string' ? req.body.avatarUrl : null;
-    const locationEnabled = req.body?.locationEnabled !== false;
-    const showMusicHistory = req.body?.showMusicHistory !== false;
-    const cityCenterLat = Number(req.body?.cityCenterLat);
-    const cityCenterLng = Number(req.body?.cityCenterLng);
-
-    if (city.length < 2) return res.status(400).json({ error: 'Cidade deve ter no minimo 2 caracteres.' });
-    if (bio.length > 160) return res.status(400).json({ error: 'Bio deve ter no maximo 160 caracteres.' });
-    if (avatarUrl && avatarUrl.length > 6_000_000) {
-      return res.status(400).json({ error: 'Imagem de perfil muito grande.' });
-    }
-
-    const settings = await accountSettingsService.updateByUserId(auth.user.id, {
-      city,
-      bio,
-      locationEnabled,
-      showMusicHistory,
-      cityCenterLat: Number.isFinite(cityCenterLat) ? cityCenterLat : null,
-      cityCenterLng: Number.isFinite(cityCenterLng) ? cityCenterLng : null
-    });
-
-    if (typeof req.body?.avatarUrl === 'string' || req.body?.avatarUrl === null) {
-      await userService.updateUserById(auth.user.id, {
-        avatarUrl: avatarUrl || null
-      });
-    }
-
-    const updatedUser = await userService.findById(auth.user.id);
-    return res.json({
-      settings,
-      avatarUrl: updatedUser?.avatarUrl || null
-    });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao salvar configuracoes: ${error.message}` });
-  }
-});
-
-app.get('/api/map-users', async (_req, res) => {
-  try {
-    const usersPayload = await userService.listUsers({ page: 1, limit: 5000, search: '' });
-    const users = Array.isArray(usersPayload?.items) ? usersPayload.items : [];
-    const settingsMap = await accountSettingsService.getManyByUserIds(users.map((user) => user.id));
-
-    const items = users
-      .map((user) => {
-        const settings = settingsMap.get(user.id);
-        if (!settings || settings.locationEnabled === false) return null;
-        const location = accountSettingsService.buildRandomLocation(user.id, settings.city, settings.cityCenterLat, settings.cityCenterLng);
-        return {
-          id: user.id,
-          name: user.name || user.username || 'Usuario',
-          city: settings.city,
-          bio: settings.bio || '',
-          showMusicHistory: settings.showMusicHistory !== false,
-          avatarUrl: user.avatarUrl || null,
-          location
-        };
-      })
-      .filter(Boolean);
-
-    res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
-    return res.json({ users: items });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao listar usuarios do mapa: ${error.message}` });
-  }
-});
-
-app.post('/api/trendings/playback', async (req, res) => {
-  try {
-    const auth = await readAuthSession(req);
-    if (auth.error) return res.status(401).json({ error: auth.error });
-
-    const isPlaying = req.body?.isPlaying !== false;
-    if (!isPlaying) return res.json({ ok: true, recorded: false, reason: 'not-playing' });
-
-    const artistName = String(req.body?.artistName || '').trim();
-    const trackName = String(req.body?.trackName || '').trim();
-    if (!artistName || !trackName) {
-      return res.status(400).json({ error: 'artistName e trackName sao obrigatorios.' });
-    }
-
-    const result = await trendingPlaybackService.recordPlayback({
-      userId: auth.user.id,
-      artistId: req.body?.artistId || null,
-      artistName,
-      trackId: req.body?.trackId || null,
-      trackName,
-      timestamp: req.body?.timestamp || new Date().toISOString(),
-      isPlaying: true
-    });
-
-    return res.json({ ok: true, ...result });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao registrar reproducao: ${error.message}` });
-  }
-});
-
-app.post('/auth/local/logout', async (req, res) => {
-  try {
-    const auth = await readAuthSession(req);
-    if (auth.error) {
-      const sessionId = String(req.headers['x-session-id'] || req.body?.sessionId || '');
-      if (sessionId) await sessionService.destroy(sessionId);
-      return res.json({ ok: true });
-    }
-    await sessionService.destroy(auth.sessionId);
-    res.json({ ok: true });
-  } catch {
-    res.status(500).json({ error: 'Falha ao encerrar sessao.' });
-  }
-});
-
-app.get('/admin/users', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const { page, limit, search } = parseListQuery(req.query || {});
-    const result = await userService.listUsers({ page, limit, search });
-    return res.json({
-      users: result.items.map((user) => ({
-        id: user.id,
-        name: user.name || user.username || 'Usuario',
-        email: user.email,
-        role: sanitizeRole(user.role),
-        createdAt: user.createdAt || null
-      })),
-      pagination: {
-        page: result.page,
-        limit: result.limit,
-        total: result.total
-      }
-    });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao listar usuarios: ${error.message}` });
-  }
-});
-
-app.post('/admin/users', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-
-    const name = String(req.body?.name || '').trim();
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-    const role = sanitizeRole(req.body?.role);
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Nome, e-mail e senha sao obrigatorios.' });
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: 'E-mail invalido.' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres.' });
-    }
-    const existingUser = await userService.findByEmail(email);
-    if (existingUser) {
-      return res.status(409).json({ error: 'E-mail ja cadastrado.' });
-    }
-
-    const user = await userService.createUser({
-      id: `u-${Date.now()}-${nanoid(6)}`,
-      email,
-      name,
-      displayName: name,
-      role,
-      passwordHash: hashPassword(password)
-    });
-
-    return res.status(201).json({ user: sanitizeUserResponse(user) });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao criar usuario: ${error.message}` });
-  }
-});
-
-app.patch('/admin/users/:id', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const userId = String(req.params.id || '').trim();
-    if (!userId) return res.status(400).json({ error: 'ID de usuario invalido.' });
-
-    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
-    const emailRaw = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    const role = typeof req.body?.role === 'string' ? sanitizeRole(req.body.role) : undefined;
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
-
-    if (!name || !emailRaw) {
-      return res.status(400).json({ error: 'Nome e e-mail sao obrigatorios.' });
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
-      return res.status(400).json({ error: 'E-mail invalido.' });
-    }
-    if (password && password.length < 6) {
-      return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres.' });
-    }
-
-    const existingByEmail = await userService.findByEmail(emailRaw);
-    if (existingByEmail && existingByEmail.id !== userId) {
-      return res.status(409).json({ error: 'E-mail ja cadastrado para outro usuario.' });
-    }
-
-    const userToUpdate = await userService.findById(userId);
-    if (!userToUpdate) {
-      return res.status(404).json({ error: 'Usuario nao encontrado.' });
-    }
-
-    if (userToUpdate.id === auth.user.id && role === 'USER') {
-      return res.status(400).json({ error: 'Nao e permitido remover seu proprio acesso admin.' });
-    }
-
-    const updated = await userService.updateUserById(userId, {
-      email: emailRaw,
-      displayName: name,
-      role,
-      passwordHash: password ? hashPassword(password) : undefined
-    });
-    return res.json({ user: sanitizeUserResponse(updated) });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao atualizar usuario: ${error.message}` });
-  }
-});
-
-app.delete('/admin/users/:id', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const userId = String(req.params.id || '').trim();
-    if (!userId) return res.status(400).json({ error: 'ID de usuario invalido.' });
-    if (userId === auth.user.id) {
-      return res.status(400).json({ error: 'Nao e permitido excluir seu proprio usuario admin.' });
-    }
-
-    const deleted = await userService.deleteUserById(userId);
-    if (!deleted) {
-      return res.status(404).json({ error: 'Usuario nao encontrado.' });
-    }
-    await sessionService.destroyByUserId(userId);
-    return res.json({ ok: true });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao excluir usuario: ${error.message}` });
-  }
-});
-
-app.get('/admin/shows', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const { page, limit, search } = parseListQuery(req.query || {});
-    const city = String(req.query?.city || '').trim();
-    const upcomingOnly = String(req.query?.upcomingOnly || 'false') === 'true';
-    const result = await showService.listShows({ page, limit, search, city, upcomingOnly });
-    return res.json({
-      shows: result.items.map((show) => sanitizeShowResponse(show)).filter(Boolean),
-      pagination: {
-        page: result.page,
-        limit: result.limit,
-        total: result.total
-      }
-    });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
-  }
-});
-
-app.get('/admin/trendings', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const days = Number(req.query?.days);
-    const limit = Number(req.query?.limit);
-    const snapshot = await trendingPlaybackService.getSnapshot({ days, limit });
-    return res.json(snapshot);
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao carregar trendings: ${error.message}` });
-  }
-});
-
-app.get('/admin/performance', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const snapshot = performanceService.getSnapshot();
-    return res.json(snapshot);
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao carregar performance: ${error.message}` });
-  }
-});
-
-app.post('/admin/shows', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const payload = parseShowPayload(req.body);
-    if (payload.error) {
-      return res.status(400).json({ error: payload.error });
-    }
-    const show = await showService.createShow(payload);
-    showCacheService.invalidateShowsCache();
-    const sanitizedShow = sanitizeShowResponse(show);
-    io.emit('shows:changed', { type: 'created', showId: show.id, show: sanitizedShow });
-    return res.status(201).json({ show: sanitizedShow });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao criar show: ${error.message}` });
-  }
-});
-
-app.patch('/admin/shows/:id', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const showId = String(req.params.id || '').trim();
-    if (!showId) return res.status(400).json({ error: 'ID de show invalido.' });
-
-    const payload = parseShowPayload(req.body);
-    if (payload.error) {
-      return res.status(400).json({ error: payload.error });
-    }
-
-    const updated = await showService.updateShowById(showId, payload);
-    if (!updated) {
-      return res.status(404).json({ error: 'Show nao encontrado.' });
-    }
-    showCacheService.invalidateShowsCache();
-    const sanitizedShow = sanitizeShowResponse(updated);
-    io.emit('shows:changed', { type: 'updated', showId: updated.id, show: sanitizedShow });
-    return res.json({ show: sanitizedShow });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao atualizar show: ${error.message}` });
-  }
-});
-
-app.delete('/admin/shows/:id', async (req, res) => {
-  try {
-    const auth = await requireAdmin(req, res);
-    if (!auth) return;
-    const showId = String(req.params.id || '').trim();
-    if (!showId) return res.status(400).json({ error: 'ID de show invalido.' });
-
-    const deleted = await showService.deleteShowById(showId);
-    if (!deleted) {
-      return res.status(404).json({ error: 'Show nao encontrado.' });
-    }
-    showCacheService.invalidateShowsCache();
-    io.emit('shows:changed', { type: 'deleted', showId });
-    return res.json({ ok: true });
-  } catch (error) {
-    return res.status(500).json({ error: `Erro ao excluir show: ${error.message}` });
-  }
-});
-
-app.post('/auth/spotify/connect', async (req, res) => {
-  try {
-    const auth = await readAuthSession(req);
-    if (auth.error) {
-      return res.status(401).json({ error: auth.error });
-    }
-
-    const stateToken = jwt.sign(
-      {
-        type: 'spotify-connect',
-        userId: auth.user.id,
-        roomId: String(req.body?.roomId || 'global'),
-        sessionId: auth.sessionId,
-        nonce: nanoid()
-      },
-      JWT_SECRET,
-      { expiresIn: '10m' }
-    );
-
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: process.env.SPOTIFY_CLIENT_ID || '',
-      scope: 'user-read-private user-read-email user-read-currently-playing user-read-playback-state',
-      redirect_uri: process.env.SPOTIFY_REDIRECT_URI || '',
-      state: stateToken
-    });
-
-    return res.json({
-      url: `https://accounts.spotify.com/authorize?${params.toString()}`
-    });
-  } catch {
-    return res.status(500).json({ error: 'Falha ao iniciar conexao Spotify.' });
-  }
-});
-
-app.get('/auth/spotify/login', (req, res) => {
-  const { userId = 'user', roomId = 'global' } = req.query;
-  const state = Buffer.from(JSON.stringify({ userId, roomId, nonce: nanoid() })).toString('base64url');
-
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: process.env.SPOTIFY_CLIENT_ID || '',
-    scope: 'user-read-private user-read-email user-read-currently-playing user-read-playback-state',
-    redirect_uri: process.env.SPOTIFY_REDIRECT_URI || '',
-    state
-  });
-
-  res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
-});
-
-app.get('/auth/spotify/callback', async (req, res) => {
-  try {
-    const { code, state } = req.query;
-    if (!code || !state) {
-      return res.status(400).send('Missing code/state');
-    }
-
-    let decoded = null;
-    try {
-      const payload = jwt.verify(String(state), JWT_SECRET);
-      if (payload?.type === 'spotify-connect') {
-        decoded = payload;
-      }
-    } catch {
-      // ignore signed state parse errors and fallback to legacy format.
-    }
-
-    if (!decoded) {
-      decoded = JSON.parse(Buffer.from(String(state), 'base64url').toString('utf8'));
-    }
-
-    const sessionId = String(decoded.sessionId || '');
-    if (sessionId) {
-      const session = await sessionService.get(sessionId);
-      if (!session || session.userId !== decoded.userId) {
-        return res.status(401).send('Sessao local invalida para conectar Spotify.');
-      }
-    }
-
-    const tokenRes = await axios.post(
-      'https://accounts.spotify.com/api/token',
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: String(code),
-        redirect_uri: process.env.SPOTIFY_REDIRECT_URI || ''
-      }).toString(),
-      {
-        headers: {
-          Authorization: buildSpotifyBasicHeader(),
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
-    );
-
-    const accessToken = tokenRes.data.access_token;
-    const refreshToken = tokenRes.data.refresh_token || null;
-    const expiresIn = Number(tokenRes.data.expires_in || 3600);
-    const tokenExpiresAt = Date.now() + expiresIn * 1000;
-    const profileRes = await axios.get('https://api.spotify.com/v1/me', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
-    const spotifyProfile = {
-      id: profileRes.data.id,
-      display_name: profileRes.data.display_name,
-      email: profileRes.data.email,
-      product: profileRes.data.product,
-      image: profileRes.data.images?.[0]?.url || null
-    };
-    const nowPlaying = await fetchSpotifyNowPlaying(accessToken);
-
-    if (nowPlaying?.isPlaying && nowPlaying?.trackName && nowPlaying?.artistName) {
-      try {
-        await trendingPlaybackService.recordPlayback({
-          userId: decoded.userId,
-          artistId: nowPlaying.artistId || null,
-          artistName: nowPlaying.artistName,
-          trackId: nowPlaying.trackId || null,
-          trackName: nowPlaying.trackName,
-          timestamp: new Date().toISOString(),
-          isPlaying: true
-        });
-      } catch {
-        // Não interrompe login/callback do Spotify por falha de trendings.
-      }
-    }
-
-    const appToken = jwt.sign(
-      {
-        type: 'spotify-auth',
-        userId: decoded.userId,
-        roomId: decoded.roomId,
-        spotify: spotifyProfile,
-        accessToken,
-        refreshToken,
-        tokenExpiresAt,
-        nowPlaying
-      },
-      JWT_SECRET,
-      { expiresIn: '8h' }
-    );
-
-    cleanupSpotifyExchangeCodes();
-    const exchangeCode = randomBytes(24).toString('hex');
-    spotifyExchangeCodes.set(exchangeCode, {
-      userId: decoded.userId,
-      spotifyToken: appToken,
-      expiresAt: Date.now() + SPOTIFY_EXCHANGE_TTL_MS
-    });
-
-    const redirect = new URL(FRONTEND_URL);
-    redirect.searchParams.set('spotify_code', exchangeCode);
-    redirect.searchParams.set('spotify_connected', '1');
-    redirect.searchParams.set('room', decoded.roomId);
-    redirect.searchParams.set('user', decoded.userId);
-
-    res.redirect(redirect.toString());
-  } catch (error) {
-    res.status(500).send(`Spotify callback error: ${error.message}`);
-  }
-});
-
-app.post('/auth/spotify/exchange', async (req, res) => {
-  try {
-    cleanupSpotifyExchangeCodes();
-    const auth = await readAuthSession(req);
-    if (auth.error) return res.status(401).json({ error: auth.error });
-
-    const code = String(req.body?.code || '').trim();
-    if (!code) return res.status(400).json({ error: 'Codigo ausente.' });
-
-    const pending = spotifyExchangeCodes.get(code);
-    spotifyExchangeCodes.delete(code);
-    if (!pending) return res.status(400).json({ error: 'Codigo invalido ou expirado.' });
-    if (pending.expiresAt <= Date.now()) return res.status(400).json({ error: 'Codigo expirado.' });
-    if (pending.userId !== auth.user.id) return res.status(403).json({ error: 'Codigo nao pertence ao usuario autenticado.' });
-
-    return res.json({ spotifyToken: pending.spotifyToken });
-  } catch (error) {
-    return res.status(500).json({ error: `Falha ao trocar codigo Spotify: ${error.message}` });
-  }
-});
-
-app.get('/auth/spotify/me', (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'Missing token' });
-
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    if (payload?.type !== 'spotify-auth') {
-      return res.status(401).json({ error: 'Invalid token type' });
-    }
-    res.json({
-      userId: payload.userId,
-      roomId: payload.roomId,
-      spotify: payload.spotify,
-      nowPlaying: payload.nowPlaying || null,
-      tokenExpiresAt: payload.tokenExpiresAt || null
-    });
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-});
-
-app.get('/auth/spotify/now-playing', async (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'Missing token' });
-
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    if (payload?.type !== 'spotify-auth') {
-      return res.status(401).json({ error: 'Invalid token type' });
-    }
-
-    let accessToken = payload.accessToken;
-    let refreshToken = payload.refreshToken || null;
-    let tokenExpiresAt = Number(payload.tokenExpiresAt || 0);
-    if (!accessToken) {
-      return res.status(400).json({ error: 'Spotify token payload missing access token' });
-    }
-
-    if (tokenExpiresAt && Date.now() >= tokenExpiresAt - 30_000) {
-      const refreshed = await refreshSpotifyAccessToken(refreshToken);
-      if (refreshed?.accessToken) {
-        accessToken = refreshed.accessToken;
-        refreshToken = refreshed.refreshToken;
-        tokenExpiresAt = Date.now() + refreshed.expiresIn * 1000;
-      }
-    }
-
-    const nowPlaying = await fetchSpotifyNowPlaying(accessToken);
-    if (nowPlaying?.isPlaying && nowPlaying?.trackName && nowPlaying?.artistName) {
-      try {
-        await trendingPlaybackService.recordPlayback({
-          userId: payload.userId,
-          artistId: nowPlaying.artistId || null,
-          artistName: nowPlaying.artistName,
-          trackId: nowPlaying.trackId || null,
-          trackName: nowPlaying.trackName,
-          timestamp: new Date().toISOString(),
-          isPlaying: true
-        });
-      } catch {
-        // Não interrompe now-playing por falha de trendings.
-      }
-    }
-    const response = { nowPlaying };
-
-    if (refreshToken && accessToken !== payload.accessToken) {
-      response.spotifyToken = jwt.sign(
-        {
-          ...payload,
-          accessToken,
-          refreshToken,
-          tokenExpiresAt,
-          nowPlaying
-        },
-        JWT_SECRET,
-        { expiresIn: '8h' }
-      );
-    }
-
-    return res.json(response);
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-});
+await realtimeCluster.start(io);
+
+app.use(
+  createPublicRouter({
+    isProduction,
+    cacheArtistsMiddleware: cacheMiddleware(300),
+    parseListQuery,
+    showService,
+    showCacheService,
+    sanitizeShowResponse,
+    userService,
+    accountSettingsService
+  })
+);
+
+app.use(
+  createLocalAuthRouter({
+    jwtSecret: JWT_SECRET,
+    nanoid,
+    adminEmails: ADMIN_EMAILS,
+    userService,
+    sessionService,
+    passwordResetService,
+    accountSettingsService,
+    trendingPlaybackService,
+    determineRoleForNewUser,
+    hashPassword,
+    verifyPassword,
+    issueLocalAuthToken,
+    sanitizeUserResponse,
+    readAuthSession,
+    isProduction
+  })
+);
+
+app.use(
+  createAdminRouter({
+    requireAdmin,
+    nanoid,
+    userService,
+    sessionService,
+    showService,
+    showCacheService,
+    trendingPlaybackService,
+    performanceService,
+    sanitizeRole,
+    sanitizeUserResponse,
+    hashPassword,
+    parseListQuery,
+    parseShowPayload,
+    sanitizeShowResponse,
+    io
+  })
+);
+
+app.use(
+  createSpotifyRouter({
+    jwtSecret: JWT_SECRET,
+    frontendUrl: FRONTEND_URL,
+    nanoid,
+    randomBytes,
+    readAuthSession,
+    sessionService,
+    trendingPlaybackService,
+    fetchSpotifyNowPlaying,
+    refreshSpotifyAccessToken,
+    buildSpotifyBasicHeader,
+    cleanupSpotifyExchangeCodes,
+    spotifyExchangeCodes,
+    spotifyExchangeTtlMs: SPOTIFY_EXCHANGE_TTL_MS
+  })
+);
 
 io.on('connection', (socket) => {
   let joinedRoom = null;
   let joinedUserId = null;
+  let joinedUserName = null;
 
   socket.on('room:join', async ({ roomId = 'global', userId, name, spotify, token, sessionId } = {}, ack) => {
     try {
@@ -1076,75 +262,60 @@ io.on('connection', (socket) => {
 
       joinedRoom = String(roomId);
       joinedUserId = String(finalUserId);
+      joinedUserName = name || finalSpotify?.display_name || `User ${joinedUserId}`;
       socket.join(joinedRoom);
 
-      const room = getRoom(joinedRoom);
-      room.users.set(joinedUserId, {
+      const presence = await realtimeCluster.upsertUser(joinedRoom, {
         id: joinedUserId,
-        name: name || finalSpotify?.display_name || `User ${joinedUserId}`,
+        name: joinedUserName,
         spotify: finalSpotify,
         location: null,
-        connectedAt: Date.now(),
-        socketId: socket.id
+        connectedAt: Date.now()
       });
-
-      io.to(joinedRoom).emit('presence:update', buildPresence(room));
-      socket.emit('chat:history', room.messages);
+      io.to(joinedRoom).emit('presence:update', presence);
+      const messages = await realtimeCluster.getMessages(joinedRoom);
+      socket.emit('chat:history', messages);
       ack?.({ ok: true, roomId: joinedRoom, userId: joinedUserId });
     } catch {
       ack?.({ ok: false, error: 'Join failed' });
     }
   });
 
-  socket.on('location:update', ({ lat, lng } = {}) => {
+  socket.on('location:update', async ({ lat, lng } = {}) => {
     if (!joinedRoom || !joinedUserId) return;
     if (typeof lat !== 'number' || typeof lng !== 'number') return;
 
-    const room = getRoom(joinedRoom);
-    const user = room.users.get(joinedUserId);
-    if (!user) return;
-
-    user.location = { lat, lng, updatedAt: Date.now() };
-    io.to(joinedRoom).emit('presence:update', buildPresence(room));
+    const presence = await realtimeCluster.updateLocation(joinedRoom, joinedUserId, {
+      lat,
+      lng,
+      updatedAt: Date.now()
+    });
+    if (!presence) return;
+    io.to(joinedRoom).emit('presence:update', presence);
   });
 
-  socket.on('chat:message', ({ text } = {}, ack) => {
+  socket.on('chat:message', async ({ text } = {}, ack) => {
     if (!joinedRoom || !joinedUserId) return;
     const normalized = typeof text === 'string' ? text.trim() : '';
     if (!normalized) return;
 
-    const room = getRoom(joinedRoom);
-    const sender = room.users.get(joinedUserId);
-    if (!sender) return;
-
     const message = {
       id: nanoid(12),
-      userId: sender.id,
-      name: sender.name,
+      userId: joinedUserId,
+      name: joinedUserName || `User ${joinedUserId}`,
       text: normalized.slice(0, 500),
       createdAt: Date.now()
     };
 
-    room.messages.push(message);
-    if (room.messages.length > 200) {
-      room.messages.shift();
-    }
-
+    await realtimeCluster.appendMessage(joinedRoom, message);
     io.to(joinedRoom).emit('chat:new', message);
     ack?.({ ok: true, id: message.id });
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     if (!joinedRoom || !joinedUserId) return;
-    const room = rooms.get(joinedRoom);
-    if (!room) return;
-
-    room.users.delete(joinedUserId);
-    io.to(joinedRoom).emit('presence:update', buildPresence(room));
-
-    if (room.users.size === 0) {
-      rooms.delete(joinedRoom);
-    }
+    const presence = await realtimeCluster.removeUser(joinedRoom, joinedUserId);
+    io.to(joinedRoom).emit('presence:update', presence);
   });
 });
 
@@ -1155,6 +326,7 @@ httpServer.listen(PORT, () => {
 async function shutdown() {
   await geolocationService.disconnect();
   await disconnectPrisma();
+  await realtimeCluster.stop();
   await redisService.disconnect();
   process.exit(0);
 }
