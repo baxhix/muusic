@@ -748,8 +748,9 @@ app.post('/admin/shows', async (req, res) => {
     }
     const show = await showService.createShow(payload);
     showCacheService.invalidateShowsCache();
-    io.emit('shows:changed', { type: 'created', showId: show.id });
-    return res.status(201).json({ show: sanitizeShowResponse(show) });
+    const sanitizedShow = sanitizeShowResponse(show);
+    io.emit('shows:changed', { type: 'created', showId: show.id, show: sanitizedShow });
+    return res.status(201).json({ show: sanitizedShow });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao criar show: ${error.message}` });
   }
@@ -772,8 +773,9 @@ app.patch('/admin/shows/:id', async (req, res) => {
       return res.status(404).json({ error: 'Show nao encontrado.' });
     }
     showCacheService.invalidateShowsCache();
-    io.emit('shows:changed', { type: 'updated', showId: updated.id });
-    return res.json({ show: sanitizeShowResponse(updated) });
+    const sanitizedShow = sanitizeShowResponse(updated);
+    io.emit('shows:changed', { type: 'updated', showId: updated.id, show: sanitizedShow });
+    return res.json({ show: sanitizedShow });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao atualizar show: ${error.message}` });
   }
