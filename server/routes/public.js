@@ -1,5 +1,35 @@
 import { Router } from 'express';
 
+function parseMapUsersQuery(query = {}) {
+  const limit = Number.isFinite(Number(query.limit)) ? Math.min(500, Math.max(20, Number(query.limit))) : 200;
+  const cursor = Number.isFinite(Number(query.cursor)) ? Math.max(0, Number(query.cursor)) : 0;
+  const scanPages = Number.isFinite(Number(query.scanPages)) ? Math.min(25, Math.max(1, Number(query.scanPages))) : 6;
+  const rawBbox = String(query.bbox || '').trim();
+  let bbox = null;
+  if (rawBbox) {
+    const parts = rawBbox.split(',').map((value) => Number(value.trim()));
+    if (parts.length === 4 && parts.every((value) => Number.isFinite(value))) {
+      const [west, south, east, north] = parts;
+      if (south >= -90 && south <= 90 && north >= -90 && north <= 90 && west >= -180 && west <= 180 && east >= -180 && east <= 180) {
+        bbox = { west, south, east, north };
+      }
+    }
+  }
+  return { limit, cursor, scanPages, bbox };
+}
+
+function isInsideBbox(location, bbox) {
+  if (!bbox) return true;
+  const lat = Number(location?.lat);
+  const lng = Number(location?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat < bbox.south || lat > bbox.north) return false;
+  if (bbox.west <= bbox.east) {
+    return lng >= bbox.west && lng <= bbox.east;
+  }
+  return lng >= bbox.west || lng <= bbox.east;
+}
+
 export function createPublicRouter({
   isProduction,
   cacheArtistsMiddleware,
@@ -63,21 +93,35 @@ export function createPublicRouter({
 
   router.get('/api/map-users', async (_req, res) => {
     try {
-      const usersPayload = await userService.listUsers({ page: 1, limit: 5000, search: '' });
-      const users = Array.isArray(usersPayload?.items) ? usersPayload.items : [];
-      const settingsMap = await accountSettingsService.getManyByUserIds(users.map((user) => user.id));
+      const { limit, cursor, scanPages, bbox } = parseMapUsersQuery(_req.query || {});
+      const items = [];
+      let globalOffset = cursor;
+      let scannedPages = 0;
+      let hasMore = true;
 
-      const items = users
-        .map((user) => {
+      while (items.length < limit && scannedPages < scanPages && hasMore) {
+        const page = Math.floor(globalOffset / 200) + 1;
+        const usersPayload = await userService.listUsers({ page, limit: 200, search: '' });
+        const users = Array.isArray(usersPayload?.items) ? usersPayload.items : [];
+        scannedPages += 1;
+        if (users.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        const settingsMap = await accountSettingsService.getManyByUserIds(users.map((user) => user.id));
+        users.forEach((user) => {
+          if (items.length >= limit) return;
           const settings = settingsMap.get(user.id);
-          if (!settings || settings.locationEnabled === false) return null;
+          if (!settings || settings.locationEnabled === false) return;
           const location = accountSettingsService.buildRandomLocation(
             user.id,
             settings.city,
             settings.cityCenterLat,
             settings.cityCenterLng
           );
-          return {
+          if (!isInsideBbox(location, bbox)) return;
+          items.push({
             id: user.id,
             name: user.name || user.username || 'Usuario',
             city: settings.city,
@@ -85,12 +129,25 @@ export function createPublicRouter({
             showMusicHistory: settings.showMusicHistory !== false,
             avatarUrl: user.avatarUrl || null,
             location
-          };
-        })
-        .filter(Boolean);
+          });
+        });
+
+        globalOffset += users.length;
+        if (users.length < 200) {
+          hasMore = false;
+        }
+      }
 
       res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
-      return res.json({ users: items });
+      return res.json({
+        users: items,
+        pagination: {
+          limit,
+          nextCursor: hasMore ? String(globalOffset) : null,
+          hasMore,
+          scannedPages
+        }
+      });
     } catch (error) {
       return res.status(500).json({ error: `Erro ao listar usuarios do mapa: ${error.message}` });
     }

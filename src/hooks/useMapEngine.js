@@ -67,7 +67,8 @@ export function useMapEngine({
   onUserSelect,
   users,
   socketRef,
-  mapVisibility = { users: true, shows: true }
+  mapVisibility = { users: true, shows: true },
+  onViewportChange
 }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -193,6 +194,19 @@ export function useMapEngine({
       });
     };
 
+    const emitViewport = () => {
+      const instance = mapRef.current;
+      if (!instance || typeof onViewportChange !== 'function') return;
+      const bounds = instance.getBounds();
+      if (!bounds) return;
+      onViewportChange({
+        west: Number(bounds.getWest().toFixed(5)),
+        south: Number(bounds.getSouth().toFixed(5)),
+        east: Number(bounds.getEast().toFixed(5)),
+        north: Number(bounds.getNorth().toFixed(5))
+      });
+    };
+
     const bootstrapMap = async () => {
       const container = mapContainerRef.current;
       if (!container || container.clientWidth === 0 || container.clientHeight === 0) {
@@ -240,6 +254,7 @@ export function useMapEngine({
 
       map.on('load', paintSimulated);
       map.on('styledata', paintSimulated);
+      map.on('moveend', emitViewport);
 
       if (!isMobileDevice) {
         map.on('mousemove', (event) => {
@@ -326,6 +341,7 @@ export function useMapEngine({
       mapRef.current = map;
       window.__MUUSIC_MAP__ = map;
       scheduleResizeBurst();
+      emitViewport();
 
       if (typeof window.ResizeObserver === 'function') {
         resizeObserver = new window.ResizeObserver(() => {
@@ -360,6 +376,7 @@ export function useMapEngine({
       if (map && paintSimulated) {
         map.off('load', paintSimulated);
         map.off('styledata', paintSimulated);
+        map.off('moveend', emitViewport);
       }
       popupRef.current?.remove();
       popupRef.current = null;
@@ -381,7 +398,7 @@ export function useMapEngine({
       mapboxRef.current = null;
       window.__MUUSIC_MAP__ = null;
     };
-  }, [enabled, simulatedPoints, perfProfile, isMobileDevice, socketRef]);
+  }, [enabled, simulatedPoints, perfProfile, isMobileDevice, socketRef, onViewportChange]);
 
   useEffect(() => {
     if (!enabled) return;

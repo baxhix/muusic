@@ -79,11 +79,13 @@ export default function App() {
   const [selectedSimProfile, setSelectedSimProfile] = useState(null);
   const [accountSettings, setAccountSettings] = useState(DEFAULT_ACCOUNT_SETTINGS);
   const [dbMapUsers, setDbMapUsers] = useState([]);
+  const [mapViewport, setMapViewport] = useState(null);
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname || '/');
   const [shows, setShows] = useState([]);
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   const lastTrendingCaptureRef = useRef({ trackId: '', isPlaying: false });
+  const mapUsersRequestRef = useRef(0);
   const isAccountPage = currentPath === ACCOUNT_PATH;
 
   const mapUsers = useMemo(() => {
@@ -163,6 +165,19 @@ export default function App() {
     },
     [resolveUserProfile]
   );
+  const handleViewportChange = useCallback((nextViewport) => {
+    if (!nextViewport) return;
+    setMapViewport((prev) => {
+      if (!prev) return nextViewport;
+      const delta =
+        Math.abs(prev.west - nextViewport.west) +
+        Math.abs(prev.south - nextViewport.south) +
+        Math.abs(prev.east - nextViewport.east) +
+        Math.abs(prev.north - nextViewport.north);
+      if (delta < 0.08) return prev;
+      return nextViewport;
+    });
+  }, []);
 
   const {
     mapContainerRef,
@@ -182,7 +197,8 @@ export default function App() {
     onUserSelect: handleMapUserSelect,
     users: mapUsers,
     socketRef,
-    mapVisibility
+    mapVisibility,
+    onViewportChange: handleViewportChange
   });
 
   useEffect(() => {
@@ -239,26 +255,55 @@ export default function App() {
   useEffect(() => {
     if (!activeUser) return undefined;
     let cancelled = false;
+    let intervalId = null;
+    const requestId = ++mapUsersRequestRef.current;
 
     const fetchMapUsers = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/map-users`, { cache: 'no-store' });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || cancelled) return;
-        const list = Array.isArray(payload?.users) ? payload.users : [];
-        setDbMapUsers(list);
+        const viewport = mapViewport;
+        const bbox = viewport
+          ? `${viewport.west},${viewport.south},${viewport.east},${viewport.north}`
+          : '';
+        const merged = new Map();
+        let cursor = '0';
+        let hasMore = true;
+        let loops = 0;
+        while (hasMore && loops < 8 && merged.size < 800) {
+          loops += 1;
+          const params = new URLSearchParams({
+            limit: '180',
+            cursor,
+            scanPages: '6'
+          });
+          if (bbox) params.set('bbox', bbox);
+
+          const response = await fetch(`${API_URL}/api/map-users?${params.toString()}`, { cache: 'no-store' });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) break;
+          const list = Array.isArray(payload?.users) ? payload.users : [];
+          list.forEach((user) => {
+            if (user?.id) merged.set(user.id, user);
+          });
+          const nextCursor = payload?.pagination?.nextCursor;
+          hasMore = Boolean(payload?.pagination?.hasMore && nextCursor);
+          cursor = String(nextCursor || '');
+          if (!cursor) hasMore = false;
+        }
+
+        if (cancelled || requestId !== mapUsersRequestRef.current) return;
+        setDbMapUsers(Array.from(merged.values()));
       } catch {
-        if (!cancelled) setDbMapUsers([]);
+        if (!cancelled && requestId === mapUsersRequestRef.current) setDbMapUsers([]);
       }
     };
 
     fetchMapUsers();
-    const intervalId = window.setInterval(fetchMapUsers, 30000);
+    intervalId = window.setInterval(fetchMapUsers, 45000);
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (intervalId) window.clearInterval(intervalId);
     };
-  }, [activeUser]);
+  }, [activeUser, mapViewport]);
 
   useEffect(() => {
     if (!activeUser) return;

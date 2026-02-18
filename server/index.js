@@ -26,6 +26,7 @@ import accountSettingsService from './services/accountSettingsService.js';
 import trendingPlaybackService from './services/trendingPlaybackService.js';
 import performanceService from './services/performanceService.js';
 import { createRealtimeClusterService } from './services/realtimeClusterService.js';
+import { createSocketRateLimiter } from './services/socketRateLimiter.js';
 import { createSpotifyApiService } from './services/spotifyApiService.js';
 import { disconnectPrisma } from './services/db.js';
 import {
@@ -157,6 +158,8 @@ const realtimeCluster = createRealtimeClusterService({
   maxMessages: 200
 });
 await realtimeCluster.start(io);
+const socketRateLimiter = createSocketRateLimiter();
+await socketRateLimiter.start();
 
 app.use(
   createPublicRouter({
@@ -236,6 +239,16 @@ io.on('connection', (socket) => {
 
   socket.on('room:join', async ({ roomId = 'global', userId, name, spotify, token, sessionId } = {}, ack) => {
     try {
+      const joinLimit = await socketRateLimiter.consume({
+        key: `join:${socket.id}`,
+        limit: 12,
+        windowSec: 60
+      });
+      if (!joinLimit.allowed) {
+        ack?.({ ok: false, error: 'Rate limit exceeded', retryAfterSec: joinLimit.retryAfterSec });
+        return;
+      }
+
       if (!token) {
         ack?.({ ok: false, error: 'Auth required' });
         return;
@@ -285,6 +298,13 @@ io.on('connection', (socket) => {
     if (!joinedRoom || !joinedUserId) return;
     if (typeof lat !== 'number' || typeof lng !== 'number') return;
 
+    const locationLimit = await socketRateLimiter.consume({
+      key: `loc:${joinedUserId}`,
+      limit: 30,
+      windowSec: 10
+    });
+    if (!locationLimit.allowed) return;
+
     const presence = await realtimeCluster.updateLocation(joinedRoom, joinedUserId, {
       lat,
       lng,
@@ -298,6 +318,16 @@ io.on('connection', (socket) => {
     if (!joinedRoom || !joinedUserId) return;
     const normalized = typeof text === 'string' ? text.trim() : '';
     if (!normalized) return;
+
+    const chatLimit = await socketRateLimiter.consume({
+      key: `chat:${joinedUserId}`,
+      limit: 8,
+      windowSec: 10
+    });
+    if (!chatLimit.allowed) {
+      ack?.({ ok: false, error: 'Rate limit exceeded', retryAfterSec: chatLimit.retryAfterSec });
+      return;
+    }
 
     const message = {
       id: nanoid(12),
@@ -326,6 +356,7 @@ httpServer.listen(PORT, () => {
 async function shutdown() {
   await geolocationService.disconnect();
   await disconnectPrisma();
+  await socketRateLimiter.stop();
   await realtimeCluster.stop();
   await redisService.disconnect();
   process.exit(0);
