@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
 import SidebarNavLite from './components/SidebarNavLite';
 import ChatListLite from './components/ChatListLite';
 import NotificationsListLite from './components/NotificationsListLite';
 import LiveNotificationToastLite from './components/LiveNotificationToastLite';
+import GlobalSearchLite from './components/GlobalSearchLite';
 import RealFeedLite from './components/RealFeedLite';
 import EventFeedLite from './components/EventFeedLite';
 import SimUserProfileModal from './components/SimUserProfileModal';
@@ -164,6 +164,22 @@ export default function App() {
     setSelectedEventFeed(item);
   }
 
+  const handleSearchShowSelect = useCallback((show) => {
+    if (!show) return;
+    setSelectedShowDetail(show);
+    setRightPanelCollapsed(false);
+  }, []);
+
+  const handleSearchUserSelect = useCallback((user) => {
+    if (!user) return;
+    setSelectedSimProfile({
+      name: user?.spotify?.display_name || user?.name || 'Usuario',
+      avatar: user?.spotify?.image || `https://i.pravatar.cc/120?u=${encodeURIComponent(user?.id || 'user')}`,
+      city: user?.location?.city || 'Cidade indisponivel',
+      recentTracks: [user?.spotify?.track || 'Sem historico de musica recente']
+    });
+  }, []);
+
   const spotifyIsPlaying = Boolean(activeUser?.nowPlaying?.isPlaying);
   const spotifyTrackName = activeUser?.nowPlaying?.trackName || '';
   const spotifyArtistName = activeUser?.nowPlaying?.artistName || activeUser?.nowPlaying?.artists || 'Artista indisponivel';
@@ -201,10 +217,13 @@ export default function App() {
   return (
     <div className="app-root">
       <div ref={mapContainerRef} className="map-canvas" />
-      <div className="global-search-wrap">
-        <Search className="global-search-icon" size={16} />
-        <input className="global-search-input" type="text" placeholder="Procure por artistas, comunidades, shows e artistas." aria-label="Busca global" />
-      </div>
+      <GlobalSearchLite
+        shows={shows}
+        users={users}
+        onFocusItem={focusFeedItem}
+        onSelectShow={handleSearchShowSelect}
+        onSelectUser={handleSearchUserSelect}
+      />
       <LiveNotificationToastLite
         enabled={Boolean(activeUser)}
         paused={notificationsPanelOpen}
