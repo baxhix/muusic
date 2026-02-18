@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, X } from 'lucide-react';
 import { API_URL } from '../config/appConfig';
 
+const SHOWS_POLL_INTERVAL_MS = 30000;
+const MAX_FORUM_SHOWS = 20;
+const MAX_FORUM_POSTS = 80;
+const MAX_FORUM_COMMENTS = 80;
+const MAX_FORUM_REPLIES = 80;
+
 function buildInitialPosts() {
   const base = [
     {
@@ -62,6 +68,48 @@ function formatShowDate(value) {
 
 function buildForumKey(showId, parentId) {
   return `${showId}:${parentId}`;
+}
+
+function normalizeShowDate(show) {
+  const date = new Date(show?.startsAt);
+  return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+}
+
+function sortShows(list = []) {
+  return [...list].sort((a, b) => normalizeShowDate(a) - normalizeShowDate(b));
+}
+
+function applyShowChange(list, payload) {
+  const safeList = Array.isArray(list) ? list : [];
+  if (!payload || !payload.type) return safeList;
+
+  if (payload.type === 'deleted') {
+    return safeList.filter((item) => item.id !== payload.showId);
+  }
+
+  const incoming = payload.show;
+  if (!incoming || !incoming.id) return safeList;
+
+  const existingIndex = safeList.findIndex((item) => item.id === incoming.id);
+  if (existingIndex === -1) {
+    return sortShows([...safeList, incoming]);
+  }
+
+  const next = [...safeList];
+  next[existingIndex] = { ...next[existingIndex], ...incoming };
+  return sortShows(next);
+}
+
+function capForumMap(map, keepId) {
+  const keys = Object.keys(map);
+  if (keys.length <= MAX_FORUM_SHOWS) return map;
+  const removable = keys.filter((key) => key !== keepId).slice(0, keys.length - MAX_FORUM_SHOWS);
+  if (!removable.length) return map;
+  const next = { ...map };
+  removable.forEach((key) => {
+    delete next[key];
+  });
+  return next;
 }
 
 export default function RealFeedLite({
@@ -127,7 +175,7 @@ export default function RealFeedLite({
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || 'Falha ao carregar shows.');
       const list = Array.isArray(payload.shows) ? payload.shows : [];
-      setShows(list.length ? list : fallbackShows);
+      setShows(list.length ? sortShows(list) : fallbackShows);
     } catch {
       setShows(fallbackShows);
     }
@@ -135,18 +183,25 @@ export default function RealFeedLite({
 
   useEffect(() => {
     loadShows();
-    const intervalId = window.setInterval(loadShows, 20000);
+    if (realtimeReady) return undefined;
+    const intervalId = window.setInterval(loadShows, SHOWS_POLL_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
-  }, [loadShows]);
+  }, [loadShows, realtimeReady]);
 
   useEffect(() => {
     if (!realtimeReady) return undefined;
     const socket = socketRef?.current;
     if (!socket) return undefined;
-    const onShowsChanged = () => loadShows();
+    const onShowsChanged = (payload) => {
+      if (!payload?.type) {
+        loadShows();
+        return;
+      }
+      setShows((prev) => applyShowChange(prev, payload));
+    };
     socket.on('shows:changed', onShowsChanged);
     return () => socket.off('shows:changed', onShowsChanged);
-  }, [loadShows, realtimeReady, socketRef]);
+  }, [fallbackShows, loadShows, realtimeReady, socketRef]);
 
   useEffect(() => {
     onShowsChange?.(shows);
@@ -237,7 +292,10 @@ export default function RealFeedLite({
     const text = showPostDraft.trim();
     if (!showId || !text) return;
     const newPost = { id: `sp-${Date.now()}`, user: 'voce', text, likes: 0, liked: false, comments: [] };
-    setShowForumById((prev) => ({ ...prev, [showId]: [newPost, ...(prev[showId] || [])] }));
+    setShowForumById((prev) => {
+      const nextPosts = [newPost, ...(prev[showId] || [])].slice(0, MAX_FORUM_POSTS);
+      return capForumMap({ ...prev, [showId]: nextPosts }, showId);
+    });
     setShowPostDraft('');
   }
 
@@ -259,10 +317,13 @@ export default function RealFeedLite({
     const text = (showCommentDrafts[key] || '').trim();
     if (!text) return;
     const comment = { id: `sc-${Date.now()}`, user: 'voce', text, likes: 0, liked: false, replies: [] };
-    setShowForumById((prev) => ({
-      ...prev,
-      [showId]: (prev[showId] || []).map((post) => (post.id === postId ? { ...post, comments: [...post.comments, comment] } : post))
-    }));
+    setShowForumById((prev) => {
+      const next = {
+        ...prev,
+        [showId]: (prev[showId] || []).map((post) => (post.id === postId ? { ...post, comments: [...post.comments, comment].slice(-MAX_FORUM_COMMENTS) } : post))
+      };
+      return capForumMap(next, showId);
+    });
     setShowCommentDrafts((prev) => ({ ...prev, [key]: '' }));
   }
 
@@ -297,21 +358,24 @@ export default function RealFeedLite({
     const key = buildForumKey(showId, `${postId}:${commentId}`);
     const text = (showReplyDrafts[key] || '').trim();
     if (!text) return;
-    setShowForumById((prev) => ({
-      ...prev,
-      [showId]: (prev[showId] || []).map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              comments: post.comments.map((comment) =>
-                comment.id === commentId
-                  ? { ...comment, replies: [...comment.replies, { id: `sr-${Date.now()}`, user: 'voce', text }] }
-                  : comment
-              )
-            }
-          : post
-      )
-    }));
+    setShowForumById((prev) => {
+      const next = {
+        ...prev,
+        [showId]: (prev[showId] || []).map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: post.comments.map((comment) =>
+                  comment.id === commentId
+                    ? { ...comment, replies: [...comment.replies, { id: `sr-${Date.now()}`, user: 'voce', text }].slice(-MAX_FORUM_REPLIES) }
+                    : comment
+                )
+              }
+            : post
+        )
+      };
+      return capForumMap(next, showId);
+    });
     setShowReplyDrafts((prev) => ({ ...prev, [key]: '' }));
     setShowReplyOpen((prev) => ({ ...prev, [key]: false }));
   }
