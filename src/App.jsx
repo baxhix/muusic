@@ -157,6 +157,8 @@ export default function App() {
     setSelectedEventFeed(item);
   }
 
+  const spotifyIsPlaying = Boolean(activeUser?.nowPlaying?.isPlaying);
+
   if (authBooting) {
     return (
       <div className="auth-loading-screen">
@@ -248,6 +250,11 @@ export default function App() {
               </div>
             )}
             <div className="now-playing-copy">
+              <div className={spotifyIsPlaying ? 'spotify-eq is-playing' : 'spotify-eq'} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
               <p className="now-playing-title">{activeUser.nowPlaying.trackName}</p>
               <p className="now-playing-artist">{activeUser.nowPlaying.artistName || activeUser.nowPlaying.artists || 'Artista indisponivel'}</p>
             </div>
@@ -262,6 +269,11 @@ export default function App() {
               </div>
             )}
             <div className="now-playing-copy">
+              <div className="spotify-eq" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
               <p className="now-playing-title">Spotify conectado</p>
               <p className="now-playing-empty">Nenhuma musica no momento.</p>
             </div>

@@ -780,12 +780,13 @@
 
 .perf-box {
   position: absolute;
-  left: 98px;
+  left: 50%;
   bottom: 14px;
+  transform: translateX(-50%);
   z-index: 16;
   min-width: 220px;
   background: rgba(7, 10, 14, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 0;
   border-radius: 3px;
   padding: 10px;
   display: grid;
@@ -801,13 +802,15 @@
 
 .now-playing-card {
   position: absolute;
-  left: 50%;
+  left: 98px;
   bottom: 16px;
-  transform: translateX(-50%);
+  transform: none;
   z-index: 28;
-  width: min(480px, calc(100vw - 120px));
+  width: fit-content;
+  max-width: min(560px, calc(100vw - 220px));
+  min-width: 260px;
   background: rgba(7, 10, 14, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 0;
   border-radius: 999px;
   padding: 10px 14px;
   display: block;
@@ -841,28 +844,76 @@
 
 .now-playing-copy {
   min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .now-playing-title {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
+  line-height: 1.25;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .now-playing-artist,
 .now-playing-empty {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 12px;
   color: #b7c6d8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.spotify-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 12px;
+}
+
+.spotify-eq span {
+  width: 3px;
+  background: #1DB954;
+  border-radius: 999px;
+  opacity: 0.95;
+}
+
+.spotify-eq span:nth-child(1) {
+  height: 6px;
+}
+
+.spotify-eq span:nth-child(2) {
+  height: 10px;
+}
+
+.spotify-eq span:nth-child(3) {
+  height: 8px;
+}
+
+.spotify-eq.is-playing span:nth-child(1) {
+  animation: spotifyEq 900ms ease-in-out infinite;
+}
+
+.spotify-eq.is-playing span:nth-child(2) {
+  animation: spotifyEq 900ms ease-in-out infinite 120ms;
+}
+
+.spotify-eq.is-playing span:nth-child(3) {
+  animation: spotifyEq 900ms ease-in-out infinite 240ms;
+}
+
+@keyframes spotifyEq {
+  0%,
+  100% {
+    transform: scaleY(0.45);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }
 
 .auth-badge {
