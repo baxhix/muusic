@@ -103,7 +103,7 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
   return (
     <div className="admin-root dark min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
-        <aside className={cn('hidden shrink-0 border-r border-border bg-card lg:block', sidebarWidth)}>
+        <aside className={cn('hidden shrink-0 border-r border-border bg-card lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto', sidebarWidth)}>
           <SidebarContent activeItem={activeItem} collapsed={collapsed} onToggle={() => setCollapsed((prev) => !prev)} onNavigate={onNavigate} />
         </aside>
 

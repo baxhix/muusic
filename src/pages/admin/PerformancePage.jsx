@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, Clock3, Cpu, Gauge, MemoryStick, Server } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
@@ -13,6 +12,31 @@ function formatUptime(sec) {
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
   return `${h}h ${m}m ${s}s`;
+}
+
+function statusColorClass(level) {
+  if (level === 'critical') return 'bg-red-500';
+  if (level === 'attention') return 'bg-amber-400';
+  return 'bg-emerald-500';
+}
+
+function metricLevel(value, { attention, critical }) {
+  const numeric = Number(value || 0);
+  if (numeric >= critical) return 'critical';
+  if (numeric >= attention) return 'attention';
+  return 'healthy';
+}
+
+function MetricRow({ label, value, level = 'healthy' }) {
+  return (
+    <p className="flex items-center justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="inline-flex items-center gap-2 text-right font-medium text-white">
+        <span className={`h-[3px] w-[3px] rounded-full ${statusColorClass(level)}`} aria-hidden="true" />
+        {value}
+      </span>
+    </p>
+  );
 }
 
 export default function PerformancePage({ apiFetch }) {
@@ -68,47 +92,87 @@ export default function PerformancePage({ apiFetch }) {
       {snapshot ? (
         <>
           <section className="grid gap-4 lg:grid-cols-4">
-            <KpiCard icon={Activity} label="RPS (1 min)" value={snapshot.http?.rpsLast1m ?? 0} />
-            <KpiCard icon={Gauge} label="Latência p95 (ms)" value={snapshot.http?.p95Ms ?? 0} />
-            <KpiCard icon={Clock3} label="Uptime" value={formatUptime(snapshot.process?.uptimeSec)} />
-            <KpiCard icon={MemoryStick} label="Heap usado (MB)" value={snapshot.process?.heapUsedMb ?? 0} />
+            <KpiCard label="RPS (1 min)" value={snapshot.http?.rpsLast1m ?? 0} />
+            <KpiCard label="Latência p95 (ms)" value={snapshot.http?.p95Ms ?? 0} />
+            <KpiCard label="Uptime" value={formatUptime(snapshot.process?.uptimeSec)} />
+            <KpiCard label="Heap usado (MB)" value={snapshot.process?.heapUsedMb ?? 0} />
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Server className="h-4 w-4" />
-                  Processo / Sistema
-                </CardTitle>
+                <CardTitle>Processo / Sistema</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-2 text-sm">
-                <p>PID: {snapshot.process?.pid}</p>
-                <p>Node: {snapshot.process?.nodeVersion}</p>
-                <p>RSS: {snapshot.process?.rssMb} MB</p>
-                <p>Heap total: {snapshot.process?.heapTotalMb} MB</p>
-                <p>Load avg (1m/5m/15m): {snapshot.system?.loadAvg1m} / {snapshot.system?.loadAvg5m} / {snapshot.system?.loadAvg15m}</p>
-                <p>CPU cores: {snapshot.system?.cpuCount}</p>
-                <p>Memória livre: {snapshot.system?.freeMemGb} GB / {snapshot.system?.totalMemGb} GB</p>
+                <MetricRow label="PID" value={snapshot.process?.pid} />
+                <MetricRow label="Node" value={snapshot.process?.nodeVersion} />
+                <MetricRow
+                  label="RSS"
+                  value={`${snapshot.process?.rssMb} MB`}
+                  level={metricLevel(snapshot.process?.rssMb, { attention: 700, critical: 1200 })}
+                />
+                <MetricRow
+                  label="Heap total"
+                  value={`${snapshot.process?.heapTotalMb} MB`}
+                  level={metricLevel(snapshot.process?.heapTotalMb, { attention: 350, critical: 700 })}
+                />
+                <MetricRow
+                  label="Load avg (1m/5m/15m)"
+                  value={`${snapshot.system?.loadAvg1m} / ${snapshot.system?.loadAvg5m} / ${snapshot.system?.loadAvg15m}`}
+                  level={metricLevel(Number(snapshot.system?.loadAvg1m) / Math.max(Number(snapshot.system?.cpuCount || 1), 1), {
+                    attention: 0.8,
+                    critical: 1
+                  })}
+                />
+                <MetricRow label="CPU cores" value={snapshot.system?.cpuCount} />
+                <MetricRow
+                  label="Memória livre"
+                  value={`${snapshot.system?.freeMemGb} GB / ${snapshot.system?.totalMemGb} GB`}
+                  level={metricLevel(
+                    1 - Number(snapshot.system?.freeMemGb || 0) / Math.max(Number(snapshot.system?.totalMemGb || 1), 1),
+                    { attention: 0.8, critical: 0.9 }
+                  )}
+                />
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Cpu className="h-4 w-4" />
-                  Event Loop / HTTP
-                </CardTitle>
+                <CardTitle>Event Loop / HTTP</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-2 text-sm">
-                <p>Event loop médio: {snapshot.eventLoop?.meanMs} ms</p>
-                <p>Event loop p95: {snapshot.eventLoop?.p95Ms} ms</p>
-                <p>Event loop max: {snapshot.eventLoop?.maxMs} ms</p>
-                <p>Latência média HTTP: {snapshot.http?.avgMs} ms</p>
-                <p>Amostra HTTP: {snapshot.http?.sampleSize} req</p>
-                <p>Status 2xx: {snapshot.http?.byStatus?.s2xx ?? 0}</p>
-                <p>Status 4xx: {snapshot.http?.byStatus?.s4xx ?? 0}</p>
-                <p>Status 5xx: {snapshot.http?.byStatus?.s5xx ?? 0}</p>
+                <MetricRow
+                  label="Event loop médio"
+                  value={`${snapshot.eventLoop?.meanMs} ms`}
+                  level={metricLevel(snapshot.eventLoop?.meanMs, { attention: 40, critical: 80 })}
+                />
+                <MetricRow
+                  label="Event loop p95"
+                  value={`${snapshot.eventLoop?.p95Ms} ms`}
+                  level={metricLevel(snapshot.eventLoop?.p95Ms, { attention: 80, critical: 150 })}
+                />
+                <MetricRow
+                  label="Event loop max"
+                  value={`${snapshot.eventLoop?.maxMs} ms`}
+                  level={metricLevel(snapshot.eventLoop?.maxMs, { attention: 200, critical: 400 })}
+                />
+                <MetricRow
+                  label="Latência média HTTP"
+                  value={`${snapshot.http?.avgMs} ms`}
+                  level={metricLevel(snapshot.http?.avgMs, { attention: 350, critical: 700 })}
+                />
+                <MetricRow label="Amostra HTTP" value={`${snapshot.http?.sampleSize} req`} />
+                <MetricRow label="Status 2xx" value={snapshot.http?.byStatus?.s2xx ?? 0} />
+                <MetricRow
+                  label="Status 4xx"
+                  value={snapshot.http?.byStatus?.s4xx ?? 0}
+                  level={metricLevel(snapshot.http?.byStatus?.s4xx, { attention: 1, critical: 10 })}
+                />
+                <MetricRow
+                  label="Status 5xx"
+                  value={snapshot.http?.byStatus?.s5xx ?? 0}
+                  level={metricLevel(snapshot.http?.byStatus?.s5xx, { attention: 1, critical: 3 })}
+                />
               </CardContent>
             </Card>
           </section>
