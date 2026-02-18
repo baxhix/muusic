@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Heart, MessageCircle } from 'lucide-react';
 import { API_URL } from '../config/appConfig';
 
@@ -104,7 +104,23 @@ function buildInitialPosts() {
   }));
 }
 
-export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, socketRef, realtimeReady, collapsed, onToggleCollapse }) {
+function formatShowDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Data a confirmar';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(date);
+}
+
+export default function RealFeedLite({
+  onFocusItem,
+  onOpenItem,
+  onShowsChange,
+  socketRef,
+  realtimeReady,
+  selectedShowDetail,
+  onCloseShowDetail,
+  collapsed,
+  onToggleCollapse
+}) {
   const [activeTab, setActiveTab] = useState('feed');
   const [feedPosts, setFeedPosts] = useState(() => buildInitialPosts());
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -302,27 +318,91 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, s
     );
   }
 
+  const isShowDetailOpen = Boolean(selectedShowDetail);
+  const showDetailThumb = selectedShowDetail?.thumbUrl || `https://picsum.photos/seed/${encodeURIComponent(selectedShowDetail?.artist || 'show-detail')}/900/560`;
+
   return (
     <div className="right-panel">
       <div className="right-head">
-        <div className="feed-tabs">
-          <button type="button" className={activeTab === 'feed' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('feed')}>
-            Feed
-          </button>
-          <button type="button" className={activeTab === 'buzz' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('buzz')}>
-            Buzz
-          </button>
-          <button type="button" className={activeTab === 'shows' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('shows')}>
-            Shows
-          </button>
-        </div>
+        {!isShowDetailOpen ? (
+          <div className="feed-tabs">
+            <button type="button" className={activeTab === 'feed' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('feed')}>
+              Feed
+            </button>
+            <button type="button" className={activeTab === 'buzz' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('buzz')}>
+              Buzz
+            </button>
+            <button type="button" className={activeTab === 'shows' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('shows')}>
+              Shows
+            </button>
+          </div>
+        ) : (
+          <div className="feed-tabs">
+            <button type="button" className="feed-tab active" onClick={onCloseShowDetail}>
+              Detalhes do show
+            </button>
+          </div>
+        )}
         <button type="button" className="right-panel-collapse" onClick={onToggleCollapse} aria-label="Recolher painel">
           <ChevronRight size={18} />
         </button>
       </div>
 
       <div className="feed-box">
-        {activeTab === 'feed' && (
+        {isShowDetailOpen && (
+          <article className="show-detail-card">
+            <img src={showDetailThumb} alt={selectedShowDetail?.artist || 'Show'} className="show-detail-cover" />
+            <div className="show-detail-body">
+              <div className="show-detail-head">
+                <div>
+                  <p className="show-detail-kicker">Show no mapa</p>
+                  <h3>{selectedShowDetail?.artist || 'Show'}</h3>
+                </div>
+                <button type="button" className="show-detail-close" onClick={onCloseShowDetail} aria-label="Fechar detalhes do show">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <p className="show-detail-line">
+                <strong>Data e horario:</strong> {formatShowDate(selectedShowDetail?.startsAt)}
+              </p>
+              <p className="show-detail-line">
+                <strong>Local:</strong> {selectedShowDetail?.venue || 'Local a confirmar'} - {selectedShowDetail?.city || 'Cidade a confirmar'}
+              </p>
+              <p className="show-detail-line">
+                <strong>Endereco:</strong> {selectedShowDetail?.address || 'Endereco nao informado'}
+              </p>
+              <p className="show-detail-desc">{selectedShowDetail?.description || 'Descricao nao informada.'}</p>
+
+              <div className="show-detail-actions">
+                <button
+                  type="button"
+                  className="show-ticket-btn"
+                  onClick={() =>
+                    onFocusItem({
+                      coords: [Number(selectedShowDetail?.longitude), Number(selectedShowDetail?.latitude)],
+                      city: selectedShowDetail?.city,
+                      country: selectedShowDetail?.country || 'Brasil'
+                    })
+                  }
+                >
+                  Ver no mapa
+                </button>
+                {selectedShowDetail?.ticketUrl ? (
+                  <a href={selectedShowDetail.ticketUrl} target="_blank" rel="noreferrer" className="feed-link secondary">
+                    Ingressos
+                  </a>
+                ) : (
+                  <button type="button" className="feed-link secondary" disabled>
+                    Sem ingressos
+                  </button>
+                )}
+              </div>
+            </div>
+          </article>
+        )}
+
+        {!isShowDetailOpen && activeTab === 'feed' && (
           <div className="social-feed-list">
             {feedPosts.map((post) => (
               <article key={post.id} className="social-card">
@@ -422,9 +502,9 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, s
           </div>
         )}
 
-        {activeTab === 'buzz' && <div className="feed-empty">Buzz vazio</div>}
+        {!isShowDetailOpen && activeTab === 'buzz' && <div className="feed-empty">Buzz vazio</div>}
 
-        {activeTab === 'shows' && (
+        {!isShowDetailOpen && activeTab === 'shows' && (
           <div className="shows-list">
             {showsForRender.map((show) => (
               <div key={show.id} className="show-card">

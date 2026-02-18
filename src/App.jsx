@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import SidebarNavLite from './components/SidebarNavLite';
 import ChatListLite from './components/ChatListLite';
@@ -62,11 +62,16 @@ export default function App() {
   const [notificationsPrimed, setNotificationsPrimed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [selectedEventFeed, setSelectedEventFeed] = useState(null);
+  const [selectedShowDetail, setSelectedShowDetail] = useState(null);
   const [shows, setShows] = useState([]);
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
 
   const perfProfile = isMobileDevice ? MOBILE_PERF : DESKTOP_PERF;
   const simulatedPoints = useMemo(() => buildSimulatedPoints(perfProfile.points), [perfProfile.points]);
+  const handleMapShowSelect = useCallback((show) => {
+    setSelectedShowDetail(show);
+    setRightPanelCollapsed(false);
+  }, []);
 
   const {
     mapContainerRef,
@@ -82,6 +87,7 @@ export default function App() {
     perfProfile,
     simulatedPoints,
     shows,
+    onShowSelect: handleMapShowSelect,
     users,
     socketRef
   });
@@ -221,6 +227,8 @@ export default function App() {
         onShowsChange={setShows}
         socketRef={socketRef}
         realtimeReady={joined}
+        selectedShowDetail={selectedShowDetail}
+        onCloseShowDetail={() => setSelectedShowDetail(null)}
         collapsed={rightPanelCollapsed}
         onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
       />

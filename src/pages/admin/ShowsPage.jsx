@@ -20,6 +20,8 @@ const EMPTY_FORM = {
   venue: '',
   city: '',
   country: 'Brasil',
+  address: '',
+  description: '',
   startsAt: '',
   latitude: '',
   longitude: '',
@@ -146,6 +148,8 @@ export default function ShowsPage({ apiFetch }) {
       venue: show.venue || '',
       city: show.city || '',
       country: show.country || 'Brasil',
+      address: show.address || '',
+      description: show.description || '',
       startsAt: toDateTimeLocalValue(show.startsAt),
       latitude: Number.isFinite(Number(show.latitude)) ? String(show.latitude) : '',
       longitude: Number.isFinite(Number(show.longitude)) ? String(show.longitude) : '',
@@ -170,6 +174,8 @@ export default function ShowsPage({ apiFetch }) {
       venue: form.venue.trim(),
       city: form.city.trim(),
       country: (form.country || 'Brasil').trim() || 'Brasil',
+      address: form.address.trim(),
+      description: form.description.trim(),
       startsAt: form.startsAt,
       latitude: Number(form.latitude),
       longitude: Number(form.longitude),
@@ -239,6 +245,7 @@ export default function ShowsPage({ apiFetch }) {
               <Input value={form.venue} onChange={(event) => setForm((prev) => ({ ...prev, venue: event.target.value }))} placeholder="Local" required />
               <Input value={form.city} onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))} placeholder="Cidade" required />
               <Input value={form.country} onChange={(event) => setForm((prev) => ({ ...prev, country: event.target.value }))} placeholder="Pais" />
+              <Input value={form.address} onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))} placeholder="Endereco exato" />
               <Input type="datetime-local" value={form.startsAt} onChange={(event) => setForm((prev) => ({ ...prev, startsAt: event.target.value }))} required />
               <div className="grid grid-cols-2 gap-3">
                 <Input
@@ -264,6 +271,12 @@ export default function ShowsPage({ apiFetch }) {
               </div>
               <Input value={form.ticketUrl} onChange={(event) => setForm((prev) => ({ ...prev, ticketUrl: event.target.value }))} placeholder="URL do ingresso (opcional)" />
               <Input value={form.thumbUrl} onChange={(event) => setForm((prev) => ({ ...prev, thumbUrl: event.target.value }))} placeholder="URL da imagem (opcional)" />
+              <textarea
+                value={form.description}
+                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Descricao ampla do show"
+                className="md:col-span-2 min-h-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
 
               <div className="md:col-span-2 flex flex-wrap items-center gap-2">
                 <Button type="submit" disabled={saving}>

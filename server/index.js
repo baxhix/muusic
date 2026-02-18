@@ -161,6 +161,8 @@ function sanitizeShowResponse(show) {
     venue: String(show.venue || '').trim(),
     city: String(show.city || '').trim(),
     country: String(show.country || 'Brasil').trim() || 'Brasil',
+    address: show.address ? String(show.address).trim() : null,
+    description: show.description ? String(show.description).trim() : null,
     latitude: Number(show.latitude),
     longitude: Number(show.longitude),
     startsAt: formatShowDateLabel(show.startsAt),
@@ -175,6 +177,8 @@ function parseShowPayload(body = {}) {
   const venue = String(body.venue || '').trim();
   const city = String(body.city || '').trim();
   const country = String(body.country || 'Brasil').trim() || 'Brasil';
+  const address = String(body.address || '').trim();
+  const description = String(body.description || '').trim();
   const startsAt = String(body.startsAt || '').trim();
   const thumbUrl = String(body.thumbUrl || '').trim();
   const ticketUrl = String(body.ticketUrl || '').trim();
@@ -200,6 +204,8 @@ function parseShowPayload(body = {}) {
     venue,
     city,
     country,
+    address: address || null,
+    description: description || null,
     startsAt: startsDate.toISOString(),
     latitude,
     longitude,

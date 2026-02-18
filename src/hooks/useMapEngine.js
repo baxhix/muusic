@@ -9,14 +9,13 @@ import {
 } from '../lib/mapSimulation';
 import { summarizeFpsSamples } from '../lib/perfStats';
 
-export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPoints, shows = [], users, socketRef }) {
+export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPoints, shows = [], onShowSelect, users, socketRef }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const mapboxRef = useRef(null);
   const userMarkersRef = useRef(new Map());
   const showMarkersRef = useRef(new Map());
   const popupRef = useRef(null);
-  const showPopupRef = useRef(null);
   const selectedSimIdRef = useRef(null);
   const fpsSamplesRef = useRef([]);
 
@@ -277,8 +276,6 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
       }
       popupRef.current?.remove();
       popupRef.current = null;
-      showPopupRef.current?.remove();
-      showPopupRef.current = null;
       selectedSimIdRef.current = null;
       showMarkersRef.current.forEach(({ marker, element, onClick }) => {
         if (element && onClick) element.removeEventListener('click', onClick);
@@ -352,34 +349,12 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
 
         const onClick = (event) => {
           event.stopPropagation();
-          showPopupRef.current?.remove();
-
-          const date = new Date(show?.startsAt);
-          const dateLabel = Number.isNaN(date.getTime())
-            ? 'Data a confirmar'
-            : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-
-          const wrapper = document.createElement('div');
-          wrapper.className = 'show-popup-content';
-          const title = document.createElement('strong');
-          title.textContent = show?.artist || 'Show';
-          const details = document.createElement('p');
-          details.textContent = `${show?.venue || 'Local a confirmar'} - ${show?.city || 'Cidade a confirmar'}`;
-          const when = document.createElement('p');
-          when.textContent = dateLabel;
-          wrapper.appendChild(title);
-          wrapper.appendChild(details);
-          wrapper.appendChild(when);
-
-          showPopupRef.current = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: true,
-            offset: 14,
-            className: 'show-popup'
-          })
-            .setLngLat([longitude, latitude])
-            .setDOMContent(wrapper)
-            .addTo(map);
+          onShowSelect?.({
+            ...show,
+            latitude,
+            longitude
+          });
+          setSelectedGeo({ city: show?.city || '', country: show?.country || 'Brasil' });
         };
 
         el.addEventListener('click', onClick);
@@ -396,7 +371,7 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
         showMarkersRef.current.delete(id);
       }
     });
-  }, [enabled, shows]);
+  }, [enabled, onShowSelect, shows]);
 
   async function runBenchmark() {
     if (!enabled) return undefined;

@@ -39,6 +39,8 @@ model Show {
   venue     String
   city      String
   country   String   @default("Brasil")
+  address   String?
+  description String?
   latitude  Float
   longitude Float
   startsAt  DateTime

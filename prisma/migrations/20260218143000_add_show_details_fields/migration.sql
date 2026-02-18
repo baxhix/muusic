@@ -1,0 +1,3 @@
+ALTER TABLE "Show"
+  ADD COLUMN IF NOT EXISTS "address" TEXT,
+  ADD COLUMN IF NOT EXISTS "description" TEXT;
