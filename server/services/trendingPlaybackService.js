@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { promises as fs } from 'fs';
 import { getPrisma } from './db.js';
+import accountSettingsService from './accountSettingsService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,12 +65,24 @@ function labelFromUserId(userId) {
   return `${clean.slice(0, 8)}...${clean.slice(-4)}`;
 }
 
-function buildSnapshotFromEvents(events = [], limit = 20, userNames = new Map()) {
+function cityIdFromName(name) {
+  return `city:${String(name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')}`;
+}
+
+function buildSnapshotFromEvents(events = [], limit = 20, userNames = new Map(), userCities = new Map()) {
   const safeEvents = Array.isArray(events) ? events : [];
   const totalPlays = safeEvents.length;
   const artistMap = new Map();
   const trackMap = new Map();
   const fanMap = new Map();
+  const regionMap = new Map();
 
   safeEvents.forEach((event) => {
     const artistKey = event.artistKey || makeArtistKey(event.artistId, event.artistName);
@@ -100,6 +113,18 @@ function buildSnapshotFromEvents(events = [], limit = 20, userNames = new Map())
     };
     currentFan.count += 1;
     fanMap.set(fanKey, currentFan);
+
+    const city = toSafeText(userCities.get(event.userId), '');
+    if (city) {
+      const regionKey = city.toLowerCase();
+      const currentRegion = regionMap.get(regionKey) || {
+        id: cityIdFromName(city),
+        name: city,
+        count: 0
+      };
+      currentRegion.count += 1;
+      regionMap.set(regionKey, currentRegion);
+    }
   });
 
   const artists = Array.from(artistMap.values())
@@ -117,6 +142,11 @@ function buildSnapshotFromEvents(events = [], limit = 20, userNames = new Map())
     .slice(0, limit)
     .map((item) => ({ ...item, percent: percent(totalPlays, item.count) }));
 
+  const regions = Array.from(regionMap.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map((item) => ({ ...item, percent: percent(totalPlays, item.count) }));
+
   const updatedAt = safeEvents.length ? safeEvents[safeEvents.length - 1]?.playedAt || null : null;
 
   return {
@@ -124,6 +154,7 @@ function buildSnapshotFromEvents(events = [], limit = 20, userNames = new Map())
     artists,
     tracks,
     topFans,
+    regions,
     updatedAt
   };
 }
@@ -244,8 +275,12 @@ class TrendingPlaybackService {
       const userNames = new Map(
         users.map((user) => [user.id, toSafeText(user.displayName || user.username || user.id, 'Usuario')])
       );
+      const rawSettings = await accountSettingsService.readAll();
+      const userCities = new Map(
+        userIds.map((userId) => [userId, toSafeText(rawSettings?.[userId]?.city || '', '')])
+      );
 
-      return buildSnapshotFromEvents(normalized, safeLimit, userNames);
+      return buildSnapshotFromEvents(normalized, safeLimit, userNames, userCities);
     }
 
     const events = await this.readLocalStore();
@@ -253,8 +288,12 @@ class TrendingPlaybackService {
       const ts = new Date(event.playedAt).getTime();
       return !Number.isNaN(ts) && ts >= since.getTime();
     });
-
-    return buildSnapshotFromEvents(filtered, safeLimit);
+    const userIds = Array.from(new Set(filtered.map((event) => event.userId).filter(Boolean)));
+    const rawSettings = await accountSettingsService.readAll();
+    const userCities = new Map(
+      userIds.map((userId) => [userId, toSafeText(rawSettings?.[userId]?.city || '', '')])
+    );
+    return buildSnapshotFromEvents(filtered, safeLimit, new Map(), userCities);
   }
 }
 
