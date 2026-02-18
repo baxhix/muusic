@@ -343,7 +343,7 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
         const el = document.createElement('button');
         el.type = 'button';
         el.className = 'show-marker';
-        el.setAttribute('aria-label', `Show: ${show?.artist || 'Sem artista'}`);
+        el.setAttribute('aria-label', `Evento: ${show?.artist || 'Sem artista'}`);
 
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([longitude, latitude]).addTo(map);
 

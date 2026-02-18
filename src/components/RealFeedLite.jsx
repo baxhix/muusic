@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { Heart, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, X } from 'lucide-react';
 import { API_URL } from '../config/appConfig';
 
 function buildInitialPosts() {
@@ -17,16 +16,7 @@ function buildInitialPosts() {
       image: 'https://picsum.photos/seed/feed-ana/900/900',
       likes: 128,
       liked: false,
-      comments: [
-        {
-          id: 'c-1-1',
-          user: 'cadu.music',
-          text: 'Fechei ingresso agora.',
-          likes: 3,
-          liked: false,
-          replies: [{ id: 'r-1-1-1', user: 'ana.souza', text: 'Bora!' }]
-        }
-      ]
+      comments: [{ id: 'c-1-1', user: 'cadu.music', text: 'Fechei ingresso agora.', likes: 3, liked: false, replies: [{ id: 'r-1-1-1', user: 'ana.souza', text: 'Bora!' }] }]
     },
     {
       id: 'post-2',
@@ -41,22 +31,8 @@ function buildInitialPosts() {
       likes: 247,
       liked: true,
       comments: [
-        {
-          id: 'c-2-1',
-          user: 'leo.pires',
-          text: 'Essa música final foi sinistra.',
-          likes: 8,
-          liked: false,
-          replies: []
-        },
-        {
-          id: 'c-2-2',
-          user: 'mari.brito',
-          text: 'Quero esse replay no feed.',
-          likes: 5,
-          liked: false,
-          replies: []
-        }
+        { id: 'c-2-1', user: 'leo.pires', text: 'Essa música final foi sinistra.', likes: 8, liked: false, replies: [] },
+        { id: 'c-2-2', user: 'mari.brito', text: 'Quero esse replay no feed.', likes: 5, liked: false, replies: [] }
       ]
     },
     {
@@ -72,42 +48,20 @@ function buildInitialPosts() {
       likes: 91,
       liked: false,
       comments: []
-    },
-    {
-      id: 'post-4',
-      user: 'carol.nunes',
-      name: 'Carol Nunes',
-      city: 'Curitiba',
-      country: 'Brasil',
-      coords: [-49.2733, -25.4284],
-      ago: 'há 1 h',
-      caption: 'Achei esse som novo no after e já virou vício.',
-      image: 'https://picsum.photos/seed/feed-carol/900/900',
-      likes: 302,
-      liked: false,
-      comments: [
-        {
-          id: 'c-4-1',
-          user: 'gui.santos',
-          text: 'Manda o nome da faixa.',
-          likes: 2,
-          liked: false,
-          replies: [{ id: 'r-4-1-1', user: 'carol.nunes', text: 'Te enviei no chat.' }]
-        }
-      ]
     }
   ];
 
-  return base.map((post, index) => ({
-    ...post,
-    avatar: `https://i.pravatar.cc/120?img=${index + 12}`
-  }));
+  return base.map((post, index) => ({ ...post, avatar: `https://i.pravatar.cc/120?img=${index + 12}` }));
 }
 
 function formatShowDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Data a confirmar';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(date);
+}
+
+function buildForumKey(showId, parentId) {
+  return `${showId}:${parentId}`;
 }
 
 export default function RealFeedLite({
@@ -128,6 +82,12 @@ export default function RealFeedLite({
   const [replyOpen, setReplyOpen] = useState({});
 
   const [shows, setShows] = useState([]);
+  const [showDetailTab, setShowDetailTab] = useState('info');
+  const [showForumById, setShowForumById] = useState({});
+  const [showPostDraft, setShowPostDraft] = useState('');
+  const [showCommentDrafts, setShowCommentDrafts] = useState({});
+  const [showReplyDrafts, setShowReplyDrafts] = useState({});
+  const [showReplyOpen, setShowReplyOpen] = useState({});
 
   const fallbackShows = useMemo(
     () => [
@@ -137,6 +97,8 @@ export default function RealFeedLite({
         venue: 'Villa Country',
         city: 'Sao Paulo',
         country: 'Brasil',
+        address: 'Av. Francisco Matarazzo, 774 - Agua Branca',
+        description: 'Noite especial com repertorio completo e convidados.',
         latitude: -23.536,
         longitude: -46.664,
         startsAt: new Date(Date.now() + 4 * 86400000).toISOString(),
@@ -148,21 +110,12 @@ export default function RealFeedLite({
         venue: 'Espaco Hall',
         city: 'Rio de Janeiro',
         country: 'Brasil',
+        address: 'Av. Ayrton Senna, 5850 - Barra da Tijuca',
+        description: 'Show com abertura especial e ativações no local.',
         latitude: -22.874,
         longitude: -43.364,
         startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
         thumbUrl: 'https://picsum.photos/seed/fallback-show-2/112/112'
-      },
-      {
-        id: 'fallback-show-3',
-        artist: 'Maiara & Maraisa',
-        venue: 'Pedra do Canto',
-        city: 'Goiania',
-        country: 'Brasil',
-        latitude: -16.6869,
-        longitude: -49.2643,
-        startsAt: new Date(Date.now() + 10 * 86400000).toISOString(),
-        thumbUrl: 'https://picsum.photos/seed/fallback-show-3/112/112'
       }
     ],
     []
@@ -170,9 +123,7 @@ export default function RealFeedLite({
 
   const loadShows = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/shows?page=1&limit=200`, {
-        cache: 'no-store'
-      });
+      const response = await fetch(`${API_URL}/api/shows?page=1&limit=200`, { cache: 'no-store' });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || 'Falha ao carregar shows.');
       const list = Array.isArray(payload.shows) ? payload.shows : [];
@@ -185,29 +136,27 @@ export default function RealFeedLite({
   useEffect(() => {
     loadShows();
     const intervalId = window.setInterval(loadShows, 20000);
-    return () => {
-      window.clearInterval(intervalId);
-    };
+    return () => window.clearInterval(intervalId);
   }, [loadShows]);
 
   useEffect(() => {
     if (!realtimeReady) return undefined;
     const socket = socketRef?.current;
     if (!socket) return undefined;
-
-    const onShowsChanged = () => {
-      loadShows();
-    };
-
+    const onShowsChanged = () => loadShows();
     socket.on('shows:changed', onShowsChanged);
-    return () => {
-      socket.off('shows:changed', onShowsChanged);
-    };
+    return () => socket.off('shows:changed', onShowsChanged);
   }, [loadShows, realtimeReady, socketRef]);
 
   useEffect(() => {
     onShowsChange?.(shows);
   }, [shows, onShowsChange]);
+
+  useEffect(() => {
+    if (!selectedShowDetail?.id) return;
+    setShowDetailTab('info');
+    setShowPostDraft('');
+  }, [selectedShowDetail?.id]);
 
   const showsForRender = useMemo(() => {
     const monthAbbr = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
@@ -227,35 +176,24 @@ export default function RealFeedLite({
     });
   }, [shows]);
 
+  const currentShowForum = useMemo(() => {
+    const showId = selectedShowDetail?.id;
+    if (!showId) return [];
+    return showForumById[showId] || [];
+  }, [selectedShowDetail?.id, showForumById]);
+
   function toggleLike(postId) {
     setFeedPosts((prev) =>
-      prev.map((post) => {
-        if (post.id !== postId) return post;
-        const nextLiked = !post.liked;
-        return {
-          ...post,
-          liked: nextLiked,
-          likes: nextLiked ? post.likes + 1 : Math.max(0, post.likes - 1)
-        };
-      })
+      prev.map((post) => (post.id === postId ? { ...post, liked: !post.liked, likes: post.liked ? Math.max(0, post.likes - 1) : post.likes + 1 } : post))
     );
   }
 
   function addComment(postId) {
     const draft = (commentDrafts[postId] || '').trim();
     if (!draft) return;
-
     setFeedPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              comments: [...post.comments, { id: `c-${postId}-${Date.now()}`, user: 'voce', text: draft, likes: 0, liked: false, replies: [] }]
-            }
-          : post
-      )
+      prev.map((post) => (post.id === postId ? { ...post, comments: [...post.comments, { id: `c-${postId}-${Date.now()}`, user: 'voce', text: draft, likes: 0, liked: false, replies: [] }] } : post))
     );
-
     setCommentDrafts((prev) => ({ ...prev, [postId]: '' }));
   }
 
@@ -268,46 +206,114 @@ export default function RealFeedLite({
     const key = `${postId}:${commentId}`;
     const draft = (replyDrafts[key] || '').trim();
     if (!draft) return;
-
     setFeedPosts((prev) =>
-      prev.map((post) => {
-        if (post.id !== postId) return post;
-        return {
-          ...post,
-          comments: post.comments.map((comment) =>
-            comment.id === commentId
-              ? {
-                  ...comment,
-                  replies: [...comment.replies, { id: `r-${commentId}-${Date.now()}`, user: 'voce', text: draft }]
-                }
-              : comment
-          )
-        };
-      })
+      prev.map((post) =>
+        post.id === postId
+          ? { ...post, comments: post.comments.map((comment) => (comment.id === commentId ? { ...comment, replies: [...comment.replies, { id: `r-${commentId}-${Date.now()}`, user: 'voce', text: draft }] } : comment)) }
+          : post
+      )
     );
-
     setReplyDrafts((prev) => ({ ...prev, [key]: '' }));
     setReplyOpen((prev) => ({ ...prev, [key]: false }));
   }
 
   function toggleCommentLike(postId, commentId) {
     setFeedPosts((prev) =>
-      prev.map((post) => {
-        if (post.id !== postId) return post;
-        return {
-          ...post,
-          comments: post.comments.map((comment) => {
-            if (comment.id !== commentId) return comment;
-            const nextLiked = !comment.liked;
-            return {
-              ...comment,
-              liked: nextLiked,
-              likes: nextLiked ? comment.likes + 1 : Math.max(0, comment.likes - 1)
-            };
-          })
-        };
-      })
+      prev.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: post.comments.map((comment) =>
+                comment.id === commentId ? { ...comment, liked: !comment.liked, likes: comment.liked ? Math.max(0, comment.likes - 1) : comment.likes + 1 } : comment
+              )
+            }
+          : post
+      )
     );
+  }
+
+  function addShowPost() {
+    const showId = selectedShowDetail?.id;
+    const text = showPostDraft.trim();
+    if (!showId || !text) return;
+    const newPost = { id: `sp-${Date.now()}`, user: 'voce', text, likes: 0, liked: false, comments: [] };
+    setShowForumById((prev) => ({ ...prev, [showId]: [newPost, ...(prev[showId] || [])] }));
+    setShowPostDraft('');
+  }
+
+  function toggleShowPostLike(postId) {
+    const showId = selectedShowDetail?.id;
+    if (!showId) return;
+    setShowForumById((prev) => ({
+      ...prev,
+      [showId]: (prev[showId] || []).map((post) =>
+        post.id === postId ? { ...post, liked: !post.liked, likes: post.liked ? Math.max(0, post.likes - 1) : post.likes + 1 } : post
+      )
+    }));
+  }
+
+  function addShowComment(postId) {
+    const showId = selectedShowDetail?.id;
+    if (!showId) return;
+    const key = buildForumKey(showId, postId);
+    const text = (showCommentDrafts[key] || '').trim();
+    if (!text) return;
+    const comment = { id: `sc-${Date.now()}`, user: 'voce', text, likes: 0, liked: false, replies: [] };
+    setShowForumById((prev) => ({
+      ...prev,
+      [showId]: (prev[showId] || []).map((post) => (post.id === postId ? { ...post, comments: [...post.comments, comment] } : post))
+    }));
+    setShowCommentDrafts((prev) => ({ ...prev, [key]: '' }));
+  }
+
+  function toggleShowCommentLike(postId, commentId) {
+    const showId = selectedShowDetail?.id;
+    if (!showId) return;
+    setShowForumById((prev) => ({
+      ...prev,
+      [showId]: (prev[showId] || []).map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: post.comments.map((comment) =>
+                comment.id === commentId ? { ...comment, liked: !comment.liked, likes: comment.liked ? Math.max(0, comment.likes - 1) : comment.likes + 1 } : comment
+              )
+            }
+          : post
+      )
+    }));
+  }
+
+  function toggleShowReplyInput(postId, commentId) {
+    const showId = selectedShowDetail?.id;
+    if (!showId) return;
+    const key = buildForumKey(showId, `${postId}:${commentId}`);
+    setShowReplyOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function addShowReply(postId, commentId) {
+    const showId = selectedShowDetail?.id;
+    if (!showId) return;
+    const key = buildForumKey(showId, `${postId}:${commentId}`);
+    const text = (showReplyDrafts[key] || '').trim();
+    if (!text) return;
+    setShowForumById((prev) => ({
+      ...prev,
+      [showId]: (prev[showId] || []).map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: post.comments.map((comment) =>
+                comment.id === commentId
+                  ? { ...comment, replies: [...comment.replies, { id: `sr-${Date.now()}`, user: 'voce', text }] }
+                  : comment
+              )
+            }
+          : post
+      )
+    }));
+    setShowReplyDrafts((prev) => ({ ...prev, [key]: '' }));
+    setShowReplyOpen((prev) => ({ ...prev, [key]: false }));
   }
 
   if (collapsed) {
@@ -319,7 +325,7 @@ export default function RealFeedLite({
   }
 
   const isShowDetailOpen = Boolean(selectedShowDetail);
-  const showDetailThumb = selectedShowDetail?.thumbUrl || `https://picsum.photos/seed/${encodeURIComponent(selectedShowDetail?.artist || 'show-detail')}/900/560`;
+  const showDetailThumb = selectedShowDetail?.thumbUrl || `https://picsum.photos/seed/${encodeURIComponent(selectedShowDetail?.artist || 'evento')}/900/560`;
 
   return (
     <div className="right-panel">
@@ -337,67 +343,155 @@ export default function RealFeedLite({
             </button>
           </div>
         ) : (
-          <div className="feed-tabs">
-            <button type="button" className="feed-tab active" onClick={onCloseShowDetail}>
-              Detalhes do show
-            </button>
-          </div>
+          <div className="feed-tabs" />
         )}
         <button type="button" className="right-panel-collapse" onClick={onToggleCollapse} aria-label="Recolher painel">
           <ChevronRight size={18} />
         </button>
       </div>
 
-      <div className="feed-box">
+      <div className={isShowDetailOpen ? 'feed-box show-detail-mode' : 'feed-box'}>
         {isShowDetailOpen && (
           <article className="show-detail-card">
-            <img src={showDetailThumb} alt={selectedShowDetail?.artist || 'Show'} className="show-detail-cover" />
+            <img src={showDetailThumb} alt={selectedShowDetail?.artist || 'Evento'} className="show-detail-cover" />
             <div className="show-detail-body">
               <div className="show-detail-head">
-                <div>
-                  <p className="show-detail-kicker">Show no mapa</p>
-                  <h3>{selectedShowDetail?.artist || 'Show'}</h3>
-                </div>
-                <button type="button" className="show-detail-close" onClick={onCloseShowDetail} aria-label="Fechar detalhes do show">
+                <h3>{selectedShowDetail?.artist || 'Evento'}</h3>
+                <button type="button" className="show-detail-close" onClick={onCloseShowDetail} aria-label="Fechar">
                   <X size={16} />
                 </button>
               </div>
 
-              <p className="show-detail-line">
-                <strong>Data e horario:</strong> {formatShowDate(selectedShowDetail?.startsAt)}
-              </p>
-              <p className="show-detail-line">
-                <strong>Local:</strong> {selectedShowDetail?.venue || 'Local a confirmar'} - {selectedShowDetail?.city || 'Cidade a confirmar'}
-              </p>
-              <p className="show-detail-line">
-                <strong>Endereco:</strong> {selectedShowDetail?.address || 'Endereco nao informado'}
-              </p>
-              <p className="show-detail-desc">{selectedShowDetail?.description || 'Descricao nao informada.'}</p>
-
-              <div className="show-detail-actions">
-                <button
-                  type="button"
-                  className="show-ticket-btn"
-                  onClick={() =>
-                    onFocusItem({
-                      coords: [Number(selectedShowDetail?.longitude), Number(selectedShowDetail?.latitude)],
-                      city: selectedShowDetail?.city,
-                      country: selectedShowDetail?.country || 'Brasil'
-                    })
-                  }
-                >
-                  Ver no mapa
+              <div className="show-detail-tabs">
+                <button type="button" className={showDetailTab === 'info' ? 'feed-tab active' : 'feed-tab'} onClick={() => setShowDetailTab('info')}>
+                  Informações
                 </button>
-                {selectedShowDetail?.ticketUrl ? (
-                  <a href={selectedShowDetail.ticketUrl} target="_blank" rel="noreferrer" className="feed-link secondary">
-                    Ingressos
-                  </a>
-                ) : (
-                  <button type="button" className="feed-link secondary" disabled>
-                    Sem ingressos
-                  </button>
-                )}
+                <button type="button" className={showDetailTab === 'forum' ? 'feed-tab active' : 'feed-tab'} onClick={() => setShowDetailTab('forum')}>
+                  Fórum
+                </button>
               </div>
+
+              {showDetailTab === 'info' && (
+                <div className="show-detail-pane">
+                  <div className="show-detail-meta-group">
+                    <p className="show-detail-line">{formatShowDate(selectedShowDetail?.startsAt)}</p>
+                    <p className="show-detail-line">
+                      {selectedShowDetail?.venue || 'Local a confirmar'} - {selectedShowDetail?.city || 'Cidade a confirmar'}
+                    </p>
+                    <p className="show-detail-address">{selectedShowDetail?.address || 'Endereço não informado'}</p>
+                  </div>
+                  <p className="show-detail-desc">{selectedShowDetail?.description || 'Descrição não informada.'}</p>
+                  <div className="show-detail-actions">
+                    <button
+                      type="button"
+                      className="show-ticket-btn"
+                      onClick={() =>
+                        onFocusItem({
+                          coords: [Number(selectedShowDetail?.longitude), Number(selectedShowDetail?.latitude)],
+                          city: selectedShowDetail?.city,
+                          country: selectedShowDetail?.country || 'Brasil'
+                        })
+                      }
+                    >
+                      Ver no mapa
+                    </button>
+                    {selectedShowDetail?.ticketUrl ? (
+                      <a href={selectedShowDetail.ticketUrl} target="_blank" rel="noreferrer" className="feed-link secondary">
+                        Ingressos
+                      </a>
+                    ) : (
+                      <button type="button" className="feed-link secondary" disabled>
+                        Sem ingressos
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {showDetailTab === 'forum' && (
+                <div className="show-detail-pane">
+                  <div className="social-comment-box show-forum-new-post">
+                    <input value={showPostDraft} onChange={(event) => setShowPostDraft(event.target.value)} placeholder="Escreva uma publicação para este evento" />
+                    <button type="button" className="social-send-btn" onClick={addShowPost}>
+                      Publicar
+                    </button>
+                  </div>
+
+                  <div className="social-comments show-forum-list">
+                    {currentShowForum.map((post) => {
+                      const commentDraftKey = buildForumKey(selectedShowDetail.id, post.id);
+                      return (
+                        <div key={post.id} className="social-comment-wrap show-forum-post">
+                          <div className="social-comment-row">
+                            <p className="social-comment">
+                              <strong>{post.user}</strong> {post.text}
+                            </p>
+                            <button type="button" className={post.liked ? 'social-comment-like liked' : 'social-comment-like'} onClick={() => toggleShowPostLike(post.id)}>
+                              <Heart size={11} />
+                              {post.likes}
+                            </button>
+                          </div>
+
+                          <div className="social-replies">
+                            {post.comments.map((comment) => {
+                              const replyKey = buildForumKey(selectedShowDetail.id, `${post.id}:${comment.id}`);
+                              return (
+                                <div key={comment.id} className="social-comment-wrap">
+                                  <div className="social-comment-row">
+                                    <p className="social-comment">
+                                      <strong>{comment.user}</strong> {comment.text}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      className={comment.liked ? 'social-comment-like liked' : 'social-comment-like'}
+                                      onClick={() => toggleShowCommentLike(post.id, comment.id)}
+                                    >
+                                      <Heart size={11} />
+                                      {comment.likes}
+                                    </button>
+                                  </div>
+                                  <button type="button" className="social-reply-toggle" onClick={() => toggleShowReplyInput(post.id, comment.id)}>
+                                    Responder
+                                  </button>
+                                  {comment.replies.map((reply) => (
+                                    <p key={reply.id} className="social-reply">
+                                      <strong>{reply.user}</strong> {reply.text}
+                                    </p>
+                                  ))}
+                                  {showReplyOpen[replyKey] && (
+                                    <div className="social-reply-box">
+                                      <input
+                                        value={showReplyDrafts[replyKey] || ''}
+                                        onChange={(event) => setShowReplyDrafts((prev) => ({ ...prev, [replyKey]: event.target.value }))}
+                                        placeholder="Escreva uma resposta"
+                                      />
+                                      <button type="button" className="social-send-btn" onClick={() => addShowReply(post.id, comment.id)}>
+                                        Enviar
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="social-comment-box">
+                            <input
+                              value={showCommentDrafts[commentDraftKey] || ''}
+                              onChange={(event) => setShowCommentDrafts((prev) => ({ ...prev, [commentDraftKey]: event.target.value }))}
+                              placeholder="Comente essa publicação"
+                            />
+                            <button type="button" className="social-send-btn" onClick={() => addShowComment(post.id)}>
+                              Comentar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {currentShowForum.length === 0 && <div className="feed-empty">Nenhuma publicação ainda.</div>}
+                  </div>
+                </div>
+              )}
             </div>
           </article>
         )}
@@ -410,19 +504,13 @@ export default function RealFeedLite({
                   <img src={post.avatar} alt={post.name} width="40" height="40" className="social-avatar" />
                   <div className="social-user-copy">
                     <p className="social-username">{post.user}</p>
-                    <button
-                      type="button"
-                      className="social-location"
-                      onClick={() => onFocusItem({ coords: post.coords, city: post.city, country: post.country })}
-                    >
+                    <button type="button" className="social-location" onClick={() => onFocusItem({ coords: post.coords, city: post.city, country: post.country })}>
                       {post.city}, {post.country}
                     </button>
                   </div>
                   <span className="social-time">{post.ago}</span>
                 </header>
-
                 <img src={post.image} alt={`Post de ${post.name}`} className="social-media" />
-
                 <div className="social-actions">
                   <button type="button" className={post.liked ? 'social-action liked' : 'social-action'} onClick={() => toggleLike(post.id)}>
                     <Heart size={14} />
@@ -433,11 +521,9 @@ export default function RealFeedLite({
                     {post.comments.length}
                   </button>
                 </div>
-
                 <p className="social-caption">
                   <strong>{post.user}</strong> {post.caption}
                 </p>
-
                 <div className="social-comments">
                   {post.comments.map((comment) => {
                     const key = `${post.id}:${comment.id}`;
@@ -447,11 +533,7 @@ export default function RealFeedLite({
                           <p className="social-comment">
                             <strong>{comment.user}</strong> {comment.text}
                           </p>
-                          <button
-                            type="button"
-                            className={comment.liked ? 'social-comment-like liked' : 'social-comment-like'}
-                            onClick={() => toggleCommentLike(post.id, comment.id)}
-                          >
+                          <button type="button" className={comment.liked ? 'social-comment-like liked' : 'social-comment-like'} onClick={() => toggleCommentLike(post.id, comment.id)}>
                             <Heart size={11} />
                             {comment.likes}
                           </button>
@@ -459,7 +541,6 @@ export default function RealFeedLite({
                         <button type="button" className="social-reply-toggle" onClick={() => toggleReplyInput(post.id, comment.id)}>
                           Responder
                         </button>
-
                         {comment.replies.length > 0 && (
                           <div className="social-replies">
                             {comment.replies.map((reply) => (
@@ -469,14 +550,9 @@ export default function RealFeedLite({
                             ))}
                           </div>
                         )}
-
                         {replyOpen[key] && (
                           <div className="social-reply-box">
-                            <input
-                              value={replyDrafts[key] || ''}
-                              onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
-                              placeholder="Responder comentário"
-                            />
+                            <input value={replyDrafts[key] || ''} onChange={(event) => setReplyDrafts((prev) => ({ ...prev, [key]: event.target.value }))} placeholder="Responder comentário" />
                             <button type="button" className="social-send-btn" onClick={() => addReply(post.id, comment.id)}>
                               Enviar
                             </button>
@@ -486,13 +562,8 @@ export default function RealFeedLite({
                     );
                   })}
                 </div>
-
                 <div className="social-comment-box">
-                  <input
-                    value={commentDrafts[post.id] || ''}
-                    onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))}
-                    placeholder="Adicione um comentário"
-                  />
+                  <input value={commentDrafts[post.id] || ''} onChange={(event) => setCommentDrafts((prev) => ({ ...prev, [post.id]: event.target.value }))} placeholder="Adicione um comentário" />
                   <button type="button" className="social-send-btn" onClick={() => addComment(post.id)}>
                     Comentar
                   </button>
