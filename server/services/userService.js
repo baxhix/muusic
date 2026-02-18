@@ -196,6 +196,77 @@ class UserService {
     };
   }
 
+  async listUsersCursor(options = {}) {
+    const limit = Number.isFinite(Number(options.limit)) ? Math.min(500, Math.max(1, Number(options.limit))) : 200;
+    const cursor = String(options.cursor || '').trim() || null;
+    const search = String(options.search || '').trim();
+
+    const prismaClient = await getPrisma();
+    if (prismaClient) {
+      const where = search
+        ? {
+            OR: [
+              { email: { contains: search, mode: 'insensitive' } },
+              { username: { contains: search, mode: 'insensitive' } },
+              { displayName: { contains: search, mode: 'insensitive' } }
+            ]
+          }
+        : undefined;
+
+      const rows = await prismaClient.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          role: true,
+          displayName: true,
+          avatarUrl: true,
+          passwordHash: true,
+          createdAt: true
+        },
+        orderBy: { id: 'asc' },
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0,
+        take: limit + 1
+      });
+
+      const hasMore = rows.length > limit;
+      const slice = hasMore ? rows.slice(0, limit) : rows;
+      return {
+        items: slice.map((row) => this.toAppUser(row)),
+        nextCursor: hasMore ? slice[slice.length - 1]?.id || null : null,
+        hasMore
+      };
+    }
+
+    const users = await this.readJSON();
+    const normalizedSearch = search.toLowerCase();
+    const filtered = users
+      .slice()
+      .filter((user) => {
+        if (!normalizedSearch) return true;
+        const haystack = `${user.email || ''} ${user.username || ''} ${user.name || ''}`.toLowerCase();
+        return haystack.includes(normalizedSearch);
+      })
+      .sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+
+    let startIndex = 0;
+    if (cursor) {
+      const idx = filtered.findIndex((user) => user.id === cursor);
+      startIndex = idx >= 0 ? idx + 1 : 0;
+    }
+
+    const chunk = filtered.slice(startIndex, startIndex + limit + 1);
+    const hasMore = chunk.length > limit;
+    const slice = hasMore ? chunk.slice(0, limit) : chunk;
+    return {
+      items: slice.map((user) => this.toAppUser(user)),
+      nextCursor: hasMore ? slice[slice.length - 1]?.id || null : null,
+      hasMore
+    };
+  }
+
   async countUsers() {
     const prismaClient = await getPrisma();
     if (prismaClient) {

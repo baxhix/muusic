@@ -265,16 +265,16 @@ export default function App() {
           ? `${viewport.west},${viewport.south},${viewport.east},${viewport.north}`
           : '';
         const merged = new Map();
-        let cursor = '0';
+        let cursor = '';
         let hasMore = true;
         let loops = 0;
         while (hasMore && loops < 8 && merged.size < 800) {
           loops += 1;
           const params = new URLSearchParams({
             limit: '180',
-            cursor,
             scanPages: '6'
           });
+          if (cursor) params.set('cursor', cursor);
           if (bbox) params.set('bbox', bbox);
 
           const response = await fetch(`${API_URL}/api/map-users?${params.toString()}`, { cache: 'no-store' });

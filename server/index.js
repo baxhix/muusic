@@ -144,6 +144,10 @@ const { fetchSpotifyNowPlaying, refreshSpotifyAccessToken, buildSpotifyBasicHead
   spotifyClientId: process.env.SPOTIFY_CLIENT_ID || '',
   spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET || ''
 });
+trendingPlaybackService.startBackgroundWorker({
+  flushIntervalMs: Number(process.env.TRENDINGS_FLUSH_INTERVAL_MS || 8000),
+  maxBatchSize: Number(process.env.TRENDINGS_BATCH_SIZE || 200)
+});
 
 function cleanupSpotifyExchangeCodes() {
   const now = Date.now();
@@ -354,6 +358,7 @@ httpServer.listen(PORT, () => {
 });
 
 async function shutdown() {
+  await trendingPlaybackService.stopBackgroundWorker();
   await geolocationService.disconnect();
   await disconnectPrisma();
   await socketRateLimiter.stop();

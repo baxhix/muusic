@@ -212,7 +212,7 @@ export function createLocalAuthRouter({
       if (parsed.error) return res.status(400).json({ error: parsed.error });
       if (!parsed.isPlaying) return res.json({ ok: true, recorded: false, reason: 'not-playing' });
 
-      const result = await trendingPlaybackService.recordPlayback({
+      const result = await trendingPlaybackService.enqueuePlayback({
         userId: auth.user.id,
         artistId: parsed.artistId,
         artistName: parsed.artistName,

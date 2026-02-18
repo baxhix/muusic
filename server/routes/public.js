@@ -2,8 +2,8 @@ import { Router } from 'express';
 
 function parseMapUsersQuery(query = {}) {
   const limit = Number.isFinite(Number(query.limit)) ? Math.min(500, Math.max(20, Number(query.limit))) : 200;
-  const cursor = Number.isFinite(Number(query.cursor)) ? Math.max(0, Number(query.cursor)) : 0;
-  const scanPages = Number.isFinite(Number(query.scanPages)) ? Math.min(25, Math.max(1, Number(query.scanPages))) : 6;
+  const cursor = String(query.cursor || '').trim() || null;
+  const scanPages = Number.isFinite(Number(query.scanPages)) ? Math.min(20, Math.max(1, Number(query.scanPages))) : 5;
   const rawBbox = String(query.bbox || '').trim();
   let bbox = null;
   if (rawBbox) {
@@ -95,14 +95,19 @@ export function createPublicRouter({
     try {
       const { limit, cursor, scanPages, bbox } = parseMapUsersQuery(_req.query || {});
       const items = [];
-      let globalOffset = cursor;
+      let nextCursor = cursor;
       let scannedPages = 0;
       let hasMore = true;
 
       while (items.length < limit && scannedPages < scanPages && hasMore) {
-        const page = Math.floor(globalOffset / 200) + 1;
-        const usersPayload = await userService.listUsers({ page, limit: 200, search: '' });
+        const usersPayload = await userService.listUsersCursor({
+          limit: Math.min(200, limit),
+          cursor: nextCursor,
+          search: ''
+        });
         const users = Array.isArray(usersPayload?.items) ? usersPayload.items : [];
+        nextCursor = usersPayload?.nextCursor || null;
+        hasMore = Boolean(usersPayload?.hasMore && nextCursor);
         scannedPages += 1;
         if (users.length === 0) {
           hasMore = false;
@@ -132,10 +137,7 @@ export function createPublicRouter({
           });
         });
 
-        globalOffset += users.length;
-        if (users.length < 200) {
-          hasMore = false;
-        }
+        if (!hasMore) break;
       }
 
       res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
@@ -143,7 +145,7 @@ export function createPublicRouter({
         users: items,
         pagination: {
           limit,
-          nextCursor: hasMore ? String(globalOffset) : null,
+          nextCursor: hasMore ? String(nextCursor || '') : null,
           hasMore,
           scannedPages
         }

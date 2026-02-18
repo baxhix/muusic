@@ -117,7 +117,7 @@ export function createSpotifyRouter({
       const nowPlaying = await fetchSpotifyNowPlaying(accessToken);
       if (nowPlaying?.isPlaying && nowPlaying?.trackName && nowPlaying?.artistName) {
         try {
-          await trendingPlaybackService.recordPlayback({
+          await trendingPlaybackService.enqueuePlayback({
             userId: decoded.userId,
             artistId: nowPlaying.artistId || null,
             artistName: nowPlaying.artistName,
@@ -237,7 +237,7 @@ export function createSpotifyRouter({
       const nowPlaying = await fetchSpotifyNowPlaying(accessToken);
       if (nowPlaying?.isPlaying && nowPlaying?.trackName && nowPlaying?.artistName) {
         try {
-          await trendingPlaybackService.recordPlayback({
+          await trendingPlaybackService.enqueuePlayback({
             userId: payload.userId,
             artistId: nowPlaying.artistId || null,
             artistName: nowPlaying.artistName,

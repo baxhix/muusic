@@ -9,6 +9,8 @@ const __dirname = path.dirname(__filename);
 const LOCAL_TRENDINGS_PATH = path.join(__dirname, '..', 'data', 'trendings-playback.json');
 const MAX_LOCAL_EVENTS = 5000;
 const DEDUPE_WINDOW_MS = 45_000;
+const DEFAULT_FLUSH_INTERVAL_MS = 8000;
+const DEFAULT_MAX_BATCH_SIZE = 200;
 
 function toSafeText(value, fallback = '') {
   const safe = String(value || '').trim();
@@ -160,6 +162,208 @@ function buildSnapshotFromEvents(events = [], limit = 20, userNames = new Map(),
 }
 
 class TrendingPlaybackService {
+  constructor() {
+    this.pendingQueue = [];
+    this.recentByFingerprint = new Map();
+    this.flushTimer = null;
+    this.flushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS;
+    this.maxBatchSize = DEFAULT_MAX_BATCH_SIZE;
+    this.flushing = false;
+    this.lastFlushAt = null;
+  }
+
+  startBackgroundWorker({ flushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS, maxBatchSize = DEFAULT_MAX_BATCH_SIZE } = {}) {
+    this.flushIntervalMs = Number.isFinite(Number(flushIntervalMs))
+      ? Math.max(1000, Number(flushIntervalMs))
+      : DEFAULT_FLUSH_INTERVAL_MS;
+    this.maxBatchSize = Number.isFinite(Number(maxBatchSize))
+      ? Math.max(50, Number(maxBatchSize))
+      : DEFAULT_MAX_BATCH_SIZE;
+
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+    }
+    this.flushTimer = setInterval(() => {
+      this.flushPending().catch(() => {});
+    }, this.flushIntervalMs);
+  }
+
+  async stopBackgroundWorker() {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
+    await this.flushPending({ force: true });
+  }
+
+  makeDedupeKey(event) {
+    return `${toSafeText(event.userId, 'anonymous')}::${toSafeText(event.trackFingerprint, 'unknown')}`;
+  }
+
+  pruneRecentMap(nowMs = Date.now()) {
+    const cutoff = nowMs - DEDUPE_WINDOW_MS * 4;
+    for (const [key, ts] of this.recentByFingerprint.entries()) {
+      if (!Number.isFinite(ts) || ts < cutoff) {
+        this.recentByFingerprint.delete(key);
+      }
+    }
+  }
+
+  dedupeInBatch(events = []) {
+    const accepted = [];
+    const seenAt = new Map();
+    events
+      .slice()
+      .sort((a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime())
+      .forEach((event) => {
+        const key = this.makeDedupeKey(event);
+        const eventMs = new Date(event.playedAt).getTime();
+        const prevMs = seenAt.get(key);
+        if (Number.isFinite(prevMs) && eventMs - prevMs < DEDUPE_WINDOW_MS) {
+          return;
+        }
+        seenAt.set(key, eventMs);
+        accepted.push(event);
+      });
+    return accepted;
+  }
+
+  async dedupeAgainstDatabase(prismaClient, events = []) {
+    if (!events.length) return [];
+    const userIds = Array.from(new Set(events.map((event) => event.userId).filter(Boolean)));
+    const trackFingerprints = Array.from(new Set(events.map((event) => event.trackFingerprint).filter(Boolean)));
+    const oldestMs = Math.min(...events.map((event) => new Date(event.playedAt).getTime()));
+    const since = new Date(oldestMs - DEDUPE_WINDOW_MS);
+
+    const existing = await prismaClient.trendingPlayback.findMany({
+      where: {
+        playedAt: { gte: since },
+        userId: userIds.length ? { in: userIds } : undefined,
+        trackFingerprint: trackFingerprints.length ? { in: trackFingerprints } : undefined
+      },
+      select: {
+        userId: true,
+        trackFingerprint: true,
+        playedAt: true
+      }
+    });
+
+    const latestByKey = new Map();
+    existing.forEach((item) => {
+      const key = `${toSafeText(item.userId, 'anonymous')}::${toSafeText(item.trackFingerprint, 'unknown')}`;
+      const ts = new Date(item.playedAt).getTime();
+      const prev = latestByKey.get(key);
+      if (!Number.isFinite(prev) || ts > prev) {
+        latestByKey.set(key, ts);
+      }
+    });
+
+    const accepted = [];
+    events
+      .slice()
+      .sort((a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime())
+      .forEach((event) => {
+        const key = this.makeDedupeKey(event);
+        const ts = new Date(event.playedAt).getTime();
+        const last = latestByKey.get(key);
+        if (Number.isFinite(last) && ts - last < DEDUPE_WINDOW_MS) {
+          return;
+        }
+        latestByKey.set(key, ts);
+        accepted.push(event);
+      });
+
+    return accepted;
+  }
+
+  async flushToDatabase(prismaClient, events = []) {
+    const deduped = this.dedupeInBatch(events);
+    const accepted = await this.dedupeAgainstDatabase(prismaClient, deduped);
+    if (!accepted.length) return 0;
+
+    await prismaClient.trendingPlayback.createMany({
+      data: accepted.map((event) => ({
+        userId: event.userId,
+        artistId: event.artistId,
+        artistName: event.artistName,
+        artistKey: event.artistKey,
+        trackId: event.trackId,
+        trackName: event.trackName,
+        trackKey: event.trackKey,
+        trackFingerprint: event.trackFingerprint,
+        playedAt: new Date(event.playedAt)
+      }))
+    });
+
+    return accepted.length;
+  }
+
+  async flushToLocalStore(events = []) {
+    if (!events.length) return 0;
+    const current = await this.readLocalStore();
+    const merged = [...current, ...events];
+    merged.sort((a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime());
+    const deduped = this.dedupeInBatch(merged);
+    const trimmed = deduped.slice(-MAX_LOCAL_EVENTS);
+    await this.writeLocalStore(trimmed);
+    return Math.max(0, trimmed.length - current.length);
+  }
+
+  async flushPending({ force = false } = {}) {
+    if (this.flushing) return { flushed: 0, pending: this.pendingQueue.length };
+    if (!force && this.pendingQueue.length === 0) return { flushed: 0, pending: 0 };
+
+    this.flushing = true;
+    let flushed = 0;
+    try {
+      while (this.pendingQueue.length > 0) {
+        const chunk = this.pendingQueue.splice(0, this.maxBatchSize);
+        const prismaClient = await getPrisma();
+        if (prismaClient?.trendingPlayback) {
+          flushed += await this.flushToDatabase(prismaClient, chunk);
+        } else {
+          flushed += await this.flushToLocalStore(chunk);
+        }
+      }
+      this.lastFlushAt = new Date().toISOString();
+      return { flushed, pending: this.pendingQueue.length };
+    } finally {
+      this.flushing = false;
+    }
+  }
+
+  getQueueStats() {
+    return {
+      pending: this.pendingQueue.length,
+      flushing: this.flushing,
+      lastFlushAt: this.lastFlushAt
+    };
+  }
+
+  async enqueuePlayback(event = {}) {
+    const normalized = normalizeEvent(event);
+    if (!normalized.isPlaying) {
+      return { recorded: false, reason: 'not-playing', queued: false };
+    }
+
+    const playedAtMs = new Date(normalized.playedAt).getTime();
+    const dedupeKey = this.makeDedupeKey(normalized);
+    const lastSeen = this.recentByFingerprint.get(dedupeKey);
+    if (Number.isFinite(lastSeen) && playedAtMs - lastSeen < DEDUPE_WINDOW_MS) {
+      return { recorded: false, reason: 'duplicate', queued: false };
+    }
+
+    this.recentByFingerprint.set(dedupeKey, playedAtMs);
+    this.pruneRecentMap(playedAtMs);
+    this.pendingQueue.push(normalized);
+
+    if (this.pendingQueue.length >= this.maxBatchSize) {
+      this.flushPending().catch(() => {});
+    }
+
+    return { recorded: true, reason: null, queued: true };
+  }
+
   async readLocalStore() {
     try {
       const raw = await fs.readFile(LOCAL_TRENDINGS_PATH, 'utf8');
@@ -177,110 +381,114 @@ class TrendingPlaybackService {
   }
 
   async recordPlayback(event = {}) {
-    const normalized = normalizeEvent(event);
-    if (!normalized.isPlaying) {
-      return { recorded: false, reason: 'not-playing' };
-    }
-
-    const nowMs = new Date(normalized.playedAt).getTime();
-    const cutoffDate = new Date(nowMs - DEDUPE_WINDOW_MS);
-    const prismaClient = await getPrisma();
-
-    if (prismaClient?.trendingPlayback) {
-      const last = await prismaClient.trendingPlayback.findFirst({
-        where: {
-          userId: normalized.userId,
-          trackFingerprint: normalized.trackFingerprint,
-          playedAt: { gte: cutoffDate }
-        },
-        orderBy: { playedAt: 'desc' }
-      });
-
-      if (last) {
-        return { recorded: false, reason: 'duplicate' };
-      }
-
-      await prismaClient.trendingPlayback.create({
-        data: {
-          userId: normalized.userId,
-          artistId: normalized.artistId,
-          artistName: normalized.artistName,
-          artistKey: normalized.artistKey,
-          trackId: normalized.trackId,
-          trackName: normalized.trackName,
-          trackKey: normalized.trackKey,
-          trackFingerprint: normalized.trackFingerprint,
-          playedAt: new Date(normalized.playedAt)
-        }
-      });
-
-      return { recorded: true };
-    }
-
-    const events = await this.readLocalStore();
-    const lastDuplicate = [...events]
-      .reverse()
-      .find((item) => item.userId === normalized.userId && item.trackFingerprint === normalized.trackFingerprint);
-
-    if (lastDuplicate) {
-      const lastMs = new Date(lastDuplicate.playedAt).getTime();
-      if (!Number.isNaN(lastMs) && nowMs - lastMs < DEDUPE_WINDOW_MS) {
-        return { recorded: false, reason: 'duplicate' };
-      }
-    }
-
-    events.push(normalized);
-    if (events.length > MAX_LOCAL_EVENTS) {
-      events.splice(0, events.length - MAX_LOCAL_EVENTS);
-    }
-    await this.writeLocalStore(events);
-    return { recorded: true };
+    return this.enqueuePlayback(event);
   }
 
   async getSnapshot({ days = 7, limit = 20 } = {}) {
+    await this.flushPending({ force: true });
     const safeDays = Number.isFinite(Number(days)) ? Math.min(90, Math.max(1, Number(days))) : 7;
     const safeLimit = Number.isFinite(Number(limit)) ? Math.min(100, Math.max(1, Number(limit))) : 20;
     const since = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000);
 
     const prismaClient = await getPrisma();
     if (prismaClient?.trendingPlayback) {
-      const events = await prismaClient.trendingPlayback.findMany({
-        where: { playedAt: { gte: since } },
-        orderBy: { playedAt: 'asc' },
-        select: {
-          userId: true,
-          artistId: true,
-          artistName: true,
-          artistKey: true,
-          trackId: true,
-          trackName: true,
-          trackKey: true,
-          trackFingerprint: true,
-          playedAt: true
-        }
-      });
+      const where = { playedAt: { gte: since } };
+      const [totalPlays, latestEvent, artistGroups, trackGroups, fanGroups] = await Promise.all([
+        prismaClient.trendingPlayback.count({ where }),
+        prismaClient.trendingPlayback.findFirst({
+          where,
+          orderBy: { playedAt: 'desc' },
+          select: { playedAt: true }
+        }),
+        prismaClient.trendingPlayback.groupBy({
+          by: ['artistKey', 'artistId', 'artistName'],
+          where,
+          _count: { _all: true },
+          orderBy: { _count: { _all: 'desc' } },
+          take: safeLimit
+        }),
+        prismaClient.trendingPlayback.groupBy({
+          by: ['trackKey', 'trackId', 'trackName', 'artistId', 'artistName'],
+          where,
+          _count: { _all: true },
+          orderBy: { _count: { _all: 'desc' } },
+          take: safeLimit
+        }),
+        prismaClient.trendingPlayback.groupBy({
+          by: ['userId'],
+          where,
+          _count: { _all: true },
+          orderBy: { _count: { _all: 'desc' } },
+          take: Math.max(safeLimit * 4, 200)
+        })
+      ]);
 
-      const normalized = events.map((event) => ({
-        ...event,
-        playedAt: new Date(event.playedAt).toISOString()
-      }));
-
-      const userIds = Array.from(new Set(normalized.map((event) => event.userId).filter(Boolean)));
-      const users = userIds.length
+      const fanUserIds = fanGroups.map((item) => item.userId).filter(Boolean);
+      const users = fanUserIds.length
         ? await prismaClient.user.findMany({
-            where: { id: { in: userIds } },
+            where: { id: { in: fanUserIds } },
             select: { id: true, displayName: true, username: true }
           })
         : [];
-      const userNames = new Map(
-        users.map((user) => [user.id, toSafeText(user.displayName || user.username || user.id, 'Usuario')])
-      );
+      const userNames = new Map(users.map((user) => [user.id, toSafeText(user.displayName || user.username || user.id, 'Usuario')]));
       const rawSettings = await accountSettingsService.readAll();
-      const userCities = new Map(
-        userIds.map((userId) => [userId, toSafeText(rawSettings?.[userId]?.city || '', '')])
-      );
+      const userCities = new Map(fanUserIds.map((userId) => [userId, toSafeText(rawSettings?.[userId]?.city || '', '')]));
 
-      return buildSnapshotFromEvents(normalized, safeLimit, userNames, userCities);
+      const artists = artistGroups.map((item) => ({
+        id: item.artistId || null,
+        name: item.artistName || 'Artista desconhecido',
+        count: item._count._all,
+        percent: percent(totalPlays, item._count._all)
+      }));
+
+      const tracks = trackGroups.map((item) => ({
+        id: item.trackId || null,
+        name: item.trackName || 'Musica desconhecida',
+        artistId: item.artistId || null,
+        artistName: item.artistName || 'Artista desconhecido',
+        count: item._count._all,
+        percent: percent(totalPlays, item._count._all)
+      }));
+
+      const topFans = fanGroups
+        .map((item) => ({
+          id: item.userId || null,
+          name: userNames.get(item.userId) || labelFromUserId(item.userId),
+          count: item._count._all,
+          percent: percent(totalPlays, item._count._all)
+        }))
+        .slice(0, safeLimit);
+
+      const regionsMap = new Map();
+      fanGroups.forEach((item) => {
+        const city = toSafeText(userCities.get(item.userId), '');
+        if (!city) return;
+        const regionKey = city.toLowerCase();
+        const current = regionsMap.get(regionKey) || {
+          id: cityIdFromName(city),
+          name: city,
+          count: 0
+        };
+        current.count += item._count._all;
+        regionsMap.set(regionKey, current);
+      });
+      const regions = Array.from(regionsMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, safeLimit)
+        .map((item) => ({ ...item, percent: percent(totalPlays, item.count) }));
+
+      const snapshot = {
+        totalPlays,
+        artists,
+        tracks,
+        topFans,
+        regions,
+        updatedAt: latestEvent?.playedAt ? new Date(latestEvent.playedAt).toISOString() : null
+      };
+      return {
+        ...snapshot,
+        queue: this.getQueueStats()
+      };
     }
 
     const events = await this.readLocalStore();
@@ -293,7 +501,11 @@ class TrendingPlaybackService {
     const userCities = new Map(
       userIds.map((userId) => [userId, toSafeText(rawSettings?.[userId]?.city || '', '')])
     );
-    return buildSnapshotFromEvents(filtered, safeLimit, new Map(), userCities);
+    const snapshot = buildSnapshotFromEvents(filtered, safeLimit, new Map(), userCities);
+    return {
+      ...snapshot,
+      queue: this.getQueueStats()
+    };
   }
 }
 

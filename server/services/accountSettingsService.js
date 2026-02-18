@@ -67,11 +67,25 @@ function getCityAnchor(city) {
 }
 
 class AccountSettingsService {
-  async readAll() {
+  constructor() {
+    this.cache = null;
+    this.cacheLoadedAt = 0;
+    this.cacheTtlMs = 10_000;
+  }
+
+  async readAll({ force = false } = {}) {
+    const now = Date.now();
+    if (!force && this.cache && now - this.cacheLoadedAt < this.cacheTtlMs) {
+      return this.cache;
+    }
+
     try {
       const raw = await fs.readFile(SETTINGS_PATH, 'utf8');
       const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      const data = parsed && typeof parsed === 'object' ? parsed : {};
+      this.cache = data;
+      this.cacheLoadedAt = now;
+      return data;
     } catch (error) {
       if (error.code === 'ENOENT') return {};
       throw error;
@@ -81,6 +95,8 @@ class AccountSettingsService {
   async writeAll(payload) {
     await fs.mkdir(path.dirname(SETTINGS_PATH), { recursive: true });
     await fs.writeFile(SETTINGS_PATH, JSON.stringify(payload, null, 2), 'utf8');
+    this.cache = payload && typeof payload === 'object' ? payload : {};
+    this.cacheLoadedAt = Date.now();
   }
 
   async getByUserId(userId) {

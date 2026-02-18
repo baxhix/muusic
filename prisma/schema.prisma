@@ -32,6 +32,8 @@ model User {
 
   @@index([email])
   @@index([spotifyId])
+  @@index([createdAt, id])
+  @@index([role, createdAt])
 }
 
 model Show {
@@ -52,6 +54,7 @@ model Show {
 
   @@index([startsAt])
   @@index([city])
+  @@index([startsAt, city])
 }
 
 model Session {
@@ -64,6 +67,7 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([userId, expiresAt])
 }
 
 model PasswordResetToken {
@@ -77,6 +81,7 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([tokenHash, expiresAt])
 }
 
 model NowPlaying {
@@ -116,4 +121,7 @@ model TrendingPlayback {
   @@index([userId, trackFingerprint, playedAt])
   @@index([artistKey, playedAt])
   @@index([trackKey, playedAt])
+  @@index([playedAt, artistKey])
+  @@index([playedAt, trackKey])
+  @@index([playedAt, userId])
 }

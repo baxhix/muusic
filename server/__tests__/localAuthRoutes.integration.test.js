@@ -107,7 +107,7 @@ function createInMemoryServices() {
   };
 
   const trendingPlaybackService = {
-    async recordPlayback(play) {
+    async enqueuePlayback(play) {
       plays.push(play);
       return { recorded: true };
     }
