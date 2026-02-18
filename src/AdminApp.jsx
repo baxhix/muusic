@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AuthPage from './components/AuthPage';
 import AdminLayout from './components/admin/AdminLayout';
 import Button from './components/ui/Button';
 import { API_URL } from './config/appConfig';
 import DashboardPage from './pages/admin/DashboardPage';
 import ShowsPage from './pages/admin/ShowsPage';
+import TrendingsPage from './pages/admin/TrendingsPage';
 import UsersPage from './pages/admin/UsersPage';
 import { useAuthFlow } from './hooks/useAuthFlow';
 import './styles/global.css';
@@ -30,7 +31,19 @@ export default function AdminApp() {
   } = useAuthFlow();
 
   const isAdmin = authUser?.role === 'ADMIN';
-  const [activePage, setActivePage] = useState('usuarios');
+  const routeByPage = {
+    dashboard: '/dashboard',
+    usuarios: '/usuarios',
+    shows: '/shows',
+    trendings: '/trendings'
+  };
+  const pageByRoute = {
+    '/dashboard': 'dashboard',
+    '/usuarios': 'usuarios',
+    '/shows': 'shows',
+    '/trendings': 'trendings'
+  };
+  const [activePage, setActivePage] = useState(() => pageByRoute[window.location.pathname] || 'usuarios');
 
   const adminFetch = useCallback(
     async (path, options = {}) => {
@@ -104,13 +117,14 @@ export default function AdminApp() {
   const pageByNav = {
     dashboard: <DashboardPage />,
     usuarios: <UsersPage apiFetch={adminFetch} />,
-    shows: <ShowsPage apiFetch={adminFetch} />
+    shows: <ShowsPage apiFetch={adminFetch} />,
+    trendings: <TrendingsPage />
   };
 
   return (
     <AdminLayout
       activeItem={activePage}
-      onNavigate={(key) => setActivePage(key)}
+      onNavigate={navigateToPage}
       userName={authUser.name}
       onLogout={() => logout().catch(() => {})}
     >
@@ -118,3 +132,21 @@ export default function AdminApp() {
     </AdminLayout>
   );
 }
+  const navigateToPage = useCallback(
+    (nextPage) => {
+      const route = routeByPage[nextPage] || '/usuarios';
+      if (window.location.pathname !== route) {
+        window.history.pushState({}, '', route);
+      }
+      setActivePage(nextPage);
+    },
+    []
+  );
+
+  useEffect(() => {
+    const onPopState = () => {
+      setActivePage(pageByRoute[window.location.pathname] || 'usuarios');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);

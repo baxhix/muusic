@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import SidebarNavLite from './components/SidebarNavLite';
 import ChatListLite from './components/ChatListLite';
 import NotificationsListLite from './components/NotificationsListLite';
@@ -16,6 +16,7 @@ import { useRealtimePresence } from './hooks/useRealtimePresence';
 import { useMapEngine } from './hooks/useMapEngine';
 import { accountService, DEFAULT_ACCOUNT_SETTINGS } from './services/accountService';
 import { API_URL } from './config/appConfig';
+import { trendingsService } from './services/trendingsService';
 
 const ACCOUNT_PATH = '/minha-conta';
 
@@ -74,6 +75,7 @@ export default function App() {
   const [shows, setShows] = useState([]);
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  const lastTrendingCaptureRef = useRef({ trackId: '', isPlaying: false });
 
   const mapUsers = useMemo(() => {
     const byId = new Map();
@@ -327,6 +329,34 @@ export default function App() {
   const spotifyArtistName = activeUser?.nowPlaying?.artistName || activeUser?.nowPlaying?.artists || 'Artista indisponivel';
   const hasActiveTrack = Boolean(spotifyTrackName);
   const useMarqueeTitle = spotifyTrackName.length > 34;
+
+  useEffect(() => {
+    const nowPlaying = activeUser?.nowPlaying || null;
+    if (!nowPlaying) return;
+    const trackId = String(nowPlaying.trackId || nowPlaying.trackName || '');
+    const isPlaying = Boolean(nowPlaying.isPlaying);
+    const previous = lastTrendingCaptureRef.current;
+
+    const shouldCapture = isPlaying && (!!trackId && (previous.trackId !== trackId || previous.isPlaying === false));
+
+    if (shouldCapture) {
+      trendingsService.recordPlayback({
+        artistId: nowPlaying.artistId || null,
+        artistName: nowPlaying.artistName || nowPlaying.artists || 'Artista desconhecido',
+        trackId: nowPlaying.trackId || null,
+        trackName: nowPlaying.trackName || 'Musica desconhecida',
+        userId: activeUser?.id || null,
+        timestamp: new Date().toISOString(),
+        isPlaying: true,
+        sessionMarker: `${trackId}:${activeUser?.id || 'anon'}`
+      });
+    }
+
+    lastTrendingCaptureRef.current = {
+      trackId,
+      isPlaying
+    };
+  }, [activeUser?.id, activeUser?.nowPlaying]);
 
   if (authBooting) {
     return (

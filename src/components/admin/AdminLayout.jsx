@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  BarChart3,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +19,8 @@ const navSections = [
     items: [
       { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { key: 'usuarios', label: 'Usuarios', icon: Users },
-      { key: 'shows', label: 'Shows', icon: CalendarDays }
+      { key: 'shows', label: 'Shows', icon: CalendarDays },
+      { key: 'trendings', label: 'Trendings', icon: BarChart3 }
     ]
   }
 ];
