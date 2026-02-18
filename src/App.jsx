@@ -76,6 +76,7 @@ export default function App() {
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   const lastTrendingCaptureRef = useRef({ trackId: '', isPlaying: false });
+  const isAccountPage = currentPath === ACCOUNT_PATH;
 
   const mapUsers = useMemo(() => {
     const byId = new Map();
@@ -164,7 +165,7 @@ export default function App() {
     runBenchmark,
     focusFeedItem
   } = useMapEngine({
-    enabled: Boolean(activeUser),
+    enabled: Boolean(activeUser) && !isAccountPage,
     isMobileDevice,
     perfProfile,
     simulatedPoints,
