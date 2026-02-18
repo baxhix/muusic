@@ -279,7 +279,7 @@ export default function ShowsPage({ apiFetch }) {
               />
 
               <div className="md:col-span-2 flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving} className={!isEditing ? 'admin-cta-new' : ''}>
                   {saving ? 'Salvando...' : 'Salvar'}
                 </Button>
                 <Button type="button" variant="secondary" onClick={closeEditor} disabled={saving}>
@@ -300,7 +300,7 @@ export default function ShowsPage({ apiFetch }) {
         subtitle="Registros de eventos cadastrados no sistema"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={startCreate}>
+            <Button variant="outline" className="admin-cta-new" onClick={startCreate}>
               <Plus className="h-4 w-4" />
               Novo show
             </Button>

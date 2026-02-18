@@ -10,7 +10,7 @@
   --popover: 223 25% 9%;
   --popover-foreground: 220 20% 95%;
 
-  --primary: 345 100% 62%;
+  --primary: 220 20% 98%;
   --primary-foreground: 224 34% 4%;
   --secondary: 223 18% 14%;
   --secondary-foreground: 220 20% 92%;
@@ -23,7 +23,7 @@
   --destructive-foreground: 220 20% 98%;
   --border: 220 20% 100% / 0.1;
   --input: 220 20% 100% / 0.1;
-  --ring: 345 100% 62%;
+  --ring: 220 15% 80%;
 
   --radius: 12px;
   --radius-button: 12px;
@@ -33,7 +33,7 @@
   font-family: var(--admin-font-family);
   background:
     radial-gradient(900px 420px at 0% -20%, rgba(110, 231, 255, 0.08), transparent 50%),
-    radial-gradient(900px 420px at 100% -20%, rgba(219, 0, 53, 0.11), transparent 55%),
+    radial-gradient(900px 420px at 100% -20%, rgba(148, 163, 184, 0.1), transparent 55%),
     hsl(var(--background));
 }
 
@@ -44,4 +44,19 @@
 .admin-root button,
 .admin-root input {
   transition: all 180ms ease-out;
+}
+
+.admin-root .admin-cta-new {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
+.admin-root .admin-cta-new:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.admin-root .admin-cta-new:focus-visible {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.4);
 }
