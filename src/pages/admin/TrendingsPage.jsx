@@ -1,4 +1,4 @@
-import { Music2, Radio } from 'lucide-react';
+import { Music2, Radio, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/admin/PageHeader';
 import Alert from '../../components/ui/Alert';
@@ -40,10 +40,12 @@ export default function TrendingsPage({ apiFetch }) {
     totalPlays: 0,
     artists: [],
     tracks: [],
+    topFans: [],
     updatedAt: null
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('artists');
 
   useEffect(() => {
     let mounted = true;
@@ -71,6 +73,13 @@ export default function TrendingsPage({ apiFetch }) {
 
   const topArtists = useMemo(() => snapshot.artists.slice(0, 20), [snapshot.artists]);
   const topTracks = useMemo(() => snapshot.tracks.slice(0, 20), [snapshot.tracks]);
+  const topFans = useMemo(() => snapshot.topFans.slice(0, 20), [snapshot.topFans]);
+
+  const tabItems = [
+    { key: 'artists', label: 'Top Artistas', icon: Radio },
+    { key: 'tracks', label: 'Top Músicas', icon: Music2 },
+    { key: 'fans', label: 'Top Fãs', icon: Users }
+  ];
 
   return (
     <div className="space-y-6">
@@ -78,9 +87,46 @@ export default function TrendingsPage({ apiFetch }) {
       {error ? <Alert>{error}</Alert> : null}
       {loading ? <p className="text-sm text-muted-foreground">Carregando trendings...</p> : null}
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <TrendList title="Artistas mais reproduzidos" icon={Radio} items={topArtists} totalPlays={snapshot.totalPlays} />
-        <TrendList title="Músicas mais reproduzidas" icon={Music2} items={topTracks} totalPlays={snapshot.totalPlays} />
+      <section className="space-y-4">
+        <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-card p-2" role="tablist" aria-label="Abas de trendings">
+          {tabItems.map((tab) => {
+            const Icon = tab.icon;
+            const selected = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                className={
+                  selected
+                    ? 'inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-sm font-semibold text-foreground'
+                    : 'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+                }
+                onClick={() => setActiveTab(tab.key)}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {activeTab === 'artists' ? (
+          <TrendList title="Artistas mais reproduzidos" icon={Radio} items={topArtists} totalPlays={snapshot.totalPlays} />
+        ) : null}
+        {activeTab === 'tracks' ? (
+          <TrendList title="Músicas mais reproduzidas" icon={Music2} items={topTracks} totalPlays={snapshot.totalPlays} />
+        ) : null}
+        {activeTab === 'fans' ? (
+          <TrendList
+            title="Top fãs"
+            icon={Users}
+            items={topFans}
+            totalPlays={snapshot.totalPlays}
+            emptyText="Sem ouvintes ativos suficientes para gerar ranking."
+          />
+        ) : null}
       </section>
     </div>
   );

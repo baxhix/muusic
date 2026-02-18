@@ -47,6 +47,7 @@ export const trendingsService = {
         totalPlays: 0,
         artists: [],
         tracks: [],
+        topFans: [],
         updatedAt: null
       };
     }
@@ -59,6 +60,7 @@ export const trendingsService = {
       totalPlays: Number(payload?.totalPlays || 0),
       artists: Array.isArray(payload?.artists) ? payload.artists : [],
       tracks: Array.isArray(payload?.tracks) ? payload.tracks : [],
+      topFans: Array.isArray(payload?.topFans) ? payload.topFans : [],
       updatedAt: payload?.updatedAt || null
     };
   }

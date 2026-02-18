@@ -57,11 +57,19 @@ function percent(total, count) {
   return Number(((count / total) * 100).toFixed(2));
 }
 
-function buildSnapshotFromEvents(events = [], limit = 20) {
+function labelFromUserId(userId) {
+  if (!userId) return 'Usuario desconhecido';
+  const clean = String(userId);
+  if (clean.length <= 14) return clean;
+  return `${clean.slice(0, 8)}...${clean.slice(-4)}`;
+}
+
+function buildSnapshotFromEvents(events = [], limit = 20, userNames = new Map()) {
   const safeEvents = Array.isArray(events) ? events : [];
   const totalPlays = safeEvents.length;
   const artistMap = new Map();
   const trackMap = new Map();
+  const fanMap = new Map();
 
   safeEvents.forEach((event) => {
     const artistKey = event.artistKey || makeArtistKey(event.artistId, event.artistName);
@@ -83,6 +91,15 @@ function buildSnapshotFromEvents(events = [], limit = 20) {
     };
     currentTrack.count += 1;
     trackMap.set(trackKey, currentTrack);
+
+    const fanKey = event.userId || 'anonymous';
+    const currentFan = fanMap.get(fanKey) || {
+      id: event.userId || null,
+      name: userNames.get(event.userId) || labelFromUserId(event.userId),
+      count: 0
+    };
+    currentFan.count += 1;
+    fanMap.set(fanKey, currentFan);
   });
 
   const artists = Array.from(artistMap.values())
@@ -95,12 +112,18 @@ function buildSnapshotFromEvents(events = [], limit = 20) {
     .slice(0, limit)
     .map((item) => ({ ...item, percent: percent(totalPlays, item.count) }));
 
+  const topFans = Array.from(fanMap.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map((item) => ({ ...item, percent: percent(totalPlays, item.count) }));
+
   const updatedAt = safeEvents.length ? safeEvents[safeEvents.length - 1]?.playedAt || null : null;
 
   return {
     totalPlays,
     artists,
     tracks,
+    topFans,
     updatedAt
   };
 }
@@ -211,7 +234,18 @@ class TrendingPlaybackService {
         playedAt: new Date(event.playedAt).toISOString()
       }));
 
-      return buildSnapshotFromEvents(normalized, safeLimit);
+      const userIds = Array.from(new Set(normalized.map((event) => event.userId).filter(Boolean)));
+      const users = userIds.length
+        ? await prismaClient.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, displayName: true, username: true }
+          })
+        : [];
+      const userNames = new Map(
+        users.map((user) => [user.id, toSafeText(user.displayName || user.username || user.id, 'Usuario')])
+      );
+
+      return buildSnapshotFromEvents(normalized, safeLimit, userNames);
     }
 
     const events = await this.readLocalStore();
