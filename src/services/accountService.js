@@ -6,7 +6,9 @@ export const DEFAULT_ACCOUNT_SETTINGS = {
   bio: '',
   locationEnabled: true,
   showMusicHistory: true,
-  avatarDataUrl: ''
+  avatarDataUrl: '',
+  cityCenterLat: null,
+  cityCenterLng: null
 };
 
 /**
@@ -45,7 +47,9 @@ function normalizeSettings(payload) {
     bio: String(payload?.bio || '').slice(0, 160),
     locationEnabled: payload?.locationEnabled !== false,
     showMusicHistory: payload?.showMusicHistory !== false,
-    avatarDataUrl: String(payload?.avatarDataUrl || '')
+    avatarDataUrl: String(payload?.avatarDataUrl || ''),
+    cityCenterLat: Number.isFinite(Number(payload?.cityCenterLat)) ? Number(payload.cityCenterLat) : null,
+    cityCenterLng: Number.isFinite(Number(payload?.cityCenterLng)) ? Number(payload.cityCenterLng) : null
   };
 }
 
@@ -105,7 +109,9 @@ export const accountService = {
           bio: next.bio,
           locationEnabled: next.locationEnabled,
           showMusicHistory: next.showMusicHistory,
-          avatarUrl: next.avatarDataUrl || null
+          avatarUrl: next.avatarDataUrl || null,
+          cityCenterLat: next.cityCenterLat,
+          cityCenterLng: next.cityCenterLng
         })
       });
       const payload = await response.json().catch(() => ({}));
@@ -136,7 +142,9 @@ export const accountService = {
           bio: next.bio,
           locationEnabled: next.locationEnabled,
           showMusicHistory: next.showMusicHistory,
-          avatarUrl: next.avatarDataUrl || null
+          avatarUrl: next.avatarDataUrl || null,
+          cityCenterLat: next.cityCenterLat,
+          cityCenterLng: next.cityCenterLng
         })
       });
       const payload = await response.json().catch(() => ({}));

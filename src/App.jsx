@@ -112,6 +112,47 @@ export default function App() {
     setRightPanelCollapsed(false);
   }, []);
 
+  const resolveUserProfile = useCallback(
+    (user) => {
+      if (!user) return null;
+      const isCurrentUser = Boolean(activeUser?.id && user?.id === activeUser.id);
+      const city = isCurrentUser ? accountSettings.city : user?.city || user?.location?.city || 'Cidade indisponivel';
+      const avatar = isCurrentUser ? accountSettings.avatarDataUrl || user?.avatarUrl || user?.spotify?.image : user?.avatarUrl || user?.spotify?.image;
+      const bio = isCurrentUser ? accountSettings.bio : user?.bio || '';
+      const recentTracks = isCurrentUser
+        ? accountSettings.showMusicHistory
+          ? [user?.spotify?.track || user?.spotify?.trackName || user?.nowPlaying?.trackName || 'Sem historico de musica recente']
+          : []
+        : user?.showMusicHistory === false
+          ? []
+          : [user?.spotify?.track || user?.spotify?.trackName || user?.nowPlaying?.trackName || 'Sem historico de musica recente'];
+      return {
+        id: user?.id || `user-${Date.now()}`,
+        name: user?.spotify?.display_name || user?.name || 'Usuario',
+        avatar: avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(user?.id || 'user')}`,
+        city,
+        bio,
+        showMusicHistory: isCurrentUser ? accountSettings.showMusicHistory : user?.showMusicHistory !== false,
+        recentTracks,
+        coords:
+          Number.isFinite(Number(user?.location?.lng)) && Number.isFinite(Number(user?.location?.lat))
+            ? [Number(user.location.lng), Number(user.location.lat)]
+            : null
+      };
+    },
+    [activeUser?.id, accountSettings]
+  );
+
+  const handleMapUserSelect = useCallback(
+    (user) => {
+      const profile = resolveUserProfile(user);
+      if (!profile) return;
+      setSelectedSimProfile(profile);
+      setRightPanelCollapsed(false);
+    },
+    [resolveUserProfile]
+  );
+
   const {
     mapContainerRef,
     mapWarning,
@@ -127,6 +168,7 @@ export default function App() {
     simulatedPoints,
     shows,
     onShowSelect: handleMapShowSelect,
+    onUserSelect: handleMapUserSelect,
     users: mapUsers,
     socketRef,
     mapVisibility
@@ -273,34 +315,12 @@ export default function App() {
     setRightPanelCollapsed(false);
   }, []);
 
-  const handleSearchUserSelect = useCallback((user) => {
-    if (!user) return;
-    const isCurrentUser = Boolean(activeUser?.id && user?.id === activeUser.id);
-    const city = isCurrentUser ? accountSettings.city : user?.city || user?.location?.city || 'Cidade indisponivel';
-    const avatar = isCurrentUser ? accountSettings.avatarDataUrl || user?.avatarUrl || user?.spotify?.image : user?.avatarUrl || user?.spotify?.image;
-    const bio = isCurrentUser ? accountSettings.bio : user?.bio || '';
-    const recentTracks = isCurrentUser
-      ? accountSettings.showMusicHistory
-        ? [user?.spotify?.track || 'Sem historico de musica recente']
-        : []
-      : user?.showMusicHistory === false
-        ? []
-        : [user?.spotify?.track || 'Sem historico de musica recente'];
-    setSelectedSimProfile({
-      id: user?.id || `user-${Date.now()}`,
-      name: user?.spotify?.display_name || user?.name || 'Usuario',
-      avatar: avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(user?.id || 'user')}`,
-      city,
-      bio,
-      showMusicHistory: isCurrentUser ? accountSettings.showMusicHistory : user?.showMusicHistory !== false,
-      recentTracks,
-      coords:
-        Number.isFinite(Number(user?.location?.lng)) && Number.isFinite(Number(user?.location?.lat))
-          ? [Number(user.location.lng), Number(user.location.lat)]
-          : null
-    });
-    setRightPanelCollapsed(false);
-  }, [activeUser?.id, accountSettings]);
+  const handleSearchUserSelect = useCallback(
+    (user) => {
+      handleMapUserSelect(user);
+    },
+    [handleMapUserSelect]
+  );
 
   const spotifyIsPlaying = Boolean(activeUser?.nowPlaying?.isPlaying);
   const spotifyTrackName = activeUser?.nowPlaying?.trackName || '';

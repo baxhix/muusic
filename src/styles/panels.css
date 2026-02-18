@@ -1411,6 +1411,11 @@
   padding-top: 6px;
 }
 
+.account-actions.account-actions-start {
+  justify-content: flex-start;
+  padding-top: 0;
+}
+
 .missing-token {
   position: absolute;
   left: 50%;

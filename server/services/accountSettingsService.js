@@ -10,15 +10,21 @@ const DEFAULT_SETTINGS = {
   city: 'Sao Paulo',
   bio: '',
   locationEnabled: true,
-  showMusicHistory: true
+  showMusicHistory: true,
+  cityCenterLat: null,
+  cityCenterLng: null
 };
 
 function normalizeSettings(settings = {}) {
+  const cityCenterLat = Number(settings.cityCenterLat);
+  const cityCenterLng = Number(settings.cityCenterLng);
   return {
     city: String(settings.city || DEFAULT_SETTINGS.city).trim() || DEFAULT_SETTINGS.city,
     bio: String(settings.bio || '').slice(0, 160),
     locationEnabled: settings.locationEnabled !== false,
-    showMusicHistory: settings.showMusicHistory !== false
+    showMusicHistory: settings.showMusicHistory !== false,
+    cityCenterLat: Number.isFinite(cityCenterLat) ? cityCenterLat : null,
+    cityCenterLng: Number.isFinite(cityCenterLng) ? cityCenterLng : null
   };
 }
 
@@ -100,8 +106,11 @@ class AccountSettingsService {
     return out;
   }
 
-  buildRandomLocation(userId, city) {
-    const anchor = getCityAnchor(city);
+  buildRandomLocation(userId, city, cityCenterLat = null, cityCenterLng = null) {
+    const hasCustomCenter = Number.isFinite(Number(cityCenterLat)) && Number.isFinite(Number(cityCenterLng));
+    const anchor = hasCustomCenter
+      ? { lat: Number(cityCenterLat), lng: Number(cityCenterLng), radius: 0.12 }
+      : getCityAnchor(city);
     const seed = hashString(`${userId}:${city}`);
     const angle = (seed % 360) * (Math.PI / 180);
     const distanceFactor = ((seed % 1000) / 1000) * anchor.radius;

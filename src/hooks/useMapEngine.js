@@ -46,6 +46,7 @@ export function useMapEngine({
   simulatedPoints,
   shows = [],
   onShowSelect,
+  onUserSelect,
   users,
   socketRef,
   mapVisibility = { users: true, shows: true }
@@ -341,7 +342,10 @@ export function useMapEngine({
         marker.remove();
       });
       showMarkersRef.current.clear();
-      userMarkersRef.current.forEach((entry) => entry.marker.remove());
+      userMarkersRef.current.forEach((entry) => {
+        if (entry.element && entry.onClick) entry.element.removeEventListener('click', entry.onClick);
+        entry.marker.remove();
+      });
       userMarkersRef.current.clear();
       if (map?.getLayer(PRESENCE_LAYER_ID)) map.removeLayer(PRESENCE_LAYER_ID);
       if (map?.getSource(PRESENCE_SOURCE_ID)) map.removeSource(PRESENCE_SOURCE_ID);
@@ -367,7 +371,10 @@ export function useMapEngine({
     };
 
     if (shouldUsePresenceLayer) {
-      userMarkersRef.current.forEach((entry) => entry.marker.remove());
+      userMarkersRef.current.forEach((entry) => {
+        if (entry.element && entry.onClick) entry.element.removeEventListener('click', entry.onClick);
+        entry.marker.remove();
+      });
       userMarkersRef.current.clear();
 
       const data = toPresenceGeoJson(users);
@@ -398,6 +405,8 @@ export function useMapEngine({
       if (!user.location) return;
       const key = user.id;
       const markerLabel = user.spotify?.display_name || user.name;
+      const currentTrack =
+        user?.spotify?.trackName || user?.spotify?.track || user?.spotify?.nowPlaying?.trackName || user?.nowPlaying?.trackName || 'Música indisponível';
       const safeLabel = String(markerLabel || 'Usuario').replace(/"/g, '&quot;');
 
       if (!userMarkersRef.current.has(key)) {
@@ -405,7 +414,7 @@ export function useMapEngine({
         el.type = 'button';
         el.className = 'user-marker';
         el.setAttribute('aria-label', `Usuário: ${markerLabel}`);
-        el.title = markerLabel;
+        el.title = `${markerLabel}\n${currentTrack}`;
 
         const avatarUrl = String(user?.avatarUrl || user?.avatar || '').trim();
         if (avatarUrl) {
@@ -416,23 +425,35 @@ export function useMapEngine({
         el.style.display = mapVisibility?.users === false ? 'none' : '';
 
         const marker = new mapboxgl.Marker({ element: el }).setLngLat([user.location.lng, user.location.lat]).addTo(mapRef.current);
-
-        userMarkersRef.current.set(key, { marker, element: el });
+        const onClick = (event) => {
+          event.stopPropagation();
+          onUserSelect?.({
+            ...user,
+            name: markerLabel,
+            city: user?.city || user?.location?.city || '',
+            coords: [Number(user.location.lng), Number(user.location.lat)],
+            recentTracks: currentTrack && currentTrack !== 'Música indisponível' ? [currentTrack] : []
+          });
+        };
+        el.addEventListener('click', onClick);
+        userMarkersRef.current.set(key, { marker, element: el, onClick });
       } else {
         const entry = userMarkersRef.current.get(key);
         entry.marker.setLngLat([user.location.lng, user.location.lat]);
         entry.element.style.display = mapVisibility?.users === false ? 'none' : '';
+        entry.element.title = `${markerLabel}\n${currentTrack}`;
       }
     });
 
     const activeIds = new Set(users.map((user) => user.id));
     userMarkersRef.current.forEach((entry, id) => {
       if (!activeIds.has(id)) {
+        if (entry.element && entry.onClick) entry.element.removeEventListener('click', entry.onClick);
         entry.marker.remove();
         userMarkersRef.current.delete(id);
       }
     });
-  }, [enabled, users, mapVisibility?.users]);
+  }, [enabled, users, mapVisibility?.users, onUserSelect]);
 
   useEffect(() => {
     if (!enabled) return;

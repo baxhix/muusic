@@ -594,6 +594,8 @@ app.patch('/auth/local/account-settings', async (req, res) => {
     const avatarUrl = typeof req.body?.avatarUrl === 'string' ? req.body.avatarUrl : null;
     const locationEnabled = req.body?.locationEnabled !== false;
     const showMusicHistory = req.body?.showMusicHistory !== false;
+    const cityCenterLat = Number(req.body?.cityCenterLat);
+    const cityCenterLng = Number(req.body?.cityCenterLng);
 
     if (city.length < 2) return res.status(400).json({ error: 'Cidade deve ter no minimo 2 caracteres.' });
     if (bio.length > 160) return res.status(400).json({ error: 'Bio deve ter no maximo 160 caracteres.' });
@@ -605,7 +607,9 @@ app.patch('/auth/local/account-settings', async (req, res) => {
       city,
       bio,
       locationEnabled,
-      showMusicHistory
+      showMusicHistory,
+      cityCenterLat: Number.isFinite(cityCenterLat) ? cityCenterLat : null,
+      cityCenterLng: Number.isFinite(cityCenterLng) ? cityCenterLng : null
     });
 
     if (typeof req.body?.avatarUrl === 'string' || req.body?.avatarUrl === null) {
@@ -634,7 +638,7 @@ app.get('/api/map-users', async (_req, res) => {
       .map((user) => {
         const settings = settingsMap.get(user.id);
         if (!settings || settings.locationEnabled === false) return null;
-        const location = accountSettingsService.buildRandomLocation(user.id, settings.city);
+        const location = accountSettingsService.buildRandomLocation(user.id, settings.city, settings.cityCenterLat, settings.cityCenterLng);
         return {
           id: user.id,
           name: user.name || user.username || 'Usuario',

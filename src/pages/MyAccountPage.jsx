@@ -31,6 +31,9 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   const [avatarDataUrl, setAvatarDataUrl] = useState('');
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [showMusicHistory, setShowMusicHistory] = useState(true);
+  const [cityCenterLat, setCityCenterLat] = useState(null);
+  const [cityCenterLng, setCityCenterLng] = useState(null);
+  const [detectingCity, setDetectingCity] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -49,6 +52,8 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
         setAvatarDataUrl(settings.avatarDataUrl);
         setLocationEnabled(settings.locationEnabled);
         setShowMusicHistory(settings.showMusicHistory);
+        setCityCenterLat(settings.cityCenterLat);
+        setCityCenterLng(settings.cityCenterLng);
       })
       .catch((error) => {
         if (!active) return;
@@ -69,10 +74,55 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
       bio,
       avatarDataUrl,
       locationEnabled,
-      showMusicHistory
+      showMusicHistory,
+      cityCenterLat,
+      cityCenterLng
     }),
-    [city, bio, avatarDataUrl, locationEnabled, showMusicHistory]
+    [city, bio, avatarDataUrl, locationEnabled, showMusicHistory, cityCenterLat, cityCenterLng]
   );
+
+  function extractCityFromReverse(payload) {
+    const address = payload?.address || {};
+    return (
+      address.city ||
+      address.town ||
+      address.village ||
+      address.municipality ||
+      address.county ||
+      address.state_district ||
+      ''
+    );
+  }
+
+  async function detectCurrentCity() {
+    if (!navigator.geolocation) {
+      setFeedback({ type: 'error', message: 'Geolocalização não suportada no navegador.' });
+      return;
+    }
+    try {
+      setDetectingCity(true);
+      const position = await new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 })
+      );
+      const lat = Number(position.coords.latitude);
+      const lng = Number(position.coords.longitude);
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+      const payload = await response.json().catch(() => ({}));
+      const cityFromGeo = extractCityFromReverse(payload);
+      if (!cityFromGeo) {
+        setFeedback({ type: 'error', message: 'Não foi possível identificar a cidade atual.' });
+        return;
+      }
+      setCity(cityFromGeo);
+      setCityCenterLat(lat);
+      setCityCenterLng(lng);
+      setFeedback({ type: 'success', message: `Cidade detectada: ${cityFromGeo}` });
+    } catch {
+      setFeedback({ type: 'error', message: 'Falha ao obter cidade atual.' });
+    } finally {
+      setDetectingCity(false);
+    }
+  }
 
   function onKeyDownTabs(event) {
     const idx = TAB_KEYS.indexOf(activeTab);
@@ -265,8 +315,22 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
 
             <label className="account-field">
               <span>Cidade</span>
-              <input value={city} onChange={(event) => setCity(event.target.value)} minLength={2} required />
+              <input
+                value={city}
+                onChange={(event) => {
+                  setCity(event.target.value);
+                  setCityCenterLat(null);
+                  setCityCenterLng(null);
+                }}
+                minLength={2}
+                required
+              />
             </label>
+            <div className="account-actions account-actions-start">
+              <button type="button" className="account-secondary-btn" onClick={detectCurrentCity} disabled={detectingCity}>
+                {detectingCity ? 'Detectando cidade...' : 'Usar minha cidade atual'}
+              </button>
+            </div>
 
             <label className="account-field">
               <span>Bio</span>
