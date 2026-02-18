@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Activity,
   BarChart3,
   CalendarDays,
   ChevronLeft,
@@ -22,7 +23,8 @@ const navSections = [
       { key: 'usuarios', label: 'Usuarios', icon: Users },
       { key: 'shows', label: 'Shows', icon: CalendarDays },
       { key: 'trendings', label: 'Trendings', icon: BarChart3 },
-      { key: 'moderacao', label: 'Moderação', icon: ShieldCheck }
+      { key: 'moderacao', label: 'Moderação', icon: ShieldCheck },
+      { key: 'performance', label: 'Performance', icon: Activity }
     ]
   }
 ];

@@ -5,6 +5,7 @@ import Button from './components/ui/Button';
 import { API_URL } from './config/appConfig';
 import DashboardPage from './pages/admin/DashboardPage';
 import ModerationPage from './pages/admin/ModerationPage';
+import PerformancePage from './pages/admin/PerformancePage';
 import ShowsPage from './pages/admin/ShowsPage';
 import TrendingsPage from './pages/admin/TrendingsPage';
 import UsersPage from './pages/admin/UsersPage';
@@ -16,7 +17,8 @@ const ROUTE_BY_PAGE = {
   usuarios: '/usuarios',
   shows: '/shows',
   trendings: '/trendings',
-  moderacao: '/moderacao'
+  moderacao: '/moderacao',
+  performance: '/performance'
 };
 
 const PAGE_BY_ROUTE = {
@@ -24,7 +26,8 @@ const PAGE_BY_ROUTE = {
   '/usuarios': 'usuarios',
   '/shows': 'shows',
   '/trendings': 'trendings',
-  '/moderacao': 'moderacao'
+  '/moderacao': 'moderacao',
+  '/performance': 'performance'
 };
 
 export default function AdminApp() {
@@ -143,7 +146,8 @@ export default function AdminApp() {
     usuarios: <UsersPage apiFetch={adminFetch} />,
     shows: <ShowsPage apiFetch={adminFetch} />,
     trendings: <TrendingsPage apiFetch={adminFetch} />,
-    moderacao: <ModerationPage />
+    moderacao: <ModerationPage />,
+    performance: <PerformancePage apiFetch={adminFetch} />
   };
 
   return (

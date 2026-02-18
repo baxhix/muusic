@@ -20,6 +20,7 @@ import mapRoutes from './routes/map.js';
 import geolocationService from './services/geolocation.js';
 import accountSettingsService from './services/accountSettingsService.js';
 import trendingPlaybackService from './services/trendingPlaybackService.js';
+import performanceService from './services/performanceService.js';
 import { disconnectPrisma } from './services/db.js';
 
 function loadEnvironmentFiles() {
@@ -85,6 +86,21 @@ if (!isProduction) {
   app.use(cors({ origin: corsOriginValidator, credentials: true }));
 }
 app.use(express.json({ limit: '32kb' }));
+
+app.use((req, res, next) => {
+  const startedAt = performance.now();
+  res.on('finish', () => {
+    const durationMs = performance.now() - startedAt;
+    performanceService.recordRequest({
+      method: req.method,
+      path: req.path || req.originalUrl || '/',
+      statusCode: res.statusCode,
+      durationMs,
+      at: Date.now()
+    });
+  });
+  next();
+});
 
 app.use((req, res, next) => {
   const path = String(req.path || '');
@@ -868,6 +884,17 @@ app.get('/admin/trendings', async (req, res) => {
     return res.json(snapshot);
   } catch (error) {
     return res.status(500).json({ error: `Erro ao carregar trendings: ${error.message}` });
+  }
+});
+
+app.get('/admin/performance', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const snapshot = performanceService.getSnapshot();
+    return res.json(snapshot);
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao carregar performance: ${error.message}` });
   }
 });
 
