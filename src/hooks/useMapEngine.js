@@ -398,11 +398,21 @@ export function useMapEngine({
       if (!user.location) return;
       const key = user.id;
       const markerLabel = user.spotify?.display_name || user.name;
+      const safeLabel = String(markerLabel || 'Usuario').replace(/"/g, '&quot;');
 
       if (!userMarkersRef.current.has(key)) {
-        const el = document.createElement('div');
+        const el = document.createElement('button');
+        el.type = 'button';
         el.className = 'user-marker';
-        el.innerHTML = `<span>${markerLabel}</span>`;
+        el.setAttribute('aria-label', `Usuário: ${markerLabel}`);
+        el.title = markerLabel;
+
+        const avatarUrl = String(user?.avatarUrl || user?.avatar || '').trim();
+        if (avatarUrl) {
+          el.innerHTML = `<img src="${avatarUrl}" alt="${safeLabel}" class="user-marker-avatar" loading="lazy" />`;
+        } else {
+          el.innerHTML = '<span class="user-marker-fallback" aria-hidden="true">👤</span>';
+        }
         el.style.display = mapVisibility?.users === false ? 'none' : '';
 
         const marker = new mapboxgl.Marker({ element: el }).setLngLat([user.location.lng, user.location.lat]).addTo(mapRef.current);

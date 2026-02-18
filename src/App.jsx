@@ -15,6 +15,7 @@ import { useAuthFlow } from './hooks/useAuthFlow';
 import { useRealtimePresence } from './hooks/useRealtimePresence';
 import { useMapEngine } from './hooks/useMapEngine';
 import { accountService, DEFAULT_ACCOUNT_SETTINGS } from './services/accountService';
+import { API_URL } from './config/appConfig';
 
 const ACCOUNT_PATH = '/minha-conta';
 
@@ -68,18 +69,41 @@ export default function App() {
   const [selectedShowDetail, setSelectedShowDetail] = useState(null);
   const [selectedSimProfile, setSelectedSimProfile] = useState(null);
   const [accountSettings, setAccountSettings] = useState(DEFAULT_ACCOUNT_SETTINGS);
+  const [dbMapUsers, setDbMapUsers] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname || '/');
   const [shows, setShows] = useState([]);
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
 
   const mapUsers = useMemo(() => {
-    if (!Array.isArray(users)) return [];
-    if (accountSettings.locationEnabled !== false) return users;
-    const activeId = activeUser?.id;
-    if (!activeId) return users;
-    return users.map((user) => (user.id === activeId ? { ...user, location: null } : user));
-  }, [users, accountSettings.locationEnabled, activeUser?.id]);
+    const byId = new Map();
+    (Array.isArray(dbMapUsers) ? dbMapUsers : []).forEach((user) => {
+      byId.set(user.id, {
+        id: user.id,
+        name: user.name,
+        bio: user.bio || '',
+        city: user.city || '',
+        showMusicHistory: user.showMusicHistory !== false,
+        avatarUrl: user.avatarUrl || null,
+        location: user.location || null
+      });
+    });
+
+    (Array.isArray(users) ? users : []).forEach((user) => {
+      const existing = byId.get(user.id) || {};
+      const isCurrentUser = Boolean(activeUser?.id && user.id === activeUser.id);
+      const shouldHideLocation = isCurrentUser && accountSettings.locationEnabled === false;
+      byId.set(user.id, {
+        ...existing,
+        id: user.id,
+        name: user.name || existing.name,
+        spotify: user.spotify || existing.spotify,
+        location: shouldHideLocation ? null : existing.location || user.location || null
+      });
+    });
+
+    return Array.from(byId.values());
+  }, [dbMapUsers, users, activeUser?.id, accountSettings.locationEnabled]);
 
   const perfProfile = isMobileDevice ? MOBILE_PERF : DESKTOP_PERF;
   const simulatedPoints = useMemo(() => buildSimulatedPoints(perfProfile.points), [perfProfile.points]);
@@ -143,7 +167,7 @@ export default function App() {
   useEffect(() => {
     let active = true;
     accountService
-      .get()
+      .get(activeUser)
       .then((settings) => {
         if (active) setAccountSettings(settings);
       })
@@ -151,13 +175,37 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeUser?.token, activeUser?.sessionId]);
 
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname || '/');
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (!activeUser) return undefined;
+    let cancelled = false;
+
+    const fetchMapUsers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/map-users`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || cancelled) return;
+        const list = Array.isArray(payload?.users) ? payload.users : [];
+        setDbMapUsers(list);
+      } catch {
+        if (!cancelled) setDbMapUsers([]);
+      }
+    };
+
+    fetchMapUsers();
+    const intervalId = window.setInterval(fetchMapUsers, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeUser]);
 
   useEffect(() => {
     if (!activeUser) return;
@@ -228,21 +276,23 @@ export default function App() {
   const handleSearchUserSelect = useCallback((user) => {
     if (!user) return;
     const isCurrentUser = Boolean(activeUser?.id && user?.id === activeUser.id);
-    const city = isCurrentUser ? accountSettings.city : user?.location?.city || 'Cidade indisponivel';
-    const avatar = isCurrentUser ? accountSettings.avatarDataUrl || user?.spotify?.image : user?.spotify?.image;
-    const bio = isCurrentUser ? accountSettings.bio : '';
+    const city = isCurrentUser ? accountSettings.city : user?.city || user?.location?.city || 'Cidade indisponivel';
+    const avatar = isCurrentUser ? accountSettings.avatarDataUrl || user?.avatarUrl || user?.spotify?.image : user?.avatarUrl || user?.spotify?.image;
+    const bio = isCurrentUser ? accountSettings.bio : user?.bio || '';
     const recentTracks = isCurrentUser
       ? accountSettings.showMusicHistory
         ? [user?.spotify?.track || 'Sem historico de musica recente']
         : []
-      : [user?.spotify?.track || 'Sem historico de musica recente'];
+      : user?.showMusicHistory === false
+        ? []
+        : [user?.spotify?.track || 'Sem historico de musica recente'];
     setSelectedSimProfile({
       id: user?.id || `user-${Date.now()}`,
       name: user?.spotify?.display_name || user?.name || 'Usuario',
       avatar: avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(user?.id || 'user')}`,
       city,
       bio,
-      showMusicHistory: isCurrentUser ? accountSettings.showMusicHistory : true,
+      showMusicHistory: isCurrentUser ? accountSettings.showMusicHistory : user?.showMusicHistory !== false,
       recentTracks,
       coords:
         Number.isFinite(Number(user?.location?.lng)) && Number.isFinite(Number(user?.location?.lat))

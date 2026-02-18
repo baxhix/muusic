@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'accountSettings';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const DEFAULT_ACCOUNT_SETTINGS = {
   city: 'Sao Paulo',
@@ -30,6 +31,14 @@ function writeRaw(payload) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
+function buildAuthHeaders(auth) {
+  if (!auth?.token) return {};
+  return {
+    Authorization: `Bearer ${auth.token}`,
+    'x-session-id': auth.sessionId || ''
+  };
+}
+
 function normalizeSettings(payload) {
   return {
     city: String(payload?.city || DEFAULT_ACCOUNT_SETTINGS.city).trim(),
@@ -58,20 +67,88 @@ function validatePasswordInput(input) {
 }
 
 export const accountService = {
-  async get() {
-    const saved = readRaw();
-    return normalizeSettings({ ...DEFAULT_ACCOUNT_SETTINGS, ...saved });
+  async get(auth) {
+    const saved = normalizeSettings({ ...DEFAULT_ACCOUNT_SETTINGS, ...readRaw() });
+    if (!auth?.token) return saved;
+    try {
+      const response = await fetch(`${API_URL}/auth/local/account-settings`, {
+        headers: {
+          ...buildAuthHeaders(auth)
+        }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Falha ao carregar conta.');
+      const merged = normalizeSettings({
+        ...saved,
+        ...(payload?.settings || {}),
+        avatarDataUrl: payload?.avatarUrl || saved.avatarDataUrl || ''
+      });
+      writeRaw(merged);
+      return merged;
+    } catch {
+      return saved;
+    }
   },
 
-  async updateProfile(input) {
+  async updateProfile(input, auth) {
     validateProfileInput(input);
     const next = normalizeSettings({ ...readRaw(), ...input });
+    if (auth?.token) {
+      const response = await fetch(`${API_URL}/auth/local/account-settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildAuthHeaders(auth)
+        },
+        body: JSON.stringify({
+          city: next.city,
+          bio: next.bio,
+          locationEnabled: next.locationEnabled,
+          showMusicHistory: next.showMusicHistory,
+          avatarUrl: next.avatarDataUrl || null
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Falha ao salvar perfil.');
+      const serverNext = normalizeSettings({
+        ...next,
+        ...(payload?.settings || {}),
+        avatarDataUrl: payload?.avatarUrl || ''
+      });
+      writeRaw(serverNext);
+      return serverNext;
+    }
     writeRaw(next);
     return next;
   },
 
-  async updatePreferences(input) {
+  async updatePreferences(input, auth) {
     const next = normalizeSettings({ ...readRaw(), ...input });
+    if (auth?.token) {
+      const response = await fetch(`${API_URL}/auth/local/account-settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildAuthHeaders(auth)
+        },
+        body: JSON.stringify({
+          city: next.city,
+          bio: next.bio,
+          locationEnabled: next.locationEnabled,
+          showMusicHistory: next.showMusicHistory,
+          avatarUrl: next.avatarDataUrl || null
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Falha ao salvar preferencias.');
+      const serverNext = normalizeSettings({
+        ...next,
+        ...(payload?.settings || {}),
+        avatarDataUrl: payload?.avatarUrl || ''
+      });
+      writeRaw(serverNext);
+      return serverNext;
+    }
     writeRaw(next);
     return next;
   },

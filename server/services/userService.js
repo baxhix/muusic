@@ -57,6 +57,7 @@ class UserService {
       name: user.displayName || user.name || user.username || 'Usuario',
       username: user.username,
       role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      avatarUrl: user.avatarUrl || null,
       passwordHash: user.passwordHash,
       createdAt: user.createdAt
     };
@@ -212,6 +213,7 @@ class UserService {
       const payload = {};
       if (typeof data.email === 'string') payload.email = data.email;
       if (typeof data.displayName === 'string') payload.displayName = data.displayName;
+      if (typeof data.avatarUrl === 'string' || data.avatarUrl === null) payload.avatarUrl = data.avatarUrl;
       if (typeof data.passwordHash === 'string') payload.passwordHash = data.passwordHash;
       if (typeof nextRole === 'string') payload.role = nextRole;
 
@@ -228,6 +230,7 @@ class UserService {
 
     if (typeof data.email === 'string') users[index].email = data.email;
     if (typeof data.displayName === 'string') users[index].name = data.displayName;
+    if (typeof data.avatarUrl === 'string' || data.avatarUrl === null) users[index].avatarUrl = data.avatarUrl;
     if (typeof data.passwordHash === 'string') users[index].passwordHash = data.passwordHash;
     if (typeof nextRole === 'string') users[index].role = nextRole;
 

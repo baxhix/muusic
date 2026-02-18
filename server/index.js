@@ -18,6 +18,7 @@ import passwordResetService from './services/passwordResetService.js';
 import cacheMiddleware from './middleware/cache.js';
 import mapRoutes from './routes/map.js';
 import geolocationService from './services/geolocation.js';
+import accountSettingsService from './services/accountSettingsService.js';
 import { disconnectPrisma } from './services/db.js';
 
 function loadEnvironmentFiles() {
@@ -566,6 +567,90 @@ app.get('/auth/local/me', async (req, res) => {
     });
   } catch {
     return res.status(401).json({ error: 'Sessao invalida.' });
+  }
+});
+
+app.get('/auth/local/account-settings', async (req, res) => {
+  try {
+    const auth = await readAuthSession(req);
+    if (auth.error) return res.status(401).json({ error: auth.error });
+    const settings = await accountSettingsService.getByUserId(auth.user.id);
+    return res.json({
+      settings,
+      avatarUrl: auth.user.avatarUrl || null
+    });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao carregar configuracoes: ${error.message}` });
+  }
+});
+
+app.patch('/auth/local/account-settings', async (req, res) => {
+  try {
+    const auth = await readAuthSession(req);
+    if (auth.error) return res.status(401).json({ error: auth.error });
+
+    const city = String(req.body?.city || '').trim();
+    const bio = String(req.body?.bio || '');
+    const avatarUrl = typeof req.body?.avatarUrl === 'string' ? req.body.avatarUrl : null;
+    const locationEnabled = req.body?.locationEnabled !== false;
+    const showMusicHistory = req.body?.showMusicHistory !== false;
+
+    if (city.length < 2) return res.status(400).json({ error: 'Cidade deve ter no minimo 2 caracteres.' });
+    if (bio.length > 160) return res.status(400).json({ error: 'Bio deve ter no maximo 160 caracteres.' });
+    if (avatarUrl && avatarUrl.length > 6_000_000) {
+      return res.status(400).json({ error: 'Imagem de perfil muito grande.' });
+    }
+
+    const settings = await accountSettingsService.updateByUserId(auth.user.id, {
+      city,
+      bio,
+      locationEnabled,
+      showMusicHistory
+    });
+
+    if (typeof req.body?.avatarUrl === 'string' || req.body?.avatarUrl === null) {
+      await userService.updateUserById(auth.user.id, {
+        avatarUrl: avatarUrl || null
+      });
+    }
+
+    const updatedUser = await userService.findById(auth.user.id);
+    return res.json({
+      settings,
+      avatarUrl: updatedUser?.avatarUrl || null
+    });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao salvar configuracoes: ${error.message}` });
+  }
+});
+
+app.get('/api/map-users', async (_req, res) => {
+  try {
+    const usersPayload = await userService.listUsers({ page: 1, limit: 5000, search: '' });
+    const users = Array.isArray(usersPayload?.items) ? usersPayload.items : [];
+    const settingsMap = await accountSettingsService.getManyByUserIds(users.map((user) => user.id));
+
+    const items = users
+      .map((user) => {
+        const settings = settingsMap.get(user.id);
+        if (!settings || settings.locationEnabled === false) return null;
+        const location = accountSettingsService.buildRandomLocation(user.id, settings.city);
+        return {
+          id: user.id,
+          name: user.name || user.username || 'Usuario',
+          city: settings.city,
+          bio: settings.bio || '',
+          showMusicHistory: settings.showMusicHistory !== false,
+          avatarUrl: user.avatarUrl || null,
+          location
+        };
+      })
+      .filter(Boolean);
+
+    res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
+    return res.json({ users: items });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao listar usuarios do mapa: ${error.message}` });
   }
 });
 

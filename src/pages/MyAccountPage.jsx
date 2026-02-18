@@ -41,7 +41,7 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   useEffect(() => {
     let active = true;
     accountService
-      .get()
+      .get(authUser)
       .then((settings) => {
         if (!active) return;
         setCity(settings.city);
@@ -61,7 +61,7 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
     return () => {
       active = false;
     };
-  }, []);
+  }, [authUser?.token, authUser?.sessionId, authUser?.id]);
 
   const profileDraft = useMemo(
     () => ({
@@ -125,7 +125,7 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   async function saveProfile() {
     try {
       setSavingProfile(true);
-      const next = await accountService.updateProfile(profileDraft);
+      const next = await accountService.updateProfile(profileDraft, authUser);
       onSettingsChange?.(next);
       setFeedback({ type: 'success', message: 'Perfil atualizado com sucesso.' });
     } catch (error) {
@@ -146,10 +146,13 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
           confirmPassword
         });
       }
-      const next = await accountService.updatePreferences({
-        locationEnabled,
-        showMusicHistory
-      });
+      const next = await accountService.updatePreferences(
+        {
+          locationEnabled,
+          showMusicHistory
+        },
+        authUser
+      );
       onSettingsChange?.(next);
       setCurrentPassword('');
       setNewPassword('');
@@ -165,10 +168,13 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   async function removeAvatar() {
     setAvatarDataUrl('');
     try {
-      const next = await accountService.updateProfile({
-        ...profileDraft,
-        avatarDataUrl: ''
-      });
+      const next = await accountService.updateProfile(
+        {
+          ...profileDraft,
+          avatarDataUrl: ''
+        },
+        authUser
+      );
       onSettingsChange?.(next);
       setFeedback({ type: 'success', message: 'Foto removida.' });
     } catch (error) {
