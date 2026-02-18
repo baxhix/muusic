@@ -1,6 +1,7 @@
 import { Music2, Radio } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/admin/PageHeader';
+import Alert from '../../components/ui/Alert';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { trendingsService } from '../../services/trendingsService';
 
@@ -34,22 +35,39 @@ function TrendList({ title, icon: Icon, items = [], totalPlays = 0, emptyText = 
   );
 }
 
-export default function TrendingsPage() {
-  const [snapshot, setSnapshot] = useState(() => trendingsService.getSnapshot());
+export default function TrendingsPage({ apiFetch }) {
+  const [snapshot, setSnapshot] = useState({
+    totalPlays: 0,
+    artists: [],
+    tracks: [],
+    updatedAt: null
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const refresh = () => setSnapshot(trendingsService.getSnapshot());
+    let mounted = true;
+    const refresh = async () => {
+      try {
+        const payload = await trendingsService.getSnapshot({ apiFetch, days: 7, limit: 20 });
+        if (!mounted) return;
+        setSnapshot(payload);
+        setError('');
+      } catch (loadError) {
+        if (!mounted) return;
+        setError(loadError.message || 'Falha ao carregar trendings.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
     refresh();
-    const intervalId = window.setInterval(refresh, 3000);
-    const onStorage = (event) => {
-      if (event.key === 'muusic_trendings_v1') refresh();
-    };
-    window.addEventListener('storage', onStorage);
+    const intervalId = window.setInterval(refresh, 10000);
     return () => {
+      mounted = false;
       window.clearInterval(intervalId);
-      window.removeEventListener('storage', onStorage);
     };
-  }, []);
+  }, [apiFetch]);
 
   const topArtists = useMemo(() => snapshot.artists.slice(0, 20), [snapshot.artists]);
   const topTracks = useMemo(() => snapshot.tracks.slice(0, 20), [snapshot.tracks]);
@@ -57,6 +75,8 @@ export default function TrendingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Trendings" subtitle="Captura de reproduções para análise de tendências da plataforma" />
+      {error ? <Alert>{error}</Alert> : null}
+      {loading ? <p className="text-sm text-muted-foreground">Carregando trendings...</p> : null}
 
       <section className="grid gap-4 lg:grid-cols-2">
         <TrendList title="Artistas mais reproduzidos" icon={Radio} items={topArtists} totalPlays={snapshot.totalPlays} />

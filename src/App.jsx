@@ -340,16 +340,19 @@ export default function App() {
     const shouldCapture = isPlaying && (!!trackId && (previous.trackId !== trackId || previous.isPlaying === false));
 
     if (shouldCapture) {
-      trendingsService.recordPlayback({
-        artistId: nowPlaying.artistId || null,
-        artistName: nowPlaying.artistName || nowPlaying.artists || 'Artista desconhecido',
-        trackId: nowPlaying.trackId || null,
-        trackName: nowPlaying.trackName || 'Musica desconhecida',
-        userId: activeUser?.id || null,
-        timestamp: new Date().toISOString(),
-        isPlaying: true,
-        sessionMarker: `${trackId}:${activeUser?.id || 'anon'}`
-      });
+      trendingsService
+        .recordPlayback({
+          authUser: activeUser,
+          playback: {
+            artistId: nowPlaying.artistId || null,
+            artistName: nowPlaying.artistName || nowPlaying.artists || 'Artista desconhecido',
+            trackId: nowPlaying.trackId || null,
+            trackName: nowPlaying.trackName || 'Musica desconhecida',
+            timestamp: new Date().toISOString(),
+            isPlaying: true
+          }
+        })
+        .catch(() => {});
     }
 
     lastTrendingCaptureRef.current = {

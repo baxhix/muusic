@@ -26,6 +26,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   nowPlaying   NowPlaying?
+  trendings    TrendingPlayback[]
   sessions     Session[]
   resetTokens  PasswordResetToken[]
 
@@ -94,4 +95,25 @@ model NowPlaying {
 
   @@index([expiresAt])
   @@index([spotifyTrackId])
+}
+
+model TrendingPlayback {
+  id               String   @id @default(uuid())
+  userId           String?
+  artistId         String?
+  artistName       String
+  artistKey        String
+  trackId          String?
+  trackName        String
+  trackKey         String
+  trackFingerprint String
+  playedAt         DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([playedAt])
+  @@index([userId, trackFingerprint, playedAt])
+  @@index([artistKey, playedAt])
+  @@index([trackKey, playedAt])
 }

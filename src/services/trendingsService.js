@@ -1,129 +1,65 @@
-const STORAGE_KEY = 'muusic_trendings_v1';
-const MAX_EVENTS = 5000;
+import { API_URL } from '../config/appConfig';
 
-function readStore() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function writeStore(payload) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-}
-
-function normalizeStore(payload) {
-  const safe = payload && typeof payload === 'object' ? payload : {};
+function buildAuthHeaders(authUser) {
+  if (!authUser?.token) return null;
   return {
-    events: Array.isArray(safe.events) ? safe.events.slice(-MAX_EVENTS) : [],
-    artists: safe.artists && typeof safe.artists === 'object' ? safe.artists : {},
-    tracks: safe.tracks && typeof safe.tracks === 'object' ? safe.tracks : {},
-    plays: Number.isFinite(Number(safe.plays)) ? Number(safe.plays) : 0,
-    updatedAt: safe.updatedAt || null
+    Authorization: `Bearer ${authUser.token}`,
+    'x-session-id': authUser.sessionId || ''
   };
 }
 
-function percent(total, count) {
-  if (!total) return 0;
-  return Number(((count / total) * 100).toFixed(2));
-}
-
-function sortByCount(items) {
-  return [...items].sort((a, b) => b.count - a.count);
-}
-
-function safeKey(prefix, valueA, valueB = '') {
-  const raw = `${prefix}:${String(valueA || '').trim()}:${String(valueB || '').trim()}`;
-  return raw.length > 6 ? raw : `${prefix}:unknown`;
-}
-
-function getBaseStore() {
-  return normalizeStore(readStore());
-}
-
 export const trendingsService = {
-  recordPlayback(event) {
-    const isPlaying = Boolean(event?.isPlaying);
-    if (!isPlaying) return false;
+  async recordPlayback({ authUser, playback }) {
+    const headers = buildAuthHeaders(authUser);
+    if (!headers) return { recorded: false, reason: 'missing-auth' };
 
-    const artistId = String(event?.artistId || '').trim();
-    const artistName = String(event?.artistName || '').trim() || 'Artista desconhecido';
-    const trackId = String(event?.trackId || '').trim();
-    const trackName = String(event?.trackName || '').trim() || 'Musica desconhecida';
-    const userId = String(event?.userId || 'anonymous').trim();
-    const timestamp = event?.timestamp || new Date().toISOString();
-
-    const artistKey = safeKey('artist', artistId || artistName.toLowerCase(), artistName.toLowerCase());
-    const trackKey = safeKey('track', trackId || trackName.toLowerCase(), artistKey);
-    const dedupeKey = `${userId}:${trackKey}:${String(event?.sessionMarker || '')}`;
-
-    const store = getBaseStore();
-    const lastEvent = store.events[store.events.length - 1];
-    if (lastEvent?.dedupeKey === dedupeKey) return false;
-
-    store.events.push({
-      dedupeKey,
-      userId,
-      artistId: artistId || null,
-      artistName,
-      trackId: trackId || null,
-      trackName,
-      timestamp
+    const response = await fetch(`${API_URL}/api/trendings/playback`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        artistId: playback?.artistId || null,
+        artistName: playback?.artistName || playback?.artists || 'Artista desconhecido',
+        trackId: playback?.trackId || null,
+        trackName: playback?.trackName || 'Musica desconhecida',
+        timestamp: playback?.timestamp || new Date().toISOString(),
+        isPlaying: playback?.isPlaying !== false
+      })
     });
-    if (store.events.length > MAX_EVENTS) {
-      store.events = store.events.slice(-MAX_EVENTS);
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || 'Falha ao registrar reproducao em trendings.');
     }
 
-    store.plays += 1;
-    const prevArtist = store.artists[artistKey] || { id: artistId || null, name: artistName, count: 0 };
-    store.artists[artistKey] = {
-      ...prevArtist,
-      id: artistId || prevArtist.id || null,
-      name: artistName || prevArtist.name,
-      count: prevArtist.count + 1
+    return {
+      recorded: Boolean(payload.recorded),
+      reason: payload.reason || null
     };
-
-    const prevTrack = store.tracks[trackKey] || {
-      id: trackId || null,
-      name: trackName,
-      artistId: artistId || null,
-      artistName,
-      count: 0
-    };
-    store.tracks[trackKey] = {
-      ...prevTrack,
-      id: trackId || prevTrack.id || null,
-      name: trackName || prevTrack.name,
-      artistId: artistId || prevTrack.artistId || null,
-      artistName: artistName || prevTrack.artistName,
-      count: prevTrack.count + 1
-    };
-
-    store.updatedAt = new Date().toISOString();
-    writeStore(store);
-    return true;
   },
 
-  getSnapshot() {
-    const store = getBaseStore();
-    const total = store.plays;
-    const artists = sortByCount(Object.values(store.artists)).map((item) => ({
-      ...item,
-      percent: percent(total, item.count)
-    }));
-    const tracks = sortByCount(Object.values(store.tracks)).map((item) => ({
-      ...item,
-      percent: percent(total, item.count)
-    }));
+  async getSnapshot({ apiFetch, days = 7, limit = 20 } = {}) {
+    if (!apiFetch) {
+      return {
+        totalPlays: 0,
+        artists: [],
+        tracks: [],
+        updatedAt: null
+      };
+    }
+
+    const safeDays = Number.isFinite(Number(days)) ? Math.min(90, Math.max(1, Number(days))) : 7;
+    const safeLimit = Number.isFinite(Number(limit)) ? Math.min(100, Math.max(1, Number(limit))) : 20;
+    const payload = await apiFetch(`/admin/trendings?days=${safeDays}&limit=${safeLimit}`);
 
     return {
-      totalPlays: total,
-      artists,
-      tracks,
-      updatedAt: store.updatedAt
+      totalPlays: Number(payload?.totalPlays || 0),
+      artists: Array.isArray(payload?.artists) ? payload.artists : [],
+      tracks: Array.isArray(payload?.tracks) ? payload.tracks : [],
+      updatedAt: payload?.updatedAt || null
     };
   }
 };

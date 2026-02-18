@@ -139,7 +139,7 @@ export default function AdminApp() {
     dashboard: <DashboardPage />,
     usuarios: <UsersPage apiFetch={adminFetch} />,
     shows: <ShowsPage apiFetch={adminFetch} />,
-    trendings: <TrendingsPage />
+    trendings: <TrendingsPage apiFetch={adminFetch} />
   };
 
   return (

@@ -19,6 +19,7 @@ import cacheMiddleware from './middleware/cache.js';
 import mapRoutes from './routes/map.js';
 import geolocationService from './services/geolocation.js';
 import accountSettingsService from './services/accountSettingsService.js';
+import trendingPlaybackService from './services/trendingPlaybackService.js';
 import { disconnectPrisma } from './services/db.js';
 
 function loadEnvironmentFiles() {
@@ -658,6 +659,36 @@ app.get('/api/map-users', async (_req, res) => {
   }
 });
 
+app.post('/api/trendings/playback', async (req, res) => {
+  try {
+    const auth = await readAuthSession(req);
+    if (auth.error) return res.status(401).json({ error: auth.error });
+
+    const isPlaying = req.body?.isPlaying !== false;
+    if (!isPlaying) return res.json({ ok: true, recorded: false, reason: 'not-playing' });
+
+    const artistName = String(req.body?.artistName || '').trim();
+    const trackName = String(req.body?.trackName || '').trim();
+    if (!artistName || !trackName) {
+      return res.status(400).json({ error: 'artistName e trackName sao obrigatorios.' });
+    }
+
+    const result = await trendingPlaybackService.recordPlayback({
+      userId: auth.user.id,
+      artistId: req.body?.artistId || null,
+      artistName,
+      trackId: req.body?.trackId || null,
+      trackName,
+      timestamp: req.body?.timestamp || new Date().toISOString(),
+      isPlaying: true
+    });
+
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao registrar reproducao: ${error.message}` });
+  }
+});
+
 app.post('/auth/local/logout', async (req, res) => {
   try {
     const auth = await readAuthSession(req);
@@ -824,6 +855,19 @@ app.get('/admin/shows', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
+  }
+});
+
+app.get('/admin/trendings', async (req, res) => {
+  try {
+    const auth = await requireAdmin(req, res);
+    if (!auth) return;
+    const days = Number(req.query?.days);
+    const limit = Number(req.query?.limit);
+    const snapshot = await trendingPlaybackService.getSnapshot({ days, limit });
+    return res.json(snapshot);
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao carregar trendings: ${error.message}` });
   }
 });
 
