@@ -42,12 +42,21 @@ export const trendingsService = {
   },
 
   async getSnapshot({ apiFetch, days = 7, limit = 20 } = {}) {
+    const fallbackRegions = [
+      { id: 'region-sao-paulo', name: 'São Paulo', count: 120, percent: 28.1 },
+      { id: 'region-rio', name: 'Rio de Janeiro', count: 95, percent: 22.3 },
+      { id: 'region-goiania', name: 'Goiânia', count: 74, percent: 17.4 },
+      { id: 'region-curitiba', name: 'Curitiba', count: 63, percent: 14.8 },
+      { id: 'region-londrina', name: 'Londrina', count: 55, percent: 12.9 }
+    ];
+
     if (!apiFetch) {
       return {
         totalPlays: 0,
         artists: [],
         tracks: [],
         topFans: [],
+        regions: fallbackRegions,
         updatedAt: null
       };
     }
@@ -61,6 +70,7 @@ export const trendingsService = {
       artists: Array.isArray(payload?.artists) ? payload.artists : [],
       tracks: Array.isArray(payload?.tracks) ? payload.tracks : [],
       topFans: Array.isArray(payload?.topFans) ? payload.topFans : [],
+      regions: Array.isArray(payload?.regions) && payload.regions.length ? payload.regions : fallbackRegions,
       updatedAt: payload?.updatedAt || null
     };
   }

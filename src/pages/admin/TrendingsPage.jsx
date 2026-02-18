@@ -1,4 +1,4 @@
-import { Music2, Radio, Users } from 'lucide-react';
+import { MapPin, Music2, Radio, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/admin/PageHeader';
 import Alert from '../../components/ui/Alert';
@@ -43,6 +43,7 @@ export default function TrendingsPage({ apiFetch }) {
     artists: [],
     tracks: [],
     topFans: [],
+    regions: [],
     updatedAt: null
   });
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,7 @@ export default function TrendingsPage({ apiFetch }) {
   const [artistQuery, setArtistQuery] = useState('');
   const [trackQuery, setTrackQuery] = useState('');
   const [fanQuery, setFanQuery] = useState('');
+  const [regionQuery, setRegionQuery] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -79,9 +81,11 @@ export default function TrendingsPage({ apiFetch }) {
   const topArtists = useMemo(() => snapshot.artists.slice(0, 20), [snapshot.artists]);
   const topTracks = useMemo(() => snapshot.tracks.slice(0, 20), [snapshot.tracks]);
   const topFans = useMemo(() => snapshot.topFans.slice(0, 20), [snapshot.topFans]);
+  const topRegions = useMemo(() => snapshot.regions.slice(0, 20), [snapshot.regions]);
   const artistSuggestions = useMemo(() => topArtists.map((item) => item.name).filter(Boolean), [topArtists]);
   const trackSuggestions = useMemo(() => topTracks.map((item) => item.name).filter(Boolean), [topTracks]);
   const fanSuggestions = useMemo(() => topFans.map((item) => item.name).filter(Boolean), [topFans]);
+  const regionSuggestions = useMemo(() => topRegions.map((item) => item.name).filter(Boolean), [topRegions]);
   const filteredArtists = useMemo(() => {
     const q = artistQuery.trim().toLowerCase();
     if (!q) return topArtists;
@@ -97,11 +101,17 @@ export default function TrendingsPage({ apiFetch }) {
     if (!q) return topFans;
     return topFans.filter((item) => String(item.name || '').toLowerCase().includes(q));
   }, [fanQuery, topFans]);
+  const filteredRegions = useMemo(() => {
+    const q = regionQuery.trim().toLowerCase();
+    if (!q) return topRegions;
+    return topRegions.filter((item) => String(item.name || '').toLowerCase().includes(q));
+  }, [regionQuery, topRegions]);
 
   const tabItems = [
     { key: 'artists', label: 'Top Artistas', icon: Radio },
     { key: 'tracks', label: 'Top Músicas', icon: Music2 },
-    { key: 'fans', label: 'Top Fãs', icon: Users }
+    { key: 'fans', label: 'Top Fãs', icon: Users },
+    { key: 'regions', label: 'Região', icon: MapPin }
   ];
 
   return (
@@ -201,6 +211,24 @@ export default function TrendingsPage({ apiFetch }) {
               totalPlays={snapshot.totalPlays}
               emptyText="Sem ouvintes ativos suficientes para gerar ranking."
             />
+          </>
+        ) : null}
+        {activeTab === 'regions' ? (
+          <>
+            <Input
+              type="search"
+              value={regionQuery}
+              onChange={(event) => setRegionQuery(event.target.value)}
+              list="trendings-regions-suggestions"
+              placeholder="Pesquisar cidade..."
+              aria-label="Pesquisar cidade"
+            />
+            <datalist id="trendings-regions-suggestions">
+              {regionSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <TrendList title="Top cidades por reprodução" icon={MapPin} items={filteredRegions} totalPlays={snapshot.totalPlays} />
           </>
         ) : null}
       </section>

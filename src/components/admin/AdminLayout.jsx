@@ -6,6 +6,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   Menu,
+  ShieldCheck,
   Ticket,
   Users
 } from 'lucide-react';
@@ -20,7 +21,8 @@ const navSections = [
       { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { key: 'usuarios', label: 'Usuarios', icon: Users },
       { key: 'shows', label: 'Shows', icon: CalendarDays },
-      { key: 'trendings', label: 'Trendings', icon: BarChart3 }
+      { key: 'trendings', label: 'Trendings', icon: BarChart3 },
+      { key: 'moderacao', label: 'Moderação', icon: ShieldCheck }
     ]
   }
 ];
