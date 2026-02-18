@@ -64,7 +64,7 @@ export default function ShowsPage({ apiFetch }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [formMessage, setFormMessage] = useState('');
+  const [feedback, setFeedback] = useState('');
   const [source, setSource] = useState('mock');
   const [kpis, setKpis] = useState({ total: 0, upcoming: 0, cities: 0 });
   const [items, setItems] = useState([]);
@@ -72,6 +72,7 @@ export default function ShowsPage({ apiFetch }) {
   const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const shouldFail = useMemo(() => typeof window !== 'undefined' && window.location.search.includes('adminError=1'), []);
   const cityOptions = useMemo(() => buildCityOptions(shows), [shows]);
@@ -121,18 +122,24 @@ export default function ShowsPage({ apiFetch }) {
     setPage(1);
   }, [search, cityFilter]);
 
-  function resetForm() {
+  function closeEditor() {
+    setEditorOpen(false);
     setEditingId('');
     setForm(EMPTY_FORM);
+    setError('');
   }
 
   function startCreate() {
-    setFormMessage('');
-    resetForm();
+    setFeedback('');
+    setError('');
+    setEditingId('');
+    setForm(EMPTY_FORM);
+    setEditorOpen(true);
   }
 
   function startEdit(show) {
-    setFormMessage('');
+    setFeedback('');
+    setError('');
     setEditingId(show.id);
     setForm({
       artist: show.artist || '',
@@ -145,11 +152,12 @@ export default function ShowsPage({ apiFetch }) {
       thumbUrl: show.thumbUrl || '',
       ticketUrl: show.ticketUrl || ''
     });
+    setEditorOpen(true);
   }
 
   async function submitShow(event) {
     event.preventDefault();
-    setFormMessage('');
+    setFeedback('');
     setError('');
 
     if (!apiFetch) {
@@ -190,17 +198,17 @@ export default function ShowsPage({ apiFetch }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        setFormMessage('Show atualizado com sucesso.');
+        setFeedback('Show atualizado com sucesso.');
       } else {
         await apiFetch('/admin/shows', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        setFormMessage('Show criado com sucesso.');
+        setFeedback('Show criado com sucesso.');
       }
 
-      resetForm();
+      closeEditor();
       await loadData(1);
     } catch (submitError) {
       setError(submitError.message || 'Falha ao salvar show.');
@@ -209,15 +217,84 @@ export default function ShowsPage({ apiFetch }) {
     }
   }
 
+  if (editorOpen) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={isEditing ? 'Editar show' : 'Novo show'}
+          subtitle="Preencha os dados e salve para atualizar o mapa."
+          actions={
+            <Button variant="ghost" onClick={closeEditor} disabled={saving}>
+              Cancelar
+            </Button>
+          }
+        />
+
+        {error ? <Alert>{error}</Alert> : null}
+
+        <Card>
+          <CardContent className="pt-6">
+            <form className="grid gap-3 md:grid-cols-2" onSubmit={submitShow}>
+              <Input value={form.artist} onChange={(event) => setForm((prev) => ({ ...prev, artist: event.target.value }))} placeholder="Artista" required />
+              <Input value={form.venue} onChange={(event) => setForm((prev) => ({ ...prev, venue: event.target.value }))} placeholder="Local" required />
+              <Input value={form.city} onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))} placeholder="Cidade" required />
+              <Input value={form.country} onChange={(event) => setForm((prev) => ({ ...prev, country: event.target.value }))} placeholder="Pais" />
+              <Input type="datetime-local" value={form.startsAt} onChange={(event) => setForm((prev) => ({ ...prev, startsAt: event.target.value }))} required />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  type="number"
+                  step="any"
+                  min="-90"
+                  max="90"
+                  value={form.latitude}
+                  onChange={(event) => setForm((prev) => ({ ...prev, latitude: event.target.value }))}
+                  placeholder="Latitude"
+                  required
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  value={form.longitude}
+                  onChange={(event) => setForm((prev) => ({ ...prev, longitude: event.target.value }))}
+                  placeholder="Longitude"
+                  required
+                />
+              </div>
+              <Input value={form.ticketUrl} onChange={(event) => setForm((prev) => ({ ...prev, ticketUrl: event.target.value }))} placeholder="URL do ingresso (opcional)" />
+              <Input value={form.thumbUrl} onChange={(event) => setForm((prev) => ({ ...prev, thumbUrl: event.target.value }))} placeholder="URL da imagem (opcional)" />
+
+              <div className="md:col-span-2 flex flex-wrap items-center gap-2">
+                <Button type="submit" disabled={saving}>
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </Button>
+                <Button type="button" variant="secondary" onClick={closeEditor} disabled={saving}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Shows"
         subtitle="Registros de eventos cadastrados no sistema"
         actions={
-          <Button variant="secondary" onClick={() => loadData(page)}>
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={startCreate}>
+              <Plus className="h-4 w-4" />
+              Novo show
+            </Button>
+            <Button variant="secondary" onClick={() => loadData(page)}>
+              Atualizar
+            </Button>
+          </div>
         }
       />
 
@@ -227,62 +304,8 @@ export default function ShowsPage({ apiFetch }) {
         <KpiCard icon={MapPin} label="Cidades ativas" value={kpis.cities} />
       </section>
 
-      <Card>
-        <CardHeader className="space-y-0 pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-2xl">{isEditing ? 'Editar show' : 'Novo show'}</CardTitle>
-            <Button variant="outline" onClick={startCreate}>
-              <Plus className="h-4 w-4" />
-              Novo show
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-3 md:grid-cols-2" onSubmit={submitShow}>
-            <Input value={form.artist} onChange={(event) => setForm((prev) => ({ ...prev, artist: event.target.value }))} placeholder="Artista" required />
-            <Input value={form.venue} onChange={(event) => setForm((prev) => ({ ...prev, venue: event.target.value }))} placeholder="Local" required />
-            <Input value={form.city} onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))} placeholder="Cidade" required />
-            <Input value={form.country} onChange={(event) => setForm((prev) => ({ ...prev, country: event.target.value }))} placeholder="Pais" />
-            <Input type="datetime-local" value={form.startsAt} onChange={(event) => setForm((prev) => ({ ...prev, startsAt: event.target.value }))} required />
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                type="number"
-                step="any"
-                min="-90"
-                max="90"
-                value={form.latitude}
-                onChange={(event) => setForm((prev) => ({ ...prev, latitude: event.target.value }))}
-                placeholder="Latitude"
-                required
-              />
-              <Input
-                type="number"
-                step="any"
-                min="-180"
-                max="180"
-                value={form.longitude}
-                onChange={(event) => setForm((prev) => ({ ...prev, longitude: event.target.value }))}
-                placeholder="Longitude"
-                required
-              />
-            </div>
-            <Input value={form.ticketUrl} onChange={(event) => setForm((prev) => ({ ...prev, ticketUrl: event.target.value }))} placeholder="URL do ingresso (opcional)" />
-            <Input value={form.thumbUrl} onChange={(event) => setForm((prev) => ({ ...prev, thumbUrl: event.target.value }))} placeholder="URL da imagem (opcional)" />
-
-            <div className="md:col-span-2 flex flex-wrap items-center gap-2">
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Salvando...' : isEditing ? 'Salvar edicao' : 'Criar show'}
-              </Button>
-              {isEditing && (
-                <Button type="button" variant="ghost" onClick={resetForm} disabled={saving}>
-                  Cancelar
-                </Button>
-              )}
-            </div>
-          </form>
-          {formMessage ? <p className="mt-3 text-sm text-emerald-400">{formMessage}</p> : null}
-        </CardContent>
-      </Card>
+      {feedback ? <Alert>{feedback}</Alert> : null}
+      {error ? <Alert>{error}</Alert> : null}
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
@@ -304,8 +327,6 @@ export default function ShowsPage({ apiFetch }) {
               Exportar CSV
             </Button>
           </div>
-
-          {error ? <Alert>{error}</Alert> : null}
 
           {loading ? (
             <div className="space-y-2">
