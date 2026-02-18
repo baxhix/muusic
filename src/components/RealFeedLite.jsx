@@ -104,7 +104,7 @@ function buildInitialPosts() {
   }));
 }
 
-export default function RealFeedLite({ onFocusItem, onOpenItem, collapsed, onToggleCollapse }) {
+export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, collapsed, onToggleCollapse }) {
   const [activeTab, setActiveTab] = useState('feed');
   const [feedPosts, setFeedPosts] = useState(() => buildInitialPosts());
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -177,6 +177,10 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, collapsed, onTog
       window.clearInterval(intervalId);
     };
   }, []);
+
+  useEffect(() => {
+    onShowsChange?.(shows);
+  }, [shows, onShowsChange]);
 
   const showsForRender = useMemo(() => {
     const monthAbbr = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];

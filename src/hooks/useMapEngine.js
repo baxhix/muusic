@@ -9,12 +9,14 @@ import {
 } from '../lib/mapSimulation';
 import { summarizeFpsSamples } from '../lib/perfStats';
 
-export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPoints, users, socketRef }) {
+export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPoints, shows = [], users, socketRef }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const mapboxRef = useRef(null);
-  const markersRef = useRef(new Map());
+  const userMarkersRef = useRef(new Map());
+  const showMarkersRef = useRef(new Map());
   const popupRef = useRef(null);
+  const showPopupRef = useRef(null);
   const selectedSimIdRef = useRef(null);
   const fpsSamplesRef = useRef([]);
 
@@ -275,7 +277,16 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
       }
       popupRef.current?.remove();
       popupRef.current = null;
+      showPopupRef.current?.remove();
+      showPopupRef.current = null;
       selectedSimIdRef.current = null;
+      showMarkersRef.current.forEach(({ marker, element, onClick }) => {
+        if (element && onClick) element.removeEventListener('click', onClick);
+        marker.remove();
+      });
+      showMarkersRef.current.clear();
+      userMarkersRef.current.forEach((marker) => marker.remove());
+      userMarkersRef.current.clear();
       map?.remove();
       mapRef.current = null;
       mapboxRef.current = null;
@@ -293,27 +304,99 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
       const key = user.id;
       const markerLabel = user.spotify?.display_name || user.name;
 
-      if (!markersRef.current.has(key)) {
+      if (!userMarkersRef.current.has(key)) {
         const el = document.createElement('div');
         el.className = 'user-marker';
         el.innerHTML = `<span>${markerLabel}</span>`;
 
         const marker = new mapboxgl.Marker({ element: el }).setLngLat([user.location.lng, user.location.lat]).addTo(mapRef.current);
 
-        markersRef.current.set(key, marker);
+        userMarkersRef.current.set(key, marker);
       } else {
-        markersRef.current.get(key).setLngLat([user.location.lng, user.location.lat]);
+        userMarkersRef.current.get(key).setLngLat([user.location.lng, user.location.lat]);
       }
     });
 
     const activeIds = new Set(users.map((user) => user.id));
-    markersRef.current.forEach((marker, id) => {
+    userMarkersRef.current.forEach((marker, id) => {
       if (!activeIds.has(id)) {
         marker.remove();
-        markersRef.current.delete(id);
+        userMarkersRef.current.delete(id);
       }
     });
   }, [enabled, users]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (!mapRef.current || !mapboxRef.current) return;
+    const mapboxgl = mapboxRef.current;
+    const map = mapRef.current;
+    const activeShowIds = new Set();
+
+    shows.forEach((show) => {
+      const latitude = Number(show?.latitude);
+      const longitude = Number(show?.longitude);
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return;
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return;
+
+      const key = String(show?.id || `${show?.artist || 'show'}:${latitude}:${longitude}`);
+      activeShowIds.add(key);
+
+      if (!showMarkersRef.current.has(key)) {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'show-marker';
+        el.setAttribute('aria-label', `Show: ${show?.artist || 'Sem artista'}`);
+
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([longitude, latitude]).addTo(map);
+
+        const onClick = (event) => {
+          event.stopPropagation();
+          showPopupRef.current?.remove();
+
+          const date = new Date(show?.startsAt);
+          const dateLabel = Number.isNaN(date.getTime())
+            ? 'Data a confirmar'
+            : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'show-popup-content';
+          const title = document.createElement('strong');
+          title.textContent = show?.artist || 'Show';
+          const details = document.createElement('p');
+          details.textContent = `${show?.venue || 'Local a confirmar'} - ${show?.city || 'Cidade a confirmar'}`;
+          const when = document.createElement('p');
+          when.textContent = dateLabel;
+          wrapper.appendChild(title);
+          wrapper.appendChild(details);
+          wrapper.appendChild(when);
+
+          showPopupRef.current = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: true,
+            offset: 14,
+            className: 'show-popup'
+          })
+            .setLngLat([longitude, latitude])
+            .setDOMContent(wrapper)
+            .addTo(map);
+        };
+
+        el.addEventListener('click', onClick);
+        showMarkersRef.current.set(key, { marker, element: el, onClick });
+      } else {
+        showMarkersRef.current.get(key).marker.setLngLat([longitude, latitude]);
+      }
+    });
+
+    showMarkersRef.current.forEach((entry, id) => {
+      if (!activeShowIds.has(id)) {
+        if (entry.element && entry.onClick) entry.element.removeEventListener('click', entry.onClick);
+        entry.marker.remove();
+        showMarkersRef.current.delete(id);
+      }
+    });
+  }, [enabled, shows]);
 
   async function runBenchmark() {
     if (!enabled) return undefined;

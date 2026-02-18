@@ -29,7 +29,7 @@ if ! command -v pm2 >/dev/null 2>&1; then
   exit 1
 fi
 
-npm ci
+npm ci --include=optional
 npm run prisma:generate
 npm run db:migrate
 npm run build

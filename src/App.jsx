@@ -62,6 +62,7 @@ export default function App() {
   const [notificationsPrimed, setNotificationsPrimed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [selectedEventFeed, setSelectedEventFeed] = useState(null);
+  const [shows, setShows] = useState([]);
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
 
   const perfProfile = isMobileDevice ? MOBILE_PERF : DESKTOP_PERF;
@@ -80,6 +81,7 @@ export default function App() {
     isMobileDevice,
     perfProfile,
     simulatedPoints,
+    shows,
     users,
     socketRef
   });
@@ -216,6 +218,7 @@ export default function App() {
       <RealFeedLite
         onFocusItem={focusFeedItem}
         onOpenItem={openFeedItem}
+        onShowsChange={setShows}
         collapsed={rightPanelCollapsed}
         onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
       />
