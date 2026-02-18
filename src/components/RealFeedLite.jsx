@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Heart, MessageCircle } from 'lucide-react';
 import { API_URL } from '../config/appConfig';
@@ -104,7 +104,7 @@ function buildInitialPosts() {
   }));
 }
 
-export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, collapsed, onToggleCollapse }) {
+export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, socketRef, realtimeReady, collapsed, onToggleCollapse }) {
   const [activeTab, setActiveTab] = useState('feed');
   const [feedPosts, setFeedPosts] = useState(() => buildInitialPosts());
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -113,10 +113,8 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, c
 
   const [shows, setShows] = useState([]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const fallbackShows = [
+  const fallbackShows = useMemo(
+    () => [
       {
         id: 'fallback-show-1',
         artist: 'Jorge & Mateus',
@@ -150,33 +148,46 @@ export default function RealFeedLite({ onFocusItem, onOpenItem, onShowsChange, c
         startsAt: new Date(Date.now() + 10 * 86400000).toISOString(),
         thumbUrl: 'https://picsum.photos/seed/fallback-show-3/112/112'
       }
-    ];
+    ],
+    []
+  );
 
-    const loadShows = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/shows?page=1&limit=200`, {
-          cache: 'no-store'
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload?.error || 'Falha ao carregar shows.');
-        const list = Array.isArray(payload.shows) ? payload.shows : [];
-        if (!cancelled) {
-          setShows(list.length ? list : fallbackShows);
-        }
-      } catch {
-        if (!cancelled) {
-          setShows(fallbackShows);
-        }
-      }
-    };
+  const loadShows = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/shows?page=1&limit=200`, {
+        cache: 'no-store'
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Falha ao carregar shows.');
+      const list = Array.isArray(payload.shows) ? payload.shows : [];
+      setShows(list.length ? list : fallbackShows);
+    } catch {
+      setShows(fallbackShows);
+    }
+  }, [fallbackShows]);
 
+  useEffect(() => {
     loadShows();
     const intervalId = window.setInterval(loadShows, 20000);
     return () => {
-      cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [loadShows]);
+
+  useEffect(() => {
+    if (!realtimeReady) return undefined;
+    const socket = socketRef?.current;
+    if (!socket) return undefined;
+
+    const onShowsChanged = () => {
+      loadShows();
+    };
+
+    socket.on('shows:changed', onShowsChanged);
+    return () => {
+      socket.off('shows:changed', onShowsChanged);
+    };
+  }, [loadShows, realtimeReady, socketRef]);
 
   useEffect(() => {
     onShowsChange?.(shows);

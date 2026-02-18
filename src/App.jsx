@@ -55,7 +55,7 @@ export default function App() {
 
   const activeUser = authUser;
 
-  const { setUsername, users, socketRef } = useRealtimePresence(activeUser);
+  const { setUsername, users, socketRef, joined } = useRealtimePresence(activeUser);
 
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
@@ -219,6 +219,8 @@ export default function App() {
         onFocusItem={focusFeedItem}
         onOpenItem={openFeedItem}
         onShowsChange={setShows}
+        socketRef={socketRef}
+        realtimeReady={joined}
         collapsed={rightPanelCollapsed}
         onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
       />
