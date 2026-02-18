@@ -30,12 +30,18 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
     <>
       <div className="flex h-16 items-center justify-between border-b border-border px-4">
         <div className={cn('flex items-center gap-2 overflow-hidden', collapsed && 'justify-center')}>
-          <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/20 text-primary">
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-foreground">
             <Ticket className="h-4 w-4" />
           </div>
-          {!collapsed ? <span className="text-sm font-semibold">Admin Panel</span> : null}
+          {!collapsed ? <span className="text-sm font-semibold text-foreground">Admin Panel</span> : null}
         </div>
-        <Button variant="ghost" size="icon" onClick={onToggle} aria-label="Colapsar sidebar" className="hidden lg:inline-flex">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggle}
+          aria-label="Colapsar sidebar"
+          className="hidden text-muted-foreground hover:text-foreground lg:inline-flex"
+        >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
@@ -54,7 +60,7 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
                     type="button"
                     className={cn(
                       'group flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-150',
-                      active ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                      active ? 'bg-secondary text-white' : 'text-muted-foreground hover:bg-secondary/60 hover:text-white',
                       collapsed && 'justify-center px-0'
                     )}
                     aria-current={active ? 'page' : undefined}
@@ -107,7 +113,13 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
             />
             <aside className="relative h-full w-72 border-r border-border bg-card">
               <div className="flex h-16 items-center justify-end border-b border-border px-4">
-                <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} aria-label="Fechar menu">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setMobileOpen(false)}
+                  aria-label="Fechar menu"
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </div>
@@ -129,7 +141,7 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
             </Button>
             <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
               <span>{userName}</span>
-              <Button variant="secondary" onClick={onLogout}>
+              <Button variant="outline" className="text-muted-foreground hover:text-foreground" onClick={onLogout}>
                 Sair
               </Button>
             </div>
