@@ -158,6 +158,10 @@ export default function App() {
   }
 
   const spotifyIsPlaying = Boolean(activeUser?.nowPlaying?.isPlaying);
+  const spotifyTrackName = activeUser?.nowPlaying?.trackName || '';
+  const spotifyArtistName = activeUser?.nowPlaying?.artistName || activeUser?.nowPlaying?.artists || 'Artista indisponivel';
+  const hasActiveTrack = Boolean(spotifyTrackName);
+  const useMarqueeTitle = spotifyTrackName.length > 34;
 
   if (authBooting) {
     return (
@@ -236,12 +240,12 @@ export default function App() {
       />
 
       <div className="now-playing-card">
-        {activeUser?.spotify && activeUser?.nowPlaying?.trackName ? (
+        {activeUser?.spotify && hasActiveTrack ? (
           <div className="now-playing-content">
             {activeUser?.nowPlaying?.artistImage || activeUser?.nowPlaying?.albumImage || activeUser?.spotify?.image ? (
               <img
                 src={activeUser.nowPlaying.artistImage || activeUser.nowPlaying.albumImage || activeUser.spotify.image}
-                alt={activeUser.nowPlaying.artistName || activeUser.nowPlaying.artists || activeUser.nowPlaying.trackName}
+                alt={spotifyArtistName || spotifyTrackName}
                 className="now-playing-cover"
               />
             ) : (
@@ -255,11 +259,13 @@ export default function App() {
                 <span />
                 <span />
               </div>
-              <p className="now-playing-title">{activeUser.nowPlaying.trackName}</p>
-              <p className="now-playing-artist">{activeUser.nowPlaying.artistName || activeUser.nowPlaying.artists || 'Artista indisponivel'}</p>
+              <p className={useMarqueeTitle ? 'now-playing-title marquee' : 'now-playing-title'}>
+                <span>{spotifyTrackName}</span>
+              </p>
+              <p className="now-playing-artist">{spotifyArtistName}</p>
             </div>
           </div>
-        ) : activeUser?.spotify ? (
+        ) : (
           <div className="now-playing-content">
             {activeUser?.spotify?.image ? (
               <img src={activeUser.spotify.image} alt={activeUser.spotify.display_name || 'Spotify'} className="now-playing-cover" />
@@ -269,22 +275,7 @@ export default function App() {
               </div>
             )}
             <div className="now-playing-copy">
-              <div className="spotify-eq" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-              <p className="now-playing-title">Spotify conectado</p>
-              <p className="now-playing-empty">Nenhuma musica no momento.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="now-playing-content">
-            <div className="now-playing-cover now-playing-cover-fallback" aria-hidden="true">
-              ♪
-            </div>
-            <div className="now-playing-copy">
-              <p className="now-playing-title">Conecte seu Spotify</p>
+              <p className="now-playing-title">Conectar ao Spotify</p>
               <p className="now-playing-empty">Clique no icone do Spotify na barra lateral.</p>
             </div>
           </div>
