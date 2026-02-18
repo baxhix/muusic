@@ -8,7 +8,7 @@ import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { customAlphabet } from 'nanoid';
-import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { randomBytes } from 'crypto';
 import userService from './services/userService.js';
 import showService from './services/showService.js';
 import showCacheService from './services/showCache.js';
@@ -16,12 +16,23 @@ import redisService from './services/redis.js';
 import sessionService from './services/session.js';
 import passwordResetService from './services/passwordResetService.js';
 import cacheMiddleware from './middleware/cache.js';
+import { createLocalAuth } from './middleware/localAuth.js';
 import mapRoutes from './routes/map.js';
 import geolocationService from './services/geolocation.js';
 import accountSettingsService from './services/accountSettingsService.js';
 import trendingPlaybackService from './services/trendingPlaybackService.js';
 import performanceService from './services/performanceService.js';
+import { createSpotifyApiService } from './services/spotifyApiService.js';
 import { disconnectPrisma } from './services/db.js';
+import {
+  determineRoleForNewUser,
+  hashPassword,
+  issueLocalAuthToken,
+  sanitizeRole,
+  sanitizeUserResponse,
+  verifyPassword
+} from './utils/authLocal.js';
+import { parseListQuery, parseShowPayload, sanitizeShowResponse } from './utils/showPayload.js';
 
 function loadEnvironmentFiles() {
   const appMode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
@@ -56,8 +67,6 @@ if (isProduction && (!configuredJwtSecret || configuredJwtSecret === 'change_me_
 const JWT_SECRET = configuredJwtSecret || 'local-dev-secret';
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 24);
 const allowedOrigins = new Set([...FRONTEND_URLS, 'http://localhost:5173', 'http://127.0.0.1:5173']);
-const artistImageCache = new Map();
-const ARTIST_IMAGE_TTL_MS = 10 * 60 * 1000;
 const spotifyExchangeCodes = new Map();
 const SPOTIFY_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 const ADMIN_EMAILS = new Set(
@@ -121,129 +130,16 @@ app.use((req, res, next) => {
 app.use('/api', mapRoutes);
 
 const rooms = new Map();
-
-function hashPassword(password) {
-  const salt = randomBytes(16).toString('hex');
-  const hash = scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
-}
-
-function verifyPassword(password, storedHash) {
-  const [salt, key] = String(storedHash).split(':');
-  if (!salt || !key) return false;
-  const hashBuffer = Buffer.from(key, 'hex');
-  const candidate = scryptSync(password, salt, 64);
-  if (hashBuffer.length !== candidate.length) return false;
-  return timingSafeEqual(hashBuffer, candidate);
-}
-
-function issueLocalAuthToken(user, sessionId) {
-  return jwt.sign(
-    {
-      type: 'local-auth',
-      sessionId,
-      userId: user.id,
-      name: user.name || user.displayName || user.username || 'Usuario',
-      email: user.email,
-      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER'
-    },
-    JWT_SECRET,
-    { expiresIn: '8h' }
-  );
-}
-
-async function determineRoleForNewUser(email) {
-  if (ADMIN_EMAILS.has(email)) return 'ADMIN';
-  const totalUsers = await userService.countUsers();
-  return totalUsers === 0 ? 'ADMIN' : 'USER';
-}
-
-function sanitizeRole(rawRole) {
-  return rawRole === 'ADMIN' ? 'ADMIN' : 'USER';
-}
-
-function sanitizeUserResponse(user) {
-  return {
-    id: user.id,
-    name: user.name || user.displayName || user.username || 'Usuario',
-    email: user.email,
-    role: sanitizeRole(user.role)
-  };
-}
-
-function formatShowDateLabel(startsAt) {
-  const date = new Date(startsAt);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString();
-}
-
-function sanitizeShowResponse(show) {
-  if (!show) return null;
-  return {
-    id: show.id,
-    artist: String(show.artist || '').trim(),
-    venue: String(show.venue || '').trim(),
-    city: String(show.city || '').trim(),
-    country: String(show.country || 'Brasil').trim() || 'Brasil',
-    address: show.address ? String(show.address).trim() : null,
-    description: show.description ? String(show.description).trim() : null,
-    latitude: Number(show.latitude),
-    longitude: Number(show.longitude),
-    startsAt: formatShowDateLabel(show.startsAt),
-    thumbUrl: show.thumbUrl || null,
-    ticketUrl: show.ticketUrl || null,
-    createdAt: show.createdAt || null
-  };
-}
-
-function parseShowPayload(body = {}) {
-  const artist = String(body.artist || '').trim();
-  const venue = String(body.venue || '').trim();
-  const city = String(body.city || '').trim();
-  const country = String(body.country || 'Brasil').trim() || 'Brasil';
-  const address = String(body.address || '').trim();
-  const description = String(body.description || '').trim();
-  const startsAt = String(body.startsAt || '').trim();
-  const thumbUrl = String(body.thumbUrl || '').trim();
-  const ticketUrl = String(body.ticketUrl || '').trim();
-  const latitude = Number(body.latitude);
-  const longitude = Number(body.longitude);
-
-  if (!artist || !venue || !city || !startsAt) {
-    return { error: 'Artista, local, cidade e data/hora sao obrigatorios.' };
-  }
-  const startsDate = new Date(startsAt);
-  if (Number.isNaN(startsDate.getTime())) {
-    return { error: 'Data/hora do show invalida.' };
-  }
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    return { error: 'Latitude invalida.' };
-  }
-  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    return { error: 'Longitude invalida.' };
-  }
-
-  return {
-    artist,
-    venue,
-    city,
-    country,
-    address: address || null,
-    description: description || null,
-    startsAt: startsDate.toISOString(),
-    latitude,
-    longitude,
-    thumbUrl: thumbUrl || null,
-    ticketUrl: ticketUrl || null
-  };
-}
-
-function parseListQuery(query = {}) {
-  const page = Number.isFinite(Number(query.page)) ? Math.max(1, Number(query.page)) : 1;
-  const limit = Number.isFinite(Number(query.limit)) ? Math.min(200, Math.max(1, Number(query.limit))) : 50;
-  const search = String(query.search || '').trim();
-  return { page, limit, search };
-}
+const { readAuthSession, requireAdmin } = createLocalAuth({
+  jwtSecret: JWT_SECRET,
+  sessionService,
+  userService,
+  sanitizeRole
+});
+const { fetchSpotifyNowPlaying, refreshSpotifyAccessToken, buildSpotifyBasicHeader } = createSpotifyApiService({
+  spotifyClientId: process.env.SPOTIFY_CLIENT_ID || '',
+  spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET || ''
+});
 
 function cleanupSpotifyExchangeCodes() {
   const now = Date.now();
@@ -252,135 +148,6 @@ function cleanupSpotifyExchangeCodes() {
       spotifyExchangeCodes.delete(code);
     }
   }
-}
-
-async function requireAdmin(req, res) {
-  const auth = await readAuthSession(req);
-  if (auth.error) {
-    res.status(401).json({ error: auth.error });
-    return null;
-  }
-  if (sanitizeRole(auth.user.role) !== 'ADMIN') {
-    res.status(403).json({ error: 'Acesso restrito ao painel administrativo.' });
-    return null;
-  }
-  return auth;
-}
-
-async function fetchSpotifyNowPlaying(accessToken) {
-  try {
-    const playbackRes = await axios.get('https://api.spotify.com/v1/me/player/currently-playing', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      validateStatus: () => true
-    });
-
-    if (playbackRes.status === 204) return null;
-    if (playbackRes.status >= 400) return null;
-    const item = playbackRes.data?.item;
-    if (!item) return null;
-    const primaryArtist = Array.isArray(item.artists) ? item.artists[0] : null;
-    const primaryArtistId = primaryArtist?.id || null;
-    const artistImage = await fetchSpotifyArtistImage(accessToken, primaryArtistId);
-    const artists = Array.isArray(item.artists) ? item.artists.map((artist) => artist.name).join(', ') : null;
-
-    return {
-      trackId: item.id || null,
-      trackName: item.name || null,
-      artistId: primaryArtistId,
-      artistName: primaryArtist?.name || artists || null,
-      artists,
-      artistImage,
-      albumImage: item.album?.images?.[0]?.url || null,
-      isPlaying: Boolean(playbackRes.data?.is_playing),
-      progressMs: typeof playbackRes.data?.progress_ms === 'number' ? playbackRes.data.progress_ms : null,
-      durationMs: typeof item.duration_ms === 'number' ? item.duration_ms : null
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function fetchSpotifyArtistImage(accessToken, artistId) {
-  if (!artistId) return null;
-  const cached = artistImageCache.get(artistId);
-  if (cached?.expiresAt > Date.now()) {
-    return cached.image || null;
-  }
-
-  try {
-    const response = await axios.get(`https://api.spotify.com/v1/artists/${artistId}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      validateStatus: () => true
-    });
-    if (response.status >= 400) return null;
-    const image = response.data?.images?.[0]?.url || null;
-    artistImageCache.set(artistId, { image, expiresAt: Date.now() + ARTIST_IMAGE_TTL_MS });
-    return image;
-  } catch {
-    return null;
-  }
-}
-
-async function refreshSpotifyAccessToken(refreshToken) {
-  if (!refreshToken) return null;
-  try {
-    const tokenRes = await axios.post(
-      'https://accounts.spotify.com/api/token',
-      new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: String(refreshToken)
-      }).toString(),
-      {
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
-    );
-
-    return {
-      accessToken: tokenRes.data.access_token,
-      refreshToken: tokenRes.data.refresh_token || refreshToken,
-      expiresIn: Number(tokenRes.data.expires_in || 3600)
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function readAuthSession(req) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const sessionIdFromHeader = String(req.headers['x-session-id'] || req.query?.sessionId || '');
-  if (!token) return { error: 'Token ausente.' };
-
-  let payload;
-  try {
-    payload = jwt.verify(token, JWT_SECRET);
-  } catch {
-    return { error: 'Token expirado ou invalido.' };
-  }
-
-  if (payload?.type !== 'local-auth') {
-    return { error: 'Token invalido.' };
-  }
-
-  const sessionId = String(payload.sessionId || sessionIdFromHeader || '');
-  if (!sessionId) {
-    return { error: 'Sessao ausente.' };
-  }
-
-  const session = await sessionService.get(sessionId);
-  if (!session?.userId || session.userId !== payload.userId) {
-    return { error: 'Sessao invalida.' };
-  }
-
-  const user = await userService.findById(payload.userId);
-  if (!user) {
-    return { error: 'Sessao expirada.' };
-  }
-
-  return { user, sessionId };
 }
 
 function getRoom(roomId) {
@@ -484,12 +251,12 @@ app.post('/auth/local/register', async (req, res) => {
       email,
       name,
       displayName: name,
-      role: await determineRoleForNewUser(email),
+      role: await determineRoleForNewUser(email, ADMIN_EMAILS, userService),
       passwordHash: hashPassword(password)
     });
 
     const sessionId = await sessionService.create(user.id);
-    const token = issueLocalAuthToken(user, sessionId);
+    const token = issueLocalAuthToken(user, sessionId, JWT_SECRET);
     res.status(201).json({
       token,
       sessionId,
@@ -514,7 +281,7 @@ app.post('/auth/local/login', async (req, res) => {
     }
 
     const sessionId = await sessionService.create(user.id);
-    const token = issueLocalAuthToken(user, sessionId);
+    const token = issueLocalAuthToken(user, sessionId, JWT_SECRET);
     res.json({
       token,
       sessionId,
@@ -1095,7 +862,7 @@ app.get('/auth/spotify/callback', async (req, res) => {
       }).toString(),
       {
         headers: {
-          Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
+          Authorization: buildSpotifyBasicHeader(),
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       }
@@ -1385,16 +1152,12 @@ httpServer.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
-process.on('SIGINT', async () => {
+async function shutdown() {
   await geolocationService.disconnect();
   await disconnectPrisma();
   await redisService.disconnect();
   process.exit(0);
-});
+}
 
-process.on('SIGTERM', async () => {
-  await geolocationService.disconnect();
-  await disconnectPrisma();
-  await redisService.disconnect();
-  process.exit(0);
-});
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
