@@ -45,8 +45,8 @@
 }
 
 .rail-logo {
-  width: 48px;
-  height: 16px;
+  width: 36px;
+  height: auto;
   margin-top: 6px;
   margin-bottom: 22px;
   display: grid;
@@ -54,9 +54,9 @@
 }
 
 .rail-logo-img {
-  width: 46px;
+  width: 36px;
   height: auto;
-  max-width: 46px;
+  max-width: 36px;
   object-fit: contain;
 }
 
@@ -816,7 +816,7 @@
 
 .perf-box {
   position: fixed;
-  left: 12px;
+  left: 98px;
   top: calc(12px + env(safe-area-inset-top, 0px));
   transform: none;
   z-index: 16;
