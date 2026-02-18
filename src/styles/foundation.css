@@ -383,3 +383,14 @@ body,
   font-size: 12px;
   padding: 8px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .live-notif-toast.is-enter,
+  .live-notif-toast.is-exit,
+  .live-notif-toast.is-enter .live-notif-avatar,
+  .live-notif-toast.is-enter .live-notif-copy,
+  .live-notif-toast.is-exit .live-notif-copy,
+  .live-notif-toast.is-exit .live-notif-avatar {
+    animation: none !important;
+  }
+}

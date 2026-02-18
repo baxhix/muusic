@@ -982,6 +982,13 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .spotify-eq.is-playing span,
+  .now-playing-title.marquee span {
+    animation: none !important;
+  }
+}
+
 .auth-badge {
   display: flex;
   justify-content: space-between;

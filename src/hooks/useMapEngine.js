@@ -10,6 +10,35 @@ import {
 } from '../lib/mapSimulation';
 import { summarizeFpsSamples } from '../lib/perfStats';
 
+const PRESENCE_SOURCE_ID = 'presence-users-source';
+const PRESENCE_LAYER_ID = 'presence-users-layer';
+const PRESENCE_LAYER_LIMIT = 2000;
+
+function toPresenceGeoJson(users = []) {
+  const features = [];
+  users.forEach((user) => {
+    const lat = Number(user?.location?.lat);
+    const lng = Number(user?.location?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+    features.push({
+      type: 'Feature',
+      properties: {
+        id: user.id || '',
+        name: user?.spotify?.display_name || user?.name || 'Usuario'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [lng, lat]
+      }
+    });
+  });
+  return {
+    type: 'FeatureCollection',
+    features
+  };
+}
+
 export function useMapEngine({
   enabled,
   isMobileDevice,
@@ -73,10 +102,12 @@ export function useMapEngine({
     if (!enabled) return undefined;
     if (isMobileDevice || !perfProfile.showPulse) return undefined;
     let rafId = 0;
+    let lastPaintAt = 0;
 
     const animatePulse = (time) => {
       const map = mapRef.current;
-      if (map && map.getLayer(SIM_CLUSTER_PULSE_LAYER_ID)) {
+      if (map && map.getLayer(SIM_CLUSTER_PULSE_LAYER_ID) && time - lastPaintAt >= 80) {
+        lastPaintAt = time;
         const wave = (Math.sin(time / 450) + 1) / 2;
         const minRadius = 20 + wave * 3;
         const midRadius = 30 + wave * 4;
@@ -312,6 +343,8 @@ export function useMapEngine({
       showMarkersRef.current.clear();
       userMarkersRef.current.forEach((entry) => entry.marker.remove());
       userMarkersRef.current.clear();
+      if (map?.getLayer(PRESENCE_LAYER_ID)) map.removeLayer(PRESENCE_LAYER_ID);
+      if (map?.getSource(PRESENCE_SOURCE_ID)) map.removeSource(PRESENCE_SOURCE_ID);
       map?.remove();
       mapRef.current = null;
       mapboxRef.current = null;
@@ -323,6 +356,43 @@ export function useMapEngine({
     if (!enabled) return;
     if (!mapRef.current || !mapboxRef.current) return;
     const mapboxgl = mapboxRef.current;
+
+    const map = mapRef.current;
+    const shouldUsePresenceLayer = users.length >= PRESENCE_LAYER_LIMIT && map?.isStyleLoaded?.();
+
+    const removePresenceLayer = () => {
+      if (!map) return;
+      if (map.getLayer(PRESENCE_LAYER_ID)) map.removeLayer(PRESENCE_LAYER_ID);
+      if (map.getSource(PRESENCE_SOURCE_ID)) map.removeSource(PRESENCE_SOURCE_ID);
+    };
+
+    if (shouldUsePresenceLayer) {
+      userMarkersRef.current.forEach((entry) => entry.marker.remove());
+      userMarkersRef.current.clear();
+
+      const data = toPresenceGeoJson(users);
+      const source = map.getSource(PRESENCE_SOURCE_ID);
+      if (source) {
+        source.setData(data);
+      } else {
+        map.addSource(PRESENCE_SOURCE_ID, { type: 'geojson', data });
+        map.addLayer({
+          id: PRESENCE_LAYER_ID,
+          type: 'circle',
+          source: PRESENCE_SOURCE_ID,
+          paint: {
+            'circle-color': '#1DB954',
+            'circle-radius': 4,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#06220f'
+          }
+        });
+      }
+      map.setLayoutProperty(PRESENCE_LAYER_ID, 'visibility', mapVisibility?.users === false ? 'none' : 'visible');
+      return;
+    }
+
+    removePresenceLayer();
 
     users.forEach((user) => {
       if (!user.location) return;
@@ -424,6 +494,7 @@ export function useMapEngine({
     toggleLayer(SIM_CLUSTER_LAYER_ID, userLayerVisibility);
     toggleLayer(SIM_CLUSTER_PULSE_LAYER_ID, userLayerVisibility);
     toggleLayer(SIM_DENSITY_LAYER_ID, userLayerVisibility);
+    toggleLayer(PRESENCE_LAYER_ID, userLayerVisibility);
 
     userMarkersRef.current.forEach(({ element }) => {
       element.style.display = userMarkersVisibility;
@@ -492,7 +563,7 @@ export function useMapEngine({
     return () => {
       window.runMuusicBenchmark = null;
     };
-  });
+  }, [runBenchmark]);
 
   function focusFeedItem(item) {
     if (!mapRef.current || !item?.coords) return;

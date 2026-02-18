@@ -1,17 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
+import { buildGlobalSearchOptions, filterGlobalSearchOptions } from '../lib/searchIndex';
 
-function isValidCoords(show) {
-  const latitude = Number(show?.latitude);
-  const longitude = Number(show?.longitude);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
-  if (latitude < -90 || latitude > 90) return false;
-  if (longitude < -180 || longitude > 180) return false;
-  return true;
-}
-
-function normalizeText(value) {
-  return String(value || '').toLowerCase().trim();
+function useDebouncedValue(value, delay = 150) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
 }
 
 export default function GlobalSearchLite({ shows = [], users = [], onFocusItem, onSelectShow, onSelectUser }) {
@@ -20,80 +17,11 @@ export default function GlobalSearchLite({ shows = [], users = [], onFocusItem, 
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const debouncedQuery = useDebouncedValue(query, 140);
 
-  const options = useMemo(() => {
-    const showItems = [];
-    const venueItems = [];
-    const seenVenues = new Set();
+  const options = useMemo(() => buildGlobalSearchOptions(shows, users), [shows, users]);
 
-    shows.forEach((show) => {
-      if (!isValidCoords(show)) return;
-      const latitude = Number(show.latitude);
-      const longitude = Number(show.longitude);
-      const coords = [longitude, latitude];
-
-      showItems.push({
-        id: `show:${show.id}`,
-        kind: 'show',
-        label: show.artist || 'Show sem artista',
-        meta: [show.venue, show.city].filter(Boolean).join(' • ') || 'Show cadastrado',
-        coords,
-        city: show.city || '',
-        country: show.country || 'Brasil',
-        show
-      });
-
-      const venueLabel = String(show.venue || '').trim();
-      const venueKey = `${venueLabel.toLowerCase()}::${String(show.city || '').toLowerCase()}`;
-      if (venueLabel && !seenVenues.has(venueKey)) {
-        seenVenues.add(venueKey);
-        venueItems.push({
-          id: `venue:${show.id}`,
-          kind: 'venue',
-          label: venueLabel,
-          meta: [show.city, show.country].filter(Boolean).join(' • ') || 'Local de show',
-          coords,
-          city: show.city || '',
-          country: show.country || 'Brasil',
-          show
-        });
-      }
-    });
-
-    const userItems = users
-      .filter((user) => user?.id)
-      .map((user) => {
-        const latitude = Number(user?.location?.lat);
-        const longitude = Number(user?.location?.lng);
-        const hasCoords =
-          Number.isFinite(latitude) &&
-          Number.isFinite(longitude) &&
-          latitude >= -90 &&
-          latitude <= 90 &&
-          longitude >= -180 &&
-          longitude <= 180;
-        return {
-          id: `user:${user.id}`,
-          kind: 'user',
-          label: user?.spotify?.display_name || user?.name || 'Usuario',
-          meta: hasCoords ? 'Usuario da plataforma • online no mapa' : 'Usuario da plataforma',
-          coords: hasCoords ? [longitude, latitude] : null,
-          city: '',
-          country: '',
-          user
-        };
-      });
-
-    return [...showItems, ...venueItems, ...userItems];
-  }, [shows, users]);
-
-  const filtered = useMemo(() => {
-    const needle = normalizeText(query);
-    if (!needle) return options.slice(0, 8);
-    return options
-      .filter((item) => normalizeText(`${item.label} ${item.meta}`).includes(needle))
-      .slice(0, 10);
-  }, [options, query]);
+  const filtered = useMemo(() => filterGlobalSearchOptions(options, debouncedQuery, 10), [options, debouncedQuery]);
 
   useEffect(() => {
     const onPointerDown = (event) => {
