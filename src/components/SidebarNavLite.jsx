@@ -3,7 +3,7 @@ import { Bell, Disc3, Eye, Home, MapPin, MessageCircle, Settings, Shield, User }
 import muusicLogo from '../assets/logo-muusic.png';
 
 export default function SidebarNavLite({
-  onLogout,
+  onProfileOpen,
   onSpotifyConnect,
   spotifyConnected,
   spotifyConnecting,
@@ -146,7 +146,7 @@ export default function SidebarNavLite({
         <button type="button" className="rail-btn" aria-label="Admin" data-tooltip="Proteção">
           <Shield />
         </button>
-        <button type="button" className="rail-btn" aria-label="Perfil" onClick={onLogout} data-tooltip="Perfil">
+        <button type="button" className="rail-btn" aria-label="Perfil" onClick={onProfileOpen} data-tooltip="Perfil">
           <User />
         </button>
       </nav>

@@ -163,4 +163,23 @@
   .landing-footer-center {
     font-size: 12px;
   }
+
+  .account-page {
+    padding: 12px;
+  }
+
+  .account-card {
+    width: calc(100vw - 24px);
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .account-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .account-logout-btn {
+    margin-left: 0;
+  }
 }

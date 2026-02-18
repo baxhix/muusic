@@ -442,6 +442,10 @@
   object-fit: cover;
 }
 
+.user-detail-cover {
+  object-fit: cover;
+}
+
 .show-detail-body {
   padding: 14px;
   display: grid;
@@ -524,6 +528,20 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.show-user-tracks {
+  display: grid;
+  gap: 8px;
+}
+
+.show-user-track-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: #b7bfcc;
+  font-size: 13px;
 }
 
 .show-forum-new-post {
@@ -1177,6 +1195,206 @@
 
 .show-popup-content p {
   margin: 0;
+}
+
+.account-page {
+  min-height: 100dvh;
+  padding: 24px;
+  background:
+    radial-gradient(900px 360px at 18% -8%, rgba(219, 0, 53, 0.18), transparent 58%),
+    radial-gradient(820px 280px at 82% 108%, rgba(219, 0, 53, 0.1), transparent 64%),
+    linear-gradient(160deg, #030407 0%, #05070b 52%, #020306 100%);
+  display: grid;
+  place-items: center;
+}
+
+.account-card {
+  width: min(860px, calc(100vw - 32px));
+  background: rgba(8, 12, 18, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.account-loading {
+  min-height: 220px;
+  place-items: center;
+  color: #d2d8e4;
+}
+
+.account-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-head-copy {
+  min-width: 0;
+}
+
+.account-head-copy h1 {
+  margin: 0;
+  font-size: 22px;
+  color: #f4f6fb;
+}
+
+.account-head-copy p {
+  margin: 2px 0 0;
+  color: #a8b1be;
+  font-size: 13px;
+}
+
+.account-back-btn,
+.account-logout-btn,
+.account-primary-btn,
+.account-secondary-btn {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8edf5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-logout-btn {
+  margin-left: auto;
+}
+
+.account-primary-btn {
+  background: var(--brand-red);
+  border-color: hsl(var(--brand-red-hsl) / 0.5);
+  color: #fff4f6;
+}
+
+.account-feedback {
+  margin: 0;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.account-feedback.success {
+  background: rgba(29, 185, 84, 0.2);
+  color: #caf5da;
+  border: 1px solid rgba(29, 185, 84, 0.45);
+}
+
+.account-feedback.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ffd5d5;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.account-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.account-tab {
+  border: 0;
+  background: transparent;
+  color: #97a1ae;
+  padding: 8px 6px;
+  font-weight: 700;
+  border-bottom: 2px solid transparent;
+}
+
+.account-tab.active {
+  color: #f4f6fb;
+  border-bottom-color: var(--brand-red);
+}
+
+.account-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.account-avatar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.account-avatar,
+.account-avatar-fallback {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfd7e2;
+}
+
+.account-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.account-file-input {
+  display: none;
+}
+
+.account-field {
+  display: grid;
+  gap: 6px;
+}
+
+.account-field > span {
+  font-size: 12px;
+  color: #c7d0de;
+}
+
+.account-field input,
+.account-field textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #eef2f8;
+  border-radius: 10px;
+  min-height: 40px;
+  padding: 10px 12px;
+}
+
+.account-field textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.account-field small {
+  color: #909aab;
+  font-size: 11px;
+}
+
+.account-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #d7deea;
+  font-size: 13px;
+}
+
+.account-note {
+  margin: -4px 0 0;
+  color: #9aa4b4;
+  font-size: 12px;
+}
+
+.account-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
 }
 
 .missing-token {

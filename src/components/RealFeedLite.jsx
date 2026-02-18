@@ -120,6 +120,8 @@ export default function RealFeedLite({
   realtimeReady,
   selectedShowDetail,
   onCloseShowDetail,
+  selectedUserDetail,
+  onCloseUserDetail,
   collapsed,
   onToggleCollapse
 }) {
@@ -389,12 +391,15 @@ export default function RealFeedLite({
   }
 
   const isShowDetailOpen = Boolean(selectedShowDetail);
+  const isUserDetailOpen = !isShowDetailOpen && Boolean(selectedUserDetail);
+  const isDetailOpen = isShowDetailOpen || isUserDetailOpen;
   const showDetailThumb = selectedShowDetail?.thumbUrl || `https://picsum.photos/seed/${encodeURIComponent(selectedShowDetail?.artist || 'evento')}/900/560`;
+  const userDetailCover = selectedUserDetail?.avatar || `https://i.pravatar.cc/320?u=${encodeURIComponent(selectedUserDetail?.id || selectedUserDetail?.name || 'user')}`;
 
   return (
     <div className="right-panel">
       <div className="right-head">
-        {!isShowDetailOpen ? (
+        {!isDetailOpen ? (
           <div className="feed-tabs">
             <button type="button" className={activeTab === 'feed' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('feed')}>
               Feed
@@ -414,7 +419,7 @@ export default function RealFeedLite({
         </button>
       </div>
 
-      <div className={isShowDetailOpen ? 'feed-box show-detail-mode' : 'feed-box'}>
+      <div className={isDetailOpen ? 'feed-box show-detail-mode' : 'feed-box'}>
         {isShowDetailOpen && (
           <article className="show-detail-card">
             <img src={showDetailThumb} alt={selectedShowDetail?.artist || 'Evento'} className="show-detail-cover" />
@@ -560,7 +565,59 @@ export default function RealFeedLite({
           </article>
         )}
 
-        {!isShowDetailOpen && activeTab === 'feed' && (
+        {isUserDetailOpen && (
+          <article className="show-detail-card">
+            <img src={userDetailCover} alt={selectedUserDetail?.name || 'Usuário'} className="show-detail-cover user-detail-cover" />
+            <div className="show-detail-body">
+              <div className="show-detail-head">
+                <h3>{selectedUserDetail?.name || 'Usuário'}</h3>
+                <button type="button" className="show-detail-close" onClick={onCloseUserDetail} aria-label="Fechar">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="show-detail-pane">
+                <div className="show-detail-meta-group">
+                  <p className="show-detail-line">{selectedUserDetail?.city || 'Cidade indisponível'}</p>
+                </div>
+                <p className="show-detail-desc">{selectedUserDetail?.bio || 'Bio não informada.'}</p>
+                <div className="show-user-tracks">
+                  {selectedUserDetail?.showMusicHistory !== false && (
+                    <>
+                      <p className="show-detail-line">Músicas ouvidas recentemente</p>
+                      <ul className="show-user-track-list">
+                        {(selectedUserDetail?.recentTracks || ['Sem histórico recente']).map((track, index) => (
+                          <li key={`${track}-${index}`}>{track}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+                <div className="show-detail-actions">
+                  <button type="button" className="show-ticket-btn" onClick={onCloseUserDetail}>
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    className="feed-link secondary"
+                    onClick={() => {
+                      if (!selectedUserDetail?.coords) return;
+                      onFocusItem({
+                        coords: selectedUserDetail.coords,
+                        city: selectedUserDetail.city
+                      });
+                    }}
+                    disabled={!selectedUserDetail?.coords}
+                  >
+                    Ver no mapa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        )}
+
+        {!isDetailOpen && activeTab === 'feed' && (
           <div className="social-feed-list">
             {feedPosts.map((post) => (
               <article key={post.id} className="social-card">
@@ -637,9 +694,9 @@ export default function RealFeedLite({
           </div>
         )}
 
-        {!isShowDetailOpen && activeTab === 'buzz' && <div className="feed-empty">Buzz vazio</div>}
+        {!isDetailOpen && activeTab === 'buzz' && <div className="feed-empty">Buzz vazio</div>}
 
-        {!isShowDetailOpen && activeTab === 'shows' && (
+        {!isDetailOpen && activeTab === 'shows' && (
           <div className="shows-list">
             {showsForRender.map((show) => (
               <div key={show.id} className="show-card">

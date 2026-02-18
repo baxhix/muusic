@@ -6,7 +6,7 @@ import LiveNotificationToastLite from './components/LiveNotificationToastLite';
 import GlobalSearchLite from './components/GlobalSearchLite';
 import RealFeedLite from './components/RealFeedLite';
 import EventFeedLite from './components/EventFeedLite';
-import SimUserProfileModal from './components/SimUserProfileModal';
+import MyAccountPage from './pages/MyAccountPage';
 import AuthPage from './components/AuthPage';
 import { MAPBOX_TOKEN } from './config/appConfig';
 import { buildSimulatedPoints, DESKTOP_PERF, MOBILE_PERF } from './lib/mapSimulation';
@@ -14,6 +14,9 @@ import { readMapVisibility, saveMapVisibility, STORAGE_SESSION_KEY } from './lib
 import { useAuthFlow } from './hooks/useAuthFlow';
 import { useRealtimePresence } from './hooks/useRealtimePresence';
 import { useMapEngine } from './hooks/useMapEngine';
+import { accountService, DEFAULT_ACCOUNT_SETTINGS } from './services/accountService';
+
+const ACCOUNT_PATH = '/minha-conta';
 
 function getAdaptivePollingDelay(nowPlaying) {
   if (!nowPlaying) return 30000;
@@ -64,9 +67,19 @@ export default function App() {
   const [selectedEventFeed, setSelectedEventFeed] = useState(null);
   const [selectedShowDetail, setSelectedShowDetail] = useState(null);
   const [selectedSimProfile, setSelectedSimProfile] = useState(null);
+  const [accountSettings, setAccountSettings] = useState(DEFAULT_ACCOUNT_SETTINGS);
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname || '/');
   const [shows, setShows] = useState([]);
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+
+  const mapUsers = useMemo(() => {
+    if (!Array.isArray(users)) return [];
+    if (accountSettings.locationEnabled !== false) return users;
+    const activeId = activeUser?.id;
+    if (!activeId) return users;
+    return users.map((user) => (user.id === activeId ? { ...user, location: null } : user));
+  }, [users, accountSettings.locationEnabled, activeUser?.id]);
 
   const perfProfile = isMobileDevice ? MOBILE_PERF : DESKTOP_PERF;
   const simulatedPoints = useMemo(() => buildSimulatedPoints(perfProfile.points), [perfProfile.points]);
@@ -90,7 +103,7 @@ export default function App() {
     simulatedPoints,
     shows,
     onShowSelect: handleMapShowSelect,
-    users,
+    users: mapUsers,
     socketRef,
     mapVisibility
   });
@@ -109,6 +122,42 @@ export default function App() {
   useEffect(() => {
     saveMapVisibility(mapVisibility);
   }, [mapVisibility]);
+
+  useEffect(() => {
+    if (!selectedSimProfile?.id) return;
+    if (!activeUser?.id || selectedSimProfile.id !== activeUser.id) return;
+    setSelectedSimProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            city: accountSettings.city,
+            bio: accountSettings.bio,
+            avatar: accountSettings.avatarDataUrl || prev.avatar,
+            showMusicHistory: accountSettings.showMusicHistory,
+            recentTracks: accountSettings.showMusicHistory ? prev.recentTracks || [] : []
+          }
+        : prev
+    );
+  }, [accountSettings, activeUser?.id, selectedSimProfile?.id]);
+
+  useEffect(() => {
+    let active = true;
+    accountService
+      .get()
+      .then((settings) => {
+        if (active) setAccountSettings(settings);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => setCurrentPath(window.location.pathname || '/');
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   useEffect(() => {
     if (!activeUser) return;
@@ -164,6 +213,12 @@ export default function App() {
     setSelectedEventFeed(item);
   }
 
+  function navigateTo(path) {
+    if (window.location.pathname === path) return;
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  }
+
   const handleSearchShowSelect = useCallback((show) => {
     if (!show) return;
     setSelectedShowDetail(show);
@@ -172,13 +227,30 @@ export default function App() {
 
   const handleSearchUserSelect = useCallback((user) => {
     if (!user) return;
+    const isCurrentUser = Boolean(activeUser?.id && user?.id === activeUser.id);
+    const city = isCurrentUser ? accountSettings.city : user?.location?.city || 'Cidade indisponivel';
+    const avatar = isCurrentUser ? accountSettings.avatarDataUrl || user?.spotify?.image : user?.spotify?.image;
+    const bio = isCurrentUser ? accountSettings.bio : '';
+    const recentTracks = isCurrentUser
+      ? accountSettings.showMusicHistory
+        ? [user?.spotify?.track || 'Sem historico de musica recente']
+        : []
+      : [user?.spotify?.track || 'Sem historico de musica recente'];
     setSelectedSimProfile({
+      id: user?.id || `user-${Date.now()}`,
       name: user?.spotify?.display_name || user?.name || 'Usuario',
-      avatar: user?.spotify?.image || `https://i.pravatar.cc/120?u=${encodeURIComponent(user?.id || 'user')}`,
-      city: user?.location?.city || 'Cidade indisponivel',
-      recentTracks: [user?.spotify?.track || 'Sem historico de musica recente']
+      avatar: avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(user?.id || 'user')}`,
+      city,
+      bio,
+      showMusicHistory: isCurrentUser ? accountSettings.showMusicHistory : true,
+      recentTracks,
+      coords:
+        Number.isFinite(Number(user?.location?.lng)) && Number.isFinite(Number(user?.location?.lat))
+          ? [Number(user.location.lng), Number(user.location.lat)]
+          : null
     });
-  }, []);
+    setRightPanelCollapsed(false);
+  }, [activeUser?.id, accountSettings]);
 
   const spotifyIsPlaying = Boolean(activeUser?.nowPlaying?.isPlaying);
   const spotifyTrackName = activeUser?.nowPlaying?.trackName || '';
@@ -214,12 +286,23 @@ export default function App() {
     );
   }
 
+  if (currentPath === ACCOUNT_PATH) {
+    return (
+      <MyAccountPage
+        authUser={activeUser}
+        onBack={() => navigateTo('/')}
+        onLogout={handleLogout}
+        onSettingsChange={setAccountSettings}
+      />
+    );
+  }
+
   return (
     <div className="app-root">
       <div ref={mapContainerRef} className="map-canvas" />
       <GlobalSearchLite
         shows={shows}
-        users={users}
+        users={mapUsers}
         onFocusItem={focusFeedItem}
         onSelectShow={handleSearchShowSelect}
         onSelectUser={handleSearchUserSelect}
@@ -234,11 +317,20 @@ export default function App() {
             country: payload.country
           });
         }}
-        onUserClick={(profile) => setSelectedSimProfile(profile || null)}
+        onUserClick={(profile) => {
+          setSelectedSimProfile({
+            ...(profile || {}),
+            bio: profile?.bio || '',
+            city: profile?.city || 'Cidade indisponivel',
+            showMusicHistory: profile?.showMusicHistory !== false,
+            recentTracks: profile?.recentTracks || []
+          });
+          setRightPanelCollapsed(false);
+        }}
       />
 
       <SidebarNavLite
-        onLogout={handleLogout}
+        onProfileOpen={() => navigateTo(ACCOUNT_PATH)}
         onSpotifyConnect={() => connectSpotify('duo-room')}
         spotifyConnected={Boolean(activeUser?.spotify)}
         spotifyConnecting={spotifyConnecting}
@@ -273,6 +365,8 @@ export default function App() {
         realtimeReady={joined}
         selectedShowDetail={selectedShowDetail}
         onCloseShowDetail={() => setSelectedShowDetail(null)}
+        selectedUserDetail={selectedSimProfile}
+        onCloseUserDetail={() => setSelectedSimProfile(null)}
         collapsed={rightPanelCollapsed}
         onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
       />
@@ -340,7 +434,6 @@ export default function App() {
       {!MAPBOX_TOKEN && <div className="missing-token">Sem token Mapbox: modo fallback ativo.</div>}
       {mapWarning && <div className="missing-token">{mapWarning}</div>}
       <EventFeedLite event={selectedEventFeed} onClose={() => setSelectedEventFeed(null)} onGoToMap={focusFeedItem} />
-      <SimUserProfileModal profile={selectedSimProfile} onClose={() => setSelectedSimProfile(null)} />
     </div>
   );
 }
