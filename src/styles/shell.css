@@ -806,9 +806,9 @@
   bottom: 16px;
   transform: none;
   z-index: 28;
-  width: fit-content;
-  max-width: min(560px, calc(100vw - 220px));
-  min-width: 312px;
+  width: 290px;
+  max-width: 290px;
+  min-width: 290px;
   background: rgba(7, 10, 14, 0.92);
   border: 0;
   border-radius: 999px;
@@ -868,7 +868,7 @@
   padding-right: 22px;
   overflow: visible;
   text-overflow: clip;
-  animation: nowPlayingMarquee 10s linear infinite;
+  animation: nowPlayingMarquee 20s linear infinite;
 }
 
 .now-playing-title.marquee:hover span {
