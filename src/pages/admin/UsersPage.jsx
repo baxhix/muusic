@@ -36,7 +36,6 @@ function exportUsersCsv(items) {
 }
 
 export default function UsersPage({ apiFetch }) {
-  const [users, setUsers] = useState(mockUsers);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -60,16 +59,13 @@ export default function UsersPage({ apiFetch }) {
           try {
             payload = await fetchUsersFromApi({ apiFetch, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE });
             setSource('api');
-            setUsers(payload.users || []);
           } catch {
             payload = await fetchUsersMock({ users: mockUsers, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
             setSource('mock');
-            setUsers(mockUsers);
           }
         } else {
           payload = await fetchUsersMock({ users: mockUsers, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
           setSource('mock');
-          setUsers(mockUsers);
         }
 
         setKpis(payload.kpis);

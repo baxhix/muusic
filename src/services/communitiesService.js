@@ -8,10 +8,6 @@ function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function byDateDesc(a, b) {
-  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-}
-
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
 }

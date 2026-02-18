@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FALLBACK_STYLE, MAPBOX_TOKEN } from '../config/appConfig';
 import {
   SIM_CLUSTER_LAYER_ID,
@@ -177,6 +177,8 @@ export function useMapEngine({
     let bootRaf = 0;
     const resizeTimers = [];
     let bootAttempts = 0;
+    const trackedShowMarkers = showMarkersRef.current;
+    const trackedUserMarkers = userMarkersRef.current;
 
     const scheduleResizeBurst = () => {
       const instance = mapRef.current;
@@ -362,16 +364,16 @@ export function useMapEngine({
       popupRef.current?.remove();
       popupRef.current = null;
       selectedSimIdRef.current = null;
-      showMarkersRef.current.forEach(({ marker, element, onClick }) => {
+      trackedShowMarkers.forEach(({ marker, element, onClick }) => {
         if (element && onClick) element.removeEventListener('click', onClick);
         marker.remove();
       });
-      showMarkersRef.current.clear();
-      userMarkersRef.current.forEach((entry) => {
+      trackedShowMarkers.clear();
+      trackedUserMarkers.forEach((entry) => {
         if (entry.element && entry.onClick) entry.element.removeEventListener('click', entry.onClick);
         entry.marker.remove();
       });
-      userMarkersRef.current.clear();
+      trackedUserMarkers.clear();
       if (map?.getLayer(PRESENCE_LAYER_ID)) map.removeLayer(PRESENCE_LAYER_ID);
       if (map?.getSource(PRESENCE_SOURCE_ID)) map.removeSource(PRESENCE_SOURCE_ID);
       map?.remove();
@@ -566,53 +568,56 @@ export function useMapEngine({
     }
   }, [enabled, mapVisibility]);
 
-  async function runBenchmark() {
-    if (!enabled) return undefined;
+  const runBenchmark = useCallback(async () => {
+    if (!enabled || benchmarkRunning) return undefined;
     const map = mapRef.current;
-    if (!map || benchmarkRunning) return;
+    if (!map) return undefined;
 
     setBenchmarkRunning(true);
     setBenchmarkResult(null);
 
-    const startAt = Date.now();
-    const startSampleIndex = fpsSamplesRef.current.length;
-    const steps = [
-      { center: [-46.6333, -23.5505], zoom: 3.2, wait: 7000 },
-      { center: [-98.5795, 39.8283], zoom: 4.3, wait: 8000 },
-      { center: [2.3522, 48.8566], zoom: 5.1, wait: 8000 },
-      { center: [77.209, 28.6139], zoom: 5.1, wait: 8000 },
-      { center: [139.6917, 35.6895], zoom: 5.6, wait: 8000 },
-      { center: [151.2093, -33.8688], zoom: 4.8, wait: 7000 },
-      { center: [31.2357, 30.0444], zoom: 4.8, wait: 7000 },
-      { center: [-58.3816, -34.6037], zoom: 4.6, wait: 7000 }
-    ];
+    try {
+      const startAt = Date.now();
+      const startSampleIndex = fpsSamplesRef.current.length;
+      const steps = [
+        { center: [-46.6333, -23.5505], zoom: 3.2, wait: 7000 },
+        { center: [-98.5795, 39.8283], zoom: 4.3, wait: 8000 },
+        { center: [2.3522, 48.8566], zoom: 5.1, wait: 8000 },
+        { center: [77.209, 28.6139], zoom: 5.1, wait: 8000 },
+        { center: [139.6917, 35.6895], zoom: 5.6, wait: 8000 },
+        { center: [151.2093, -33.8688], zoom: 4.8, wait: 7000 },
+        { center: [31.2357, 30.0444], zoom: 4.8, wait: 7000 },
+        { center: [-58.3816, -34.6037], zoom: 4.6, wait: 7000 }
+      ];
 
-    for (let i = 0; i < steps.length; i += 1) {
-      const step = steps[i];
-      map.flyTo({
-        center: step.center,
-        zoom: step.zoom,
-        speed: 0.55,
-        curve: 1.5,
-        essential: true
-      });
-      await new Promise((resolve) => setTimeout(resolve, step.wait));
-      if (!mapRef.current) return;
+      for (let i = 0; i < steps.length; i += 1) {
+        const step = steps[i];
+        map.flyTo({
+          center: step.center,
+          zoom: step.zoom,
+          speed: 0.55,
+          curve: 1.5,
+          essential: true
+        });
+        await new Promise((resolve) => setTimeout(resolve, step.wait));
+        if (!mapRef.current) return undefined;
+      }
+
+      const elapsedSec = Math.round((Date.now() - startAt) / 1000);
+      const samples = fpsSamplesRef.current.slice(startSampleIndex).map((s) => s.fps);
+      const summary = summarizeFpsSamples(samples);
+      const result = {
+        durationSec: elapsedSec,
+        ...summary
+      };
+
+      setBenchmarkResult(result);
+      window.__MUUSIC_BENCHMARK_LAST__ = result;
+      return result;
+    } finally {
+      setBenchmarkRunning(false);
     }
-
-    const elapsedSec = Math.round((Date.now() - startAt) / 1000);
-    const samples = fpsSamplesRef.current.slice(startSampleIndex).map((s) => s.fps);
-    const summary = summarizeFpsSamples(samples);
-    const result = {
-      durationSec: elapsedSec,
-      ...summary
-    };
-
-    setBenchmarkResult(result);
-    setBenchmarkRunning(false);
-    window.__MUUSIC_BENCHMARK_LAST__ = result;
-    return result;
-  }
+  }, [enabled, benchmarkRunning]);
 
   useEffect(() => {
     window.runMuusicBenchmark = runBenchmark;

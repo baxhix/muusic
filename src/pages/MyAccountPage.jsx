@@ -20,6 +20,14 @@ function countBio(value) {
 }
 
 export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLogout }) {
+  const authUserId = authUser?.id || '';
+  const authUserToken = authUser?.token || '';
+  const authUserSessionId = authUser?.sessionId || '';
+  const authPayload = useMemo(
+    () => (authUserToken ? { id: authUserId, token: authUserToken, sessionId: authUserSessionId } : null),
+    [authUserId, authUserToken, authUserSessionId]
+  );
+
   const [activeTab, setActiveTab] = useState('perfil');
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -44,7 +52,7 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   useEffect(() => {
     let active = true;
     accountService
-      .get(authUser)
+      .get(authPayload)
       .then((settings) => {
         if (!active) return;
         setCity(settings.city);
@@ -66,7 +74,7 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
     return () => {
       active = false;
     };
-  }, [authUser?.token, authUser?.sessionId, authUser?.id]);
+  }, [authPayload]);
 
   const profileDraft = useMemo(
     () => ({

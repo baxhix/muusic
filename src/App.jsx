@@ -61,6 +61,13 @@ export default function App() {
   } = useAuthFlow();
 
   const activeUser = authUser;
+  const activeUserId = activeUser?.id || '';
+  const activeUserToken = activeUser?.token || '';
+  const activeUserSessionId = activeUser?.sessionId || '';
+  const activeAuthPayload = useMemo(
+    () => (activeUserToken ? { id: activeUserId, token: activeUserToken, sessionId: activeUserSessionId } : null),
+    [activeUserId, activeUserToken, activeUserSessionId]
+  );
 
   const { setUsername, users, socketRef, joined } = useRealtimePresence(activeUser);
 
@@ -213,7 +220,7 @@ export default function App() {
   useEffect(() => {
     let active = true;
     accountService
-      .get(activeUser)
+      .get(activeAuthPayload)
       .then((settings) => {
         if (active) setAccountSettings(settings);
       })
@@ -221,7 +228,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [activeUser?.token, activeUser?.sessionId]);
+  }, [activeAuthPayload]);
 
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname || '/');
@@ -347,7 +354,7 @@ export default function App() {
     if (shouldCapture) {
       trendingsService
         .recordPlayback({
-          authUser: activeUser,
+          authUser: activeAuthPayload,
           playback: {
             artistId: nowPlaying.artistId || null,
             artistName: nowPlaying.artistName || nowPlaying.artists || 'Artista desconhecido',
@@ -364,7 +371,7 @@ export default function App() {
       trackId,
       isPlaying
     };
-  }, [activeUser?.id, activeUser?.nowPlaying]);
+  }, [activeAuthPayload, activeUser?.nowPlaying]);
 
   if (authBooting) {
     return (

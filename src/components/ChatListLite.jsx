@@ -195,7 +195,20 @@ export default function ChatListLite({ open, onToggle }) {
 
           <div className="chat-list-items">
             {filteredConversations.map((chat) => (
-              <div key={chat.id} className="chat-list-item" onClick={() => openConversation(chat.id)}>
+              <div
+                key={chat.id}
+                className="chat-list-item"
+                role="button"
+                tabIndex={0}
+                aria-label={`Abrir conversa com ${chat.name}`}
+                onClick={() => openConversation(chat.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openConversation(chat.id);
+                  }
+                }}
+              >
                 <img src={chat.avatar} alt={chat.name} className="chat-list-avatar" width="44" height="44" />
                 <div className="chat-list-copy">
                   <div className="chat-list-row">
@@ -209,8 +222,15 @@ export default function ChatListLite({ open, onToggle }) {
                     <span className={chat.unread > 0 ? 'chat-list-time unread' : 'chat-list-time'}>{chat.time}</span>
                   </div>
                 </div>
-                <div className="chat-list-menu-wrap" onClick={(event) => event.stopPropagation()}>
-                  <button type="button" className="chat-list-menu-trigger" onClick={() => setMenuOpenId((prev) => (prev === chat.id ? null : chat.id))}>
+                <div className="chat-list-menu-wrap">
+                  <button
+                    type="button"
+                    className="chat-list-menu-trigger"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setMenuOpenId((prev) => (prev === chat.id ? null : chat.id));
+                    }}
+                  >
                     <MoreVertical size={14} />
                   </button>
                   {menuOpenId === chat.id && (

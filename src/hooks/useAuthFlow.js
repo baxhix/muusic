@@ -19,7 +19,7 @@ function isSameNowPlaying(prev, next) {
 }
 
 export function useAuthFlow() {
-  const initialSession = readSessionUser();
+  const [initialSession] = useState(() => readSessionUser());
   const [authMode, setAuthMode] = useState('login');
   const [authForm, setAuthForm] = useState({
     name: '',
@@ -97,7 +97,7 @@ export function useAuthFlow() {
     return () => {
       cancelled = true;
     };
-  }, [initialSession?.token, initialSession?.sessionId]);
+  }, [initialSession]);
 
   function updateAuthField(field, value) {
     setAuthForm((prev) => ({ ...prev, [field]: value }));

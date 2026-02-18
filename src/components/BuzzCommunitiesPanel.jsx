@@ -278,11 +278,14 @@ export default function BuzzCommunitiesPanel() {
     const open = menuOpenId === community.id;
 
     return (
-      <div className="buzz-menu-wrap" onClick={(event) => event.stopPropagation()}>
+      <div className="buzz-menu-wrap">
         <button
           type="button"
           className={compact ? 'social-comment-like' : 'feed-link secondary'}
-          onClick={() => setMenuOpenId(open ? '' : community.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            setMenuOpenId(open ? '' : community.id);
+          }}
           aria-expanded={open ? 'true' : 'false'}
           aria-haspopup="menu"
         >
@@ -375,11 +378,19 @@ export default function BuzzCommunitiesPanel() {
 
         <div className="buzz-communities-row" role="list">
           {filteredCommunities.map((community) => (
-            <article
+            <div
               key={community.id}
-              role="listitem"
+              role="button"
+              tabIndex={0}
               className="show-card buzz-community-card"
+              aria-label={`Abrir comunidade ${community.name}`}
               onClick={() => setSelectedCommunityId(community.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setSelectedCommunityId(community.id);
+                }
+              }}
             >
               <img src={community.previewUrl || community.coverUrl || 'https://picsum.photos/seed/community-default/240/240'} alt={community.name} className="show-thumb buzz-square-thumb" />
               <div className="show-copy buzz-community-copy">
@@ -396,7 +407,7 @@ export default function BuzzCommunitiesPanel() {
                 <p className="show-meta">{community.membersCount} membros • {community.postsCount} posts • {formatRelativeDate(community.lastActivity)}</p>
               </div>
               {renderCommunityMenu(community)}
-            </article>
+            </div>
           ))}
           {!filteredCommunities.length ? <div className="feed-empty">Nenhuma comunidade encontrada.</div> : null}
         </div>
