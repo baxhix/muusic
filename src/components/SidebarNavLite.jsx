@@ -1,4 +1,5 @@
-import { Bell, Disc3, Home, MapPin, MessageCircle, Settings, Shield, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, Disc3, Eye, Home, MapPin, MessageCircle, Settings, Shield, User } from 'lucide-react';
 import muusicLogo from '../assets/logo-muusic.png';
 
 export default function SidebarNavLite({
@@ -9,8 +10,54 @@ export default function SidebarNavLite({
   chatOpen,
   onChatToggle,
   notificationsOpen,
-  onNotificationsToggle
+  onNotificationsToggle,
+  mapVisibility,
+  onMapVisibilityChange
 }) {
+  const [viewPopoverOpen, setViewPopoverOpen] = useState(false);
+  const popoverRef = useRef(null);
+  const eyeButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!viewPopoverOpen) return undefined;
+
+    const onDocumentPointerDown = (event) => {
+      if (!popoverRef.current?.contains(event.target) && !eyeButtonRef.current?.contains(event.target)) {
+        setViewPopoverOpen(false);
+      }
+    };
+
+    const onEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      setViewPopoverOpen(false);
+      eyeButtonRef.current?.focus();
+    };
+
+    document.addEventListener('mousedown', onDocumentPointerDown);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('mousedown', onDocumentPointerDown);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [viewPopoverOpen]);
+
+  useEffect(() => {
+    if (!viewPopoverOpen) return;
+    const firstInput = popoverRef.current?.querySelector('input');
+    firstInput?.focus();
+  }, [viewPopoverOpen]);
+
+  function handleTogglePopover() {
+    setViewPopoverOpen((prev) => !prev);
+  }
+
+  function handleToggleVisibility(key) {
+    onMapVisibilityChange?.({
+      ...mapVisibility,
+      [key]: !mapVisibility?.[key]
+    });
+  }
+
   return (
     <aside className="rail-sidebar">
       <div className="rail-logo">
@@ -40,6 +87,40 @@ export default function SidebarNavLite({
         >
           <Bell />
         </button>
+        <div className="rail-view-wrap">
+          <button
+            ref={eyeButtonRef}
+            type="button"
+            className={viewPopoverOpen ? 'rail-btn active' : 'rail-btn'}
+            aria-label="Filtros de visualização do mapa"
+            data-tooltip="Visualização"
+            aria-haspopup="dialog"
+            aria-expanded={viewPopoverOpen}
+            onClick={handleTogglePopover}
+          >
+            <Eye />
+          </button>
+          {viewPopoverOpen && (
+            <div className="map-visibility-popover" role="dialog" aria-label="Filtros de visualização" ref={popoverRef}>
+              <label className="map-visibility-item">
+                <input
+                  type="checkbox"
+                  checked={mapVisibility?.users !== false}
+                  onChange={() => handleToggleVisibility('users')}
+                />
+                <span>Usuários</span>
+              </label>
+              <label className="map-visibility-item">
+                <input
+                  type="checkbox"
+                  checked={mapVisibility?.shows !== false}
+                  onChange={() => handleToggleVisibility('shows')}
+                />
+                <span>Shows</span>
+              </label>
+            </div>
+          )}
+        </div>
       </nav>
 
       <nav className="rail-nav rail-bottom">

@@ -1,6 +1,6 @@
 @media (max-width: 900px) {
   .live-notif-toast {
-    bottom: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     left: 12px;
     right: 12px;
     max-width: calc(100vw - 24px);
@@ -58,9 +58,10 @@
   }
 
   .perf-box {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 92px;
+    left: 10px;
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    transform: none;
+    bottom: auto;
     min-width: 0;
     width: min(360px, calc(100vw - 24px));
   }

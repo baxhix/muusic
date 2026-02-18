@@ -6,6 +6,7 @@ import NotificationsListLite from './components/NotificationsListLite';
 import LiveNotificationToastLite from './components/LiveNotificationToastLite';
 import RealFeedLite from './components/RealFeedLite';
 import EventFeedLite from './components/EventFeedLite';
+import SimUserProfileModal from './components/SimUserProfileModal';
 import AuthPage from './components/AuthPage';
 import { MAPBOX_TOKEN } from './config/appConfig';
 import { buildSimulatedPoints, DESKTOP_PERF, MOBILE_PERF } from './lib/mapSimulation';
@@ -59,10 +60,10 @@ export default function App() {
 
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
-  const [notificationsPrimed, setNotificationsPrimed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [selectedEventFeed, setSelectedEventFeed] = useState(null);
   const [selectedShowDetail, setSelectedShowDetail] = useState(null);
+  const [selectedSimProfile, setSelectedSimProfile] = useState(null);
   const [shows, setShows] = useState([]);
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
 
@@ -198,7 +199,18 @@ export default function App() {
         <Search className="global-search-icon" size={16} />
         <input className="global-search-input" type="text" placeholder="Procure por artistas, comunidades, shows e artistas." aria-label="Busca global" />
       </div>
-      <LiveNotificationToastLite enabled={notificationsPrimed} paused={notificationsPanelOpen} />
+      <LiveNotificationToastLite
+        enabled={Boolean(activeUser)}
+        paused={notificationsPanelOpen}
+        onCountryClick={(payload) => {
+          if (!payload?.coords) return;
+          focusFeedItem({
+            coords: payload.coords,
+            country: payload.country
+          });
+        }}
+        onUserClick={(profile) => setSelectedSimProfile(profile || null)}
+      />
 
       <SidebarNavLite
         onLogout={handleLogout}
@@ -215,7 +227,6 @@ export default function App() {
         }}
         notificationsOpen={notificationsPanelOpen}
         onNotificationsToggle={() => {
-          setNotificationsPrimed(true);
           setNotificationsPanelOpen((prev) => {
             const next = !prev;
             if (next) setChatPanelOpen(false);
@@ -302,6 +313,7 @@ export default function App() {
       {!MAPBOX_TOKEN && <div className="missing-token">Sem token Mapbox: modo fallback ativo.</div>}
       {mapWarning && <div className="missing-token">{mapWarning}</div>}
       <EventFeedLite event={selectedEventFeed} onClose={() => setSelectedEventFeed(null)} onGoToMap={focusFeedItem} />
+      <SimUserProfileModal profile={selectedSimProfile} onClose={() => setSelectedSimProfile(null)} />
     </div>
   );
 }

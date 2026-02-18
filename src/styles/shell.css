@@ -779,10 +779,10 @@
 }
 
 .perf-box {
-  position: absolute;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
+  position: fixed;
+  left: 12px;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  transform: none;
   z-index: 16;
   min-width: 220px;
   background: rgba(7, 10, 14, 0.82);

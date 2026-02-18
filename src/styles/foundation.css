@@ -49,7 +49,7 @@ body,
 
 .live-notif-toast {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   z-index: 24;
@@ -66,7 +66,7 @@ body,
   background: rgba(8, 12, 18, 0.9);
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(8px);
-  pointer-events: none;
+  pointer-events: auto;
   overflow: hidden;
 }
 
@@ -97,11 +97,46 @@ body,
 
 .live-notif-copy strong {
   color: #ffffff;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .live-notif-copy span {
-  color: #9ca3af;
+  color: #b3b3b3;
+  font-weight: 400;
+}
+
+.live-notif-fan {
+  background: rgba(8, 12, 18, 0.92);
+}
+
+.live-notif-music {
+  background: rgba(9, 16, 14, 0.92);
+}
+
+.live-notif-country {
+  background: rgba(12, 13, 20, 0.94);
+}
+
+.live-notif-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d3d9e5;
+  font-size: 14px;
+}
+
+.live-notif-token {
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+}
+
+.live-notif-token:hover {
+  text-decoration: underline;
 }
 
 .live-notif-toast.is-enter .live-notif-avatar {
@@ -188,6 +223,64 @@ body,
     opacity: 0;
     transform: translateX(-4px);
   }
+}
+
+.profile-card {
+  width: min(440px, calc(100vw - 32px));
+  gap: 14px;
+}
+
+.profile-head {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-copy h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.profile-copy p {
+  margin: 0;
+  color: #9eb4cb;
+  font-size: 13px;
+}
+
+.profile-section {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-label {
+  margin: 0;
+  color: #dfe8f3;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.profile-track-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: #b3c0d1;
+  font-size: 13px;
 }
 
 .global-search-wrap {
