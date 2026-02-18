@@ -1044,6 +1044,22 @@ app.get('/auth/spotify/callback', async (req, res) => {
     };
     const nowPlaying = await fetchSpotifyNowPlaying(accessToken);
 
+    if (nowPlaying?.isPlaying && nowPlaying?.trackName && nowPlaying?.artistName) {
+      try {
+        await trendingPlaybackService.recordPlayback({
+          userId: decoded.userId,
+          artistId: nowPlaying.artistId || null,
+          artistName: nowPlaying.artistName,
+          trackId: nowPlaying.trackId || null,
+          trackName: nowPlaying.trackName,
+          timestamp: new Date().toISOString(),
+          isPlaying: true
+        });
+      } catch {
+        // Não interrompe login/callback do Spotify por falha de trendings.
+      }
+    }
+
     const appToken = jwt.sign(
       {
         type: 'spotify-auth',
@@ -1121,6 +1137,21 @@ app.get('/auth/spotify/now-playing', async (req, res) => {
     }
 
     const nowPlaying = await fetchSpotifyNowPlaying(accessToken);
+    if (nowPlaying?.isPlaying && nowPlaying?.trackName && nowPlaying?.artistName) {
+      try {
+        await trendingPlaybackService.recordPlayback({
+          userId: payload.userId,
+          artistId: nowPlaying.artistId || null,
+          artistName: nowPlaying.artistName,
+          trackId: nowPlaying.trackId || null,
+          trackName: nowPlaying.trackName,
+          timestamp: new Date().toISOString(),
+          isPlaying: true
+        });
+      } catch {
+        // Não interrompe now-playing por falha de trendings.
+      }
+    }
     const response = { nowPlaying };
 
     if (refreshToken && accessToken !== payload.accessToken) {
