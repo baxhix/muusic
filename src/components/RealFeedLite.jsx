@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, X } from 'lucide-react';
 import { API_URL } from '../config/appConfig';
+import BuzzCommunitiesPanel from './BuzzCommunitiesPanel';
 
 const SHOWS_POLL_INTERVAL_MS = 30000;
 const MAX_FORUM_SHOWS = 20;
@@ -694,7 +695,7 @@ export default function RealFeedLite({
           </div>
         )}
 
-        {!isDetailOpen && activeTab === 'buzz' && <div className="feed-empty">Buzz vazio</div>}
+        {!isDetailOpen && activeTab === 'buzz' && <BuzzCommunitiesPanel />}
 
         {!isDetailOpen && activeTab === 'shows' && (
           <div className="shows-list">

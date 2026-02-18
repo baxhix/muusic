@@ -1320,6 +1320,262 @@
   border-bottom: 2px solid transparent;
 }
 
+.buzz-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.buzz-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.buzz-toolbar h3 {
+  margin: 0;
+  color: #f2f5fa;
+  font-size: 18px;
+}
+
+.buzz-error {
+  margin: 0;
+  color: #ffb6bf;
+  font-size: 12px;
+}
+
+.buzz-communities-grid,
+.buzz-posts-list {
+  display: grid;
+  gap: 10px;
+}
+
+.buzz-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(10, 12, 16, 0.88);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.buzz-editor input,
+.buzz-editor textarea,
+.buzz-comment-editor input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #edf1f7;
+  font-size: 13px;
+  padding: 10px 12px;
+}
+
+.buzz-editor textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.buzz-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.buzz-community-cover,
+.buzz-post-image,
+.buzz-cover-preview,
+.buzz-comment-image {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.buzz-community-cover {
+  max-height: 170px;
+}
+
+.buzz-post-image {
+  max-height: 280px;
+}
+
+.buzz-cover-preview {
+  max-height: 140px;
+}
+
+.buzz-comment-image {
+  max-height: 160px;
+}
+
+.buzz-community-copy h4,
+.buzz-editor h4 {
+  margin: 0;
+  color: #fff;
+}
+
+.buzz-category {
+  margin: 0;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e5ebf6;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.buzz-community-copy p,
+.buzz-community-header p,
+.buzz-post-text {
+  margin: 0;
+  color: #b7bfcb;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.buzz-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.buzz-stats-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #c7cdd8;
+  font-size: 12px;
+}
+
+.buzz-community-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.buzz-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.buzz-sort-row .feed-tab {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+}
+
+.buzz-sort-row .feed-tab.active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.buzz-sort-row .feed-tab.active::after {
+  display: none;
+}
+
+.buzz-post-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 8px;
+}
+
+.buzz-post-head strong {
+  color: #fff;
+  font-size: 14px;
+}
+
+.buzz-post-head p {
+  margin: 2px 0 0;
+  color: #9ea7b5;
+  font-size: 12px;
+}
+
+.buzz-comment-editor {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.buzz-comments-list {
+  display: grid;
+  gap: 8px;
+}
+
+.buzz-comment-item,
+.buzz-reply-item {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.buzz-comment-item p,
+.buzz-reply-item p {
+  margin: 0;
+  color: #c6ccd7;
+  font-size: 12px;
+}
+
+.buzz-comment-item strong,
+.buzz-reply-item strong {
+  color: #fff;
+}
+
+.buzz-reply-item {
+  margin-left: 14px;
+}
+
+.buzz-reply-editor {
+  margin-left: 14px;
+}
+
+.buzz-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #c8d0dd;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+}
+
+.buzz-upload-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.buzz-hidden-input {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .buzz-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .buzz-community-actions,
+  .buzz-inline-actions {
+    width: 100%;
+  }
+
+  .buzz-community-actions > *,
+  .buzz-inline-actions > * {
+    flex: 1 1 auto;
+  }
+}
+
 .account-tab.active {
   color: #f4f6fb;
   border-bottom-color: var(--brand-red);
