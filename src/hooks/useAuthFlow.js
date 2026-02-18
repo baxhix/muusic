@@ -388,6 +388,36 @@ export function useAuthFlow() {
     }
   }, []);
 
+  const exchangeSpotifyCode = useCallback(
+    async (spotifyCode) => {
+      const code = String(spotifyCode || '').trim();
+      if (!code) return false;
+      if (!authUser?.token || authUser.token === 'guest-local') return false;
+
+      try {
+        const response = await fetch(`${API_URL}/auth/spotify/exchange`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authUser.token}`,
+            'x-session-id': authUser.sessionId || ''
+          },
+          body: JSON.stringify({ code })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.spotifyToken) {
+          setSpotifyError(payload?.error || 'Codigo Spotify invalido.');
+          return false;
+        }
+        return applySpotifyToken(payload.spotifyToken);
+      } catch {
+        setSpotifyError('Falha ao trocar codigo do Spotify.');
+        return false;
+      }
+    },
+    [authUser?.token, authUser?.sessionId, applySpotifyToken]
+  );
+
   const refreshSpotifyNowPlaying = useCallback(async () => {
     if (!authUser?.spotifyToken) return null;
 
@@ -443,6 +473,7 @@ export function useAuthFlow() {
     logout,
     connectSpotify,
     applySpotifyToken,
+    exchangeSpotifyCode,
     refreshSpotifyNowPlaying,
     spotifyError,
     spotifyConnecting

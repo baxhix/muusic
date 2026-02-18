@@ -39,6 +39,24 @@ function toPresenceGeoJson(users = []) {
   };
 }
 
+function buildSimPopupNode({ name, track, city, country }) {
+  const wrap = document.createElement('div');
+  wrap.className = 'sim-popup-content';
+
+  const title = document.createElement('strong');
+  title.textContent = String(name || 'Usuário');
+  wrap.appendChild(title);
+  wrap.appendChild(document.createElement('br'));
+
+  const trackRow = document.createTextNode(`Spotify: ${String(track || 'Música simulada')}`);
+  wrap.appendChild(trackRow);
+  wrap.appendChild(document.createElement('br'));
+
+  const placeLabel = [String(city || '').trim(), String(country || '').trim()].filter(Boolean).join(', ');
+  wrap.appendChild(document.createTextNode(`Local: ${placeLabel}`));
+  return wrap;
+}
+
 export function useMapEngine({
   enabled,
   isMobileDevice,
@@ -283,7 +301,14 @@ export function useMapEngine({
           className: 'sim-popup'
         })
           .setLngLat([lng, lat])
-          .setHTML(`<div class="sim-popup-content"><strong>${name}</strong><br/>Spotify: ${track}<br/>Local: ${city}, ${country}</div>`)
+          .setDOMContent(
+            buildSimPopupNode({
+              name,
+              track,
+              city,
+              country
+            })
+          )
           .addTo(map);
         selectedSimIdRef.current = clickedId;
       });

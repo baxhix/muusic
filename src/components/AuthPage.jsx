@@ -115,23 +115,23 @@ export default function AuthPage({
         <footer className="landing-footer">
           <div className="landing-shell landing-footer-inner">
             <div className="landing-footer-left">
-              <a href="#" onClick={(event) => event.preventDefault()}>
+              <button type="button">
                 Artists
-              </a>
-              <a href="#" onClick={(event) => event.preventDefault()}>
+              </button>
+              <button type="button">
                 Blog
-              </a>
+              </button>
             </div>
             <p className="landing-footer-center">© 2025 Muusic. Todos os direitos reservados.</p>
             <div className="landing-footer-right">
-              <a href="#" aria-label="Instagram" onClick={(event) => event.preventDefault()}>
+              <button type="button" aria-label="Instagram">
                 <Instagram size={16} />
-              </a>
-              <a href="#" aria-label="Spotify" onClick={(event) => event.preventDefault()}>
+              </button>
+              <button type="button" aria-label="Spotify">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
                   <path d="M12 1.6a10.4 10.4 0 1 0 10.4 10.4A10.41 10.41 0 0 0 12 1.6Zm4.77 14.95a.65.65 0 0 1-.9.22 9.87 9.87 0 0 0-8.15-.87.65.65 0 1 1-.39-1.24 11.16 11.16 0 0 1 9.27.98.65.65 0 0 1 .17.91Zm1.27-2.8a.8.8 0 0 1-1.09.27 12.18 12.18 0 0 0-10.09-1.05.8.8 0 1 1-.49-1.52 13.77 13.77 0 0 1 11.43 1.2.8.8 0 0 1 .24 1.1Zm.1-2.94A14.54 14.54 0 0 0 6.32 9.6a.95.95 0 1 1-.57-1.81 16.44 16.44 0 0 1 13.37 1.35.95.95 0 1 1-.98 1.67Z" />
                 </svg>
-              </a>
+              </button>
             </div>
           </div>
         </footer>

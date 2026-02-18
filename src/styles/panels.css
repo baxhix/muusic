@@ -937,11 +937,16 @@
   justify-content: flex-end;
 }
 
-.landing-footer a {
+.landing-footer a,
+.landing-footer button {
   color: #ffffff;
   text-decoration: none;
   font-size: 14px;
   opacity: 0.88;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .landing-footer-center {

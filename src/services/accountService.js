@@ -1,5 +1,6 @@
+import { API_URL } from '../config/appConfig';
+
 const STORAGE_KEY = 'accountSettings';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const DEFAULT_ACCOUNT_SETTINGS = {
   city: 'Sao Paulo',
@@ -161,8 +162,24 @@ export const accountService = {
     return next;
   },
 
-  async changePassword(input) {
+  async changePassword(input, auth) {
     validatePasswordInput(input);
+    if (!auth?.token) throw new Error('Sessao invalida para alterar senha.');
+
+    const response = await fetch(`${API_URL}/auth/local/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...buildAuthHeaders(auth)
+      },
+      body: JSON.stringify({
+        currentPassword: String(input.currentPassword || ''),
+        newPassword: String(input.newPassword || ''),
+        confirmPassword: String(input.confirmPassword || '')
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error || 'Falha ao alterar senha.');
     return { ok: true };
   }
 };

@@ -48,12 +48,18 @@ const FRONTEND_URLS = String(process.env.FRONTEND_URLS || process.env.FRONTEND_U
   .map((url) => url.trim())
   .filter(Boolean);
 const FRONTEND_URL = FRONTEND_URLS[0] || 'http://localhost:5173';
-const JWT_SECRET = process.env.SPOTIFY_JWT_SECRET || 'local-dev-secret';
+const isProduction = process.env.NODE_ENV === 'production';
+const configuredJwtSecret = String(process.env.SPOTIFY_JWT_SECRET || '').trim();
+if (isProduction && (!configuredJwtSecret || configuredJwtSecret === 'change_me_super_secret')) {
+  throw new Error('SPOTIFY_JWT_SECRET obrigatorio em producao.');
+}
+const JWT_SECRET = configuredJwtSecret || 'local-dev-secret';
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 24);
 const allowedOrigins = new Set([...FRONTEND_URLS, 'http://localhost:5173', 'http://127.0.0.1:5173']);
-const isProduction = process.env.NODE_ENV === 'production';
 const artistImageCache = new Map();
 const ARTIST_IMAGE_TTL_MS = 10 * 60 * 1000;
+const spotifyExchangeCodes = new Map();
+const SPOTIFY_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 const ADMIN_EMAILS = new Set(
   String(process.env.ADMIN_EMAILS || '')
     .split(',')
@@ -237,6 +243,15 @@ function parseListQuery(query = {}) {
   const limit = Number.isFinite(Number(query.limit)) ? Math.min(200, Math.max(1, Number(query.limit))) : 50;
   const search = String(query.search || '').trim();
   return { page, limit, search };
+}
+
+function cleanupSpotifyExchangeCodes() {
+  const now = Date.now();
+  for (const [code, item] of spotifyExchangeCodes.entries()) {
+    if (!item || Number(item.expiresAt || 0) <= now) {
+      spotifyExchangeCodes.delete(code);
+    }
+  }
 }
 
 async function requireAdmin(req, res) {
@@ -569,6 +584,38 @@ app.post('/auth/local/reset-password', async (req, res) => {
     res.json({ ok: true, message: 'Senha atualizada com sucesso.' });
   } catch (error) {
     res.status(500).json({ error: `Erro ao redefinir senha: ${error.message}` });
+  }
+});
+
+app.post('/auth/local/change-password', async (req, res) => {
+  try {
+    const auth = await readAuthSession(req);
+    if (auth.error) return res.status(401).json({ error: auth.error });
+
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+    const confirmPassword = String(req.body?.confirmPassword || '');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'Campos obrigatorios ausentes.' });
+    }
+    if (!verifyPassword(currentPassword, auth.user.passwordHash)) {
+      return res.status(401).json({ error: 'Senha atual invalida.' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Nova senha deve ter pelo menos 8 caracteres.' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Confirmacao de senha invalida.' });
+    }
+    if (newPassword === currentPassword) {
+      return res.status(400).json({ error: 'Nova senha deve ser diferente da atual.' });
+    }
+
+    await userService.updatePasswordById(auth.user.id, hashPassword(newPassword));
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: `Erro ao alterar senha: ${error.message}` });
   }
 });
 
@@ -1102,8 +1149,16 @@ app.get('/auth/spotify/callback', async (req, res) => {
       { expiresIn: '8h' }
     );
 
+    cleanupSpotifyExchangeCodes();
+    const exchangeCode = randomBytes(24).toString('hex');
+    spotifyExchangeCodes.set(exchangeCode, {
+      userId: decoded.userId,
+      spotifyToken: appToken,
+      expiresAt: Date.now() + SPOTIFY_EXCHANGE_TTL_MS
+    });
+
     const redirect = new URL(FRONTEND_URL);
-    redirect.searchParams.set('spotify_token', appToken);
+    redirect.searchParams.set('spotify_code', exchangeCode);
     redirect.searchParams.set('spotify_connected', '1');
     redirect.searchParams.set('room', decoded.roomId);
     redirect.searchParams.set('user', decoded.userId);
@@ -1111,6 +1166,27 @@ app.get('/auth/spotify/callback', async (req, res) => {
     res.redirect(redirect.toString());
   } catch (error) {
     res.status(500).send(`Spotify callback error: ${error.message}`);
+  }
+});
+
+app.post('/auth/spotify/exchange', async (req, res) => {
+  try {
+    cleanupSpotifyExchangeCodes();
+    const auth = await readAuthSession(req);
+    if (auth.error) return res.status(401).json({ error: auth.error });
+
+    const code = String(req.body?.code || '').trim();
+    if (!code) return res.status(400).json({ error: 'Codigo ausente.' });
+
+    const pending = spotifyExchangeCodes.get(code);
+    spotifyExchangeCodes.delete(code);
+    if (!pending) return res.status(400).json({ error: 'Codigo invalido ou expirado.' });
+    if (pending.expiresAt <= Date.now()) return res.status(400).json({ error: 'Codigo expirado.' });
+    if (pending.userId !== auth.user.id) return res.status(403).json({ error: 'Codigo nao pertence ao usuario autenticado.' });
+
+    return res.json({ spotifyToken: pending.spotifyToken });
+  } catch (error) {
+    return res.status(500).json({ error: `Falha ao trocar codigo Spotify: ${error.message}` });
   }
 });
 

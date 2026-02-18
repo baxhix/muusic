@@ -54,6 +54,7 @@ export default function App() {
     logout,
     connectSpotify,
     applySpotifyToken,
+    exchangeSpotifyCode,
     refreshSpotifyNowPlaying,
     spotifyError,
     spotifyConnecting
@@ -255,17 +256,20 @@ export default function App() {
   useEffect(() => {
     if (!activeUser) return;
     const url = new window.URL(window.location.href);
+    const spotifyCode = url.searchParams.get('spotify_code');
     const spotifyToken = url.searchParams.get('spotify_token');
-    if (!spotifyToken) return;
+    if (!spotifyCode && !spotifyToken) return;
 
-    applySpotifyToken(spotifyToken).finally(() => {
+    const consume = spotifyCode ? exchangeSpotifyCode(spotifyCode) : applySpotifyToken(spotifyToken);
+    consume.finally(() => {
+      url.searchParams.delete('spotify_code');
       url.searchParams.delete('spotify_token');
       url.searchParams.delete('spotify_connected');
       url.searchParams.delete('room');
       url.searchParams.delete('user');
       window.history.replaceState({}, '', `${url.pathname}${url.search}`);
     });
-  }, [activeUser, applySpotifyToken]);
+  }, [activeUser, applySpotifyToken, exchangeSpotifyCode]);
 
   useEffect(() => {
     if (!activeUser?.spotifyToken) return undefined;

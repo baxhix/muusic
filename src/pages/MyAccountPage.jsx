@@ -194,7 +194,7 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
           currentPassword,
           newPassword,
           confirmPassword
-        });
+        }, authUser);
       }
       const next = await accountService.updatePreferences(
         {
@@ -259,7 +259,7 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
 
         {feedback && <p className={feedback.type === 'error' ? 'account-feedback error' : 'account-feedback success'}>{feedback.message}</p>}
 
-        <div className="account-tabs" role="tablist" aria-label="Abas da conta" onKeyDown={onKeyDownTabs}>
+        <div className="account-tabs" role="tablist" tabIndex={0} aria-label="Abas da conta" onKeyDown={onKeyDownTabs}>
           <button
             ref={(node) => {
               tabRefs.current[0] = node;
