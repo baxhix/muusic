@@ -88,7 +88,7 @@ export default function TrendingsPage({ apiFetch }) {
       {loading ? <p className="text-sm text-muted-foreground">Carregando trendings...</p> : null}
 
       <section className="space-y-4">
-        <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-card p-2" role="tablist" aria-label="Abas de trendings">
+        <div className="admin-trendings-tabs flex flex-wrap gap-2 rounded-lg border border-border bg-card p-2" role="tablist" aria-label="Abas de trendings">
           {tabItems.map((tab) => {
             const Icon = tab.icon;
             const selected = activeTab === tab.key;
@@ -100,8 +100,8 @@ export default function TrendingsPage({ apiFetch }) {
                 aria-selected={selected}
                 className={
                   selected
-                    ? 'inline-flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm font-semibold text-white'
-                    : 'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary/60 hover:text-white'
+                    ? 'admin-trendings-tab is-active inline-flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm font-semibold text-white'
+                    : 'admin-trendings-tab inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary/60 hover:text-white'
                 }
                 onClick={() => setActiveTab(tab.key)}
               >

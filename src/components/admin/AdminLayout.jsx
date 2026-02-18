@@ -40,7 +40,7 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
           size="icon"
           onClick={onToggle}
           aria-label="Colapsar sidebar"
-          className="hidden text-muted-foreground hover:text-foreground lg:inline-flex"
+          className="admin-neutral-control hidden text-muted-foreground hover:text-foreground lg:inline-flex"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -59,8 +59,8 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
                     key={item.key}
                     type="button"
                     className={cn(
-                      'group flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-150',
-                      active ? 'bg-secondary text-white' : 'text-muted-foreground hover:bg-secondary/60 hover:text-white',
+                      'admin-sidebar-item group flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-150',
+                      active ? 'is-active bg-secondary text-white' : 'text-muted-foreground hover:bg-secondary/60 hover:text-white',
                       collapsed && 'justify-center px-0'
                     )}
                     aria-current={active ? 'page' : undefined}
@@ -116,7 +116,7 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground"
+                  className="admin-neutral-control text-muted-foreground hover:text-foreground"
                   onClick={() => setMobileOpen(false)}
                   aria-label="Fechar menu"
                 >
@@ -141,7 +141,7 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
             </Button>
             <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
               <span>{userName}</span>
-              <Button variant="outline" className="text-muted-foreground hover:text-foreground" onClick={onLogout}>
+              <Button variant="outline" className="admin-neutral-control text-muted-foreground hover:text-foreground" onClick={onLogout}>
                 Sair
               </Button>
             </div>

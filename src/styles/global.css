@@ -60,3 +60,40 @@
 .admin-root .admin-cta-new:focus-visible {
   box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.4);
 }
+
+.admin-root .admin-neutral-control {
+  color: rgb(148 163 184) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.admin-root .admin-neutral-control:hover {
+  color: rgb(248 250 252) !important;
+  background: hsl(var(--secondary)) !important;
+}
+
+.admin-root .admin-sidebar-item {
+  color: rgb(148 163 184) !important;
+}
+
+.admin-root .admin-sidebar-item:hover {
+  color: rgb(248 250 252) !important;
+}
+
+.admin-root .admin-sidebar-item.is-active {
+  color: rgb(255 255 255) !important;
+  background: hsl(var(--secondary)) !important;
+}
+
+.admin-root .admin-trendings-tab {
+  color: rgb(148 163 184) !important;
+}
+
+.admin-root .admin-trendings-tab:hover {
+  color: rgb(255 255 255) !important;
+}
+
+.admin-root .admin-trendings-tab.is-active {
+  color: rgb(255 255 255) !important;
+  background: hsl(var(--secondary)) !important;
+  border-color: hsl(var(--border)) !important;
+}
