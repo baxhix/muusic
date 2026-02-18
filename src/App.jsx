@@ -10,7 +10,7 @@ import SimUserProfileModal from './components/SimUserProfileModal';
 import AuthPage from './components/AuthPage';
 import { MAPBOX_TOKEN } from './config/appConfig';
 import { buildSimulatedPoints, DESKTOP_PERF, MOBILE_PERF } from './lib/mapSimulation';
-import { STORAGE_SESSION_KEY } from './lib/storage';
+import { readMapVisibility, saveMapVisibility, STORAGE_SESSION_KEY } from './lib/storage';
 import { useAuthFlow } from './hooks/useAuthFlow';
 import { useRealtimePresence } from './hooks/useRealtimePresence';
 import { useMapEngine } from './hooks/useMapEngine';
@@ -65,6 +65,7 @@ export default function App() {
   const [selectedShowDetail, setSelectedShowDetail] = useState(null);
   const [selectedSimProfile, setSelectedSimProfile] = useState(null);
   const [shows, setShows] = useState([]);
+  const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
 
   const perfProfile = isMobileDevice ? MOBILE_PERF : DESKTOP_PERF;
@@ -90,7 +91,8 @@ export default function App() {
     shows,
     onShowSelect: handleMapShowSelect,
     users,
-    socketRef
+    socketRef,
+    mapVisibility
   });
 
   useEffect(() => {
@@ -103,6 +105,10 @@ export default function App() {
       localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(activeUser));
     }
   }, [activeUser, setUsername]);
+
+  useEffect(() => {
+    saveMapVisibility(mapVisibility);
+  }, [mapVisibility]);
 
   useEffect(() => {
     if (!activeUser) return;
@@ -233,6 +239,8 @@ export default function App() {
             return next;
           });
         }}
+        mapVisibility={mapVisibility}
+        onMapVisibilityChange={setMapVisibility}
       />
 
       <ChatListLite open={chatPanelOpen} onToggle={() => setChatPanelOpen((prev) => !prev)} />

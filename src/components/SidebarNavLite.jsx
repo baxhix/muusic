@@ -52,10 +52,10 @@ export default function SidebarNavLite({
   }
 
   function handleToggleVisibility(key) {
-    onMapVisibilityChange?.({
-      ...mapVisibility,
-      [key]: !mapVisibility?.[key]
-    });
+    onMapVisibilityChange?.((prev) => ({
+      ...prev,
+      [key]: !(prev?.[key] !== false)
+    }));
   }
 
   return (
@@ -96,12 +96,19 @@ export default function SidebarNavLite({
             data-tooltip="Visualização"
             aria-haspopup="dialog"
             aria-expanded={viewPopoverOpen}
+            aria-controls="map-visibility-popover"
             onClick={handleTogglePopover}
           >
             <Eye />
           </button>
           {viewPopoverOpen && (
-            <div className="map-visibility-popover" role="dialog" aria-label="Filtros de visualização" ref={popoverRef}>
+            <div
+              id="map-visibility-popover"
+              className="map-visibility-popover"
+              role="dialog"
+              aria-label="Filtros de visualização"
+              ref={popoverRef}
+            >
               <label className="map-visibility-item">
                 <input
                   type="checkbox"

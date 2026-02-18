@@ -3,18 +3,30 @@ import { FALLBACK_STYLE, MAPBOX_TOKEN } from '../config/appConfig';
 import {
   SIM_CLUSTER_LAYER_ID,
   SIM_CLUSTER_PULSE_LAYER_ID,
+  SIM_DENSITY_LAYER_ID,
   SIM_LAYER_ID,
   SIM_SOURCE_ID,
   upsertSimulatedLayer
 } from '../lib/mapSimulation';
 import { summarizeFpsSamples } from '../lib/perfStats';
 
-export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPoints, shows = [], onShowSelect, users, socketRef }) {
+export function useMapEngine({
+  enabled,
+  isMobileDevice,
+  perfProfile,
+  simulatedPoints,
+  shows = [],
+  onShowSelect,
+  users,
+  socketRef,
+  mapVisibility = { users: true, shows: true }
+}) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const mapboxRef = useRef(null);
   const userMarkersRef = useRef(new Map());
   const showMarkersRef = useRef(new Map());
+  const mapVisibilityRef = useRef(mapVisibility);
   const popupRef = useRef(null);
   const selectedSimIdRef = useRef(null);
   const fpsSamplesRef = useRef([]);
@@ -24,6 +36,10 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
   const [benchmarkRunning, setBenchmarkRunning] = useState(false);
   const [benchmarkResult, setBenchmarkResult] = useState(null);
   const [selectedGeo, setSelectedGeo] = useState(null);
+
+  useEffect(() => {
+    mapVisibilityRef.current = mapVisibility;
+  }, [mapVisibility]);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -160,6 +176,13 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
       paintSimulated = () => {
         if (map.getStyle()) {
           upsertSimulatedLayer(map, simulatedPoints, perfProfile);
+          const userLayerVisibility = mapVisibilityRef.current?.users === false ? 'none' : 'visible';
+          if (map.getLayer(SIM_LAYER_ID)) map.setLayoutProperty(SIM_LAYER_ID, 'visibility', userLayerVisibility);
+          if (map.getLayer(SIM_CLUSTER_LAYER_ID)) map.setLayoutProperty(SIM_CLUSTER_LAYER_ID, 'visibility', userLayerVisibility);
+          if (map.getLayer(SIM_CLUSTER_PULSE_LAYER_ID)) {
+            map.setLayoutProperty(SIM_CLUSTER_PULSE_LAYER_ID, 'visibility', userLayerVisibility);
+          }
+          if (map.getLayer(SIM_DENSITY_LAYER_ID)) map.setLayoutProperty(SIM_DENSITY_LAYER_ID, 'visibility', userLayerVisibility);
         }
       };
 
@@ -168,6 +191,10 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
 
       if (!isMobileDevice) {
         map.on('mousemove', (event) => {
+          if (mapVisibilityRef.current?.users === false) {
+            map.getCanvas().style.cursor = '';
+            return;
+          }
           const clusterHits = map.queryRenderedFeatures(event.point, { layers: [SIM_CLUSTER_LAYER_ID] });
           if (clusterHits.length > 0) {
             map.getCanvas().style.cursor = 'pointer';
@@ -179,6 +206,7 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
       }
 
       map.on('click', (event) => {
+        if (mapVisibilityRef.current?.users === false) return;
         const clusterHits = map.queryRenderedFeatures(event.point, { layers: [SIM_CLUSTER_LAYER_ID] });
         if (clusterHits.length > 0) {
           const cluster = clusterHits[0];
@@ -282,7 +310,7 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
         marker.remove();
       });
       showMarkersRef.current.clear();
-      userMarkersRef.current.forEach((marker) => marker.remove());
+      userMarkersRef.current.forEach((entry) => entry.marker.remove());
       userMarkersRef.current.clear();
       map?.remove();
       mapRef.current = null;
@@ -305,23 +333,26 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
         const el = document.createElement('div');
         el.className = 'user-marker';
         el.innerHTML = `<span>${markerLabel}</span>`;
+        el.style.display = mapVisibility?.users === false ? 'none' : '';
 
         const marker = new mapboxgl.Marker({ element: el }).setLngLat([user.location.lng, user.location.lat]).addTo(mapRef.current);
 
-        userMarkersRef.current.set(key, marker);
+        userMarkersRef.current.set(key, { marker, element: el });
       } else {
-        userMarkersRef.current.get(key).setLngLat([user.location.lng, user.location.lat]);
+        const entry = userMarkersRef.current.get(key);
+        entry.marker.setLngLat([user.location.lng, user.location.lat]);
+        entry.element.style.display = mapVisibility?.users === false ? 'none' : '';
       }
     });
 
     const activeIds = new Set(users.map((user) => user.id));
-    userMarkersRef.current.forEach((marker, id) => {
+    userMarkersRef.current.forEach((entry, id) => {
       if (!activeIds.has(id)) {
-        marker.remove();
+        entry.marker.remove();
         userMarkersRef.current.delete(id);
       }
     });
-  }, [enabled, users]);
+  }, [enabled, users, mapVisibility?.users]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -344,6 +375,7 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
         el.type = 'button';
         el.className = 'show-marker';
         el.setAttribute('aria-label', `Evento: ${show?.artist || 'Sem artista'}`);
+        el.style.display = mapVisibility?.shows === false ? 'none' : '';
 
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' }).setLngLat([longitude, latitude]).addTo(map);
 
@@ -360,7 +392,9 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
         el.addEventListener('click', onClick);
         showMarkersRef.current.set(key, { marker, element: el, onClick });
       } else {
-        showMarkersRef.current.get(key).marker.setLngLat([longitude, latitude]);
+        const entry = showMarkersRef.current.get(key);
+        entry.marker.setLngLat([longitude, latitude]);
+        entry.element.style.display = mapVisibility?.shows === false ? 'none' : '';
       }
     });
 
@@ -371,7 +405,39 @@ export function useMapEngine({ enabled, isMobileDevice, perfProfile, simulatedPo
         showMarkersRef.current.delete(id);
       }
     });
-  }, [enabled, onShowSelect, shows]);
+  }, [enabled, onShowSelect, shows, mapVisibility?.shows]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const map = mapRef.current;
+    const userLayerVisibility = mapVisibility?.users === false ? 'none' : 'visible';
+    const showMarkersVisibility = mapVisibility?.shows === false ? 'none' : '';
+    const userMarkersVisibility = mapVisibility?.users === false ? 'none' : '';
+
+    const toggleLayer = (layerId, visibility) => {
+      if (!map?.getLayer(layerId)) return;
+      map.setLayoutProperty(layerId, 'visibility', visibility);
+    };
+
+    toggleLayer(SIM_LAYER_ID, userLayerVisibility);
+    toggleLayer(SIM_CLUSTER_LAYER_ID, userLayerVisibility);
+    toggleLayer(SIM_CLUSTER_PULSE_LAYER_ID, userLayerVisibility);
+    toggleLayer(SIM_DENSITY_LAYER_ID, userLayerVisibility);
+
+    userMarkersRef.current.forEach(({ element }) => {
+      element.style.display = userMarkersVisibility;
+    });
+    showMarkersRef.current.forEach(({ element }) => {
+      element.style.display = showMarkersVisibility;
+    });
+
+    if (mapVisibility?.users === false && popupRef.current) {
+      popupRef.current.remove();
+      popupRef.current = null;
+      selectedSimIdRef.current = null;
+    }
+  }, [enabled, mapVisibility]);
 
   async function runBenchmark() {
     if (!enabled) return undefined;

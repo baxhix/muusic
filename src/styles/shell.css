@@ -134,6 +134,10 @@
   background: var(--brand-red);
 }
 
+.rail-view-wrap {
+  position: relative;
+}
+
 .rail-btn.spotify-connected {
   background: rgba(29, 185, 84, 0.2);
   color: #7ef6ad;
@@ -142,6 +146,38 @@
 
 .rail-btn.spotify-connected:hover {
   background: rgba(29, 185, 84, 0.3);
+}
+
+.map-visibility-popover {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 35;
+  min-width: 148px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(5, 8, 12, 0.96);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
+  display: grid;
+  gap: 8px;
+}
+
+.map-visibility-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #d9dee7;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.map-visibility-item input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #1DB954;
 }
 
 .chat-list-panel {
