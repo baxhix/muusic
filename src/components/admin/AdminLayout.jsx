@@ -60,7 +60,7 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
                     type="button"
                     className={cn(
                       'admin-sidebar-item group flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-150',
-                      active ? 'is-active bg-secondary text-white' : 'text-muted-foreground hover:bg-secondary/60 hover:text-white',
+                      active ? 'is-active text-white' : 'text-muted-foreground hover:text-white',
                       collapsed && 'justify-center px-0'
                     )}
                     aria-current={active ? 'page' : undefined}

@@ -73,27 +73,32 @@
 
 .admin-root .admin-sidebar-item {
   color: rgb(148 163 184) !important;
+  background: transparent !important;
 }
 
 .admin-root .admin-sidebar-item:hover {
   color: rgb(248 250 252) !important;
+  background: transparent !important;
 }
 
 .admin-root .admin-sidebar-item.is-active {
   color: rgb(255 255 255) !important;
-  background: hsl(var(--secondary)) !important;
+  background: transparent !important;
 }
 
 .admin-root .admin-trendings-tab {
   color: rgb(148 163 184) !important;
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 .admin-root .admin-trendings-tab:hover {
   color: rgb(255 255 255) !important;
+  background: transparent !important;
 }
 
 .admin-root .admin-trendings-tab.is-active {
   color: rgb(255 255 255) !important;
-  background: hsl(var(--secondary)) !important;
+  background: transparent !important;
   border-color: hsl(var(--border)) !important;
 }
