@@ -1,14 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ArrowLeft,
-  Heart,
-  Image as ImageIcon,
-  MessageCircle,
-  PenSquare,
-  Plus,
-  Trash2,
-  Users
-} from 'lucide-react';
+import { ArrowLeft, Heart, Image as ImageIcon, MessageCircle, MoreHorizontal, PenSquare, Plus, Trash2, Users } from 'lucide-react';
 import { communitiesService } from '../services/communitiesService';
 
 function formatRelativeDate(value) {
@@ -24,12 +15,8 @@ function formatRelativeDate(value) {
 
 function getPostsSorted(posts = [], sortBy = 'recent') {
   const safe = [...posts];
-  if (sortBy === 'likes') {
-    return safe.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
-  }
-  if (sortBy === 'comments') {
-    return safe.sort((a, b) => (b.comments?.length || 0) - (a.comments?.length || 0));
-  }
+  if (sortBy === 'likes') return safe.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+  if (sortBy === 'comments') return safe.sort((a, b) => (b.comments?.length || 0) - (a.comments?.length || 0));
   return safe.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -47,19 +34,23 @@ function readImageAsDataUrl(file) {
 }
 
 export default function BuzzCommunitiesPanel() {
-  const [communities, setCommunities] = useState(() => []);
+  const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedCommunityId, setSelectedCommunityId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [menuOpenId, setMenuOpenId] = useState('');
+
   const [communityEditor, setCommunityEditor] = useState({
     open: false,
     mode: 'create',
     id: '',
     name: '',
     description: '',
-    category: '',
+    previewUrl: '',
     coverUrl: ''
   });
+
   const [postDraft, setPostDraft] = useState({ text: '', imageUrl: '' });
   const [postEditId, setPostEditId] = useState('');
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -85,10 +76,21 @@ export default function BuzzCommunitiesPanel() {
     [communities, selectedCommunityId]
   );
 
-  const selectedPosts = useMemo(
-    () => getPostsSorted(selectedCommunity?.posts || [], sortBy),
-    [selectedCommunity?.posts, sortBy]
-  );
+  const filteredCommunities = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return communities;
+    return communities.filter((community) => String(community.name || '').toLowerCase().includes(query));
+  }, [communities, searchTerm]);
+
+  const selectedPosts = useMemo(() => getPostsSorted(selectedCommunity?.posts || [], sortBy), [selectedCommunity?.posts, sortBy]);
+
+  function isCreator(community) {
+    return community.creatorId === currentUser.id;
+  }
+
+  function isJoined(community) {
+    return community.members.includes(currentUser.id);
+  }
 
   function openCreateCommunity() {
     setCommunityEditor({
@@ -97,7 +99,7 @@ export default function BuzzCommunitiesPanel() {
       id: '',
       name: '',
       description: '',
-      category: '',
+      previewUrl: '',
       coverUrl: ''
     });
   }
@@ -109,7 +111,7 @@ export default function BuzzCommunitiesPanel() {
       id: community.id,
       name: community.name || '',
       description: community.description || '',
-      category: community.category || '',
+      previewUrl: community.previewUrl || '',
       coverUrl: community.coverUrl || ''
     });
   }
@@ -118,14 +120,18 @@ export default function BuzzCommunitiesPanel() {
     setCommunityEditor((prev) => ({ ...prev, open: false }));
   }
 
-  async function onCommunityCoverFile(event) {
+  async function onCommunityFile(event, target) {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
       const dataUrl = await readImageAsDataUrl(file);
-      setCommunityEditor((prev) => ({ ...prev, coverUrl: dataUrl || '' }));
+      if (target === 'preview') {
+        setCommunityEditor((prev) => ({ ...prev, previewUrl: dataUrl || '' }));
+      } else {
+        setCommunityEditor((prev) => ({ ...prev, coverUrl: dataUrl || '' }));
+      }
     } catch {
-      setError('Não foi possível carregar a imagem da comunidade.');
+      setError('Não foi possível carregar imagem da comunidade.');
     }
   }
 
@@ -142,35 +148,33 @@ export default function BuzzCommunitiesPanel() {
         return communitiesService.updateCommunity(prev, communityEditor.id, {
           name,
           description,
-          category: communityEditor.category,
+          previewUrl: communityEditor.previewUrl,
           coverUrl: communityEditor.coverUrl
         });
       }
       return communitiesService.createCommunity(prev, {
         name,
         description,
-        category: communityEditor.category,
+        previewUrl: communityEditor.previewUrl,
         coverUrl: communityEditor.coverUrl
       });
     });
+
     setError('');
     closeCommunityEditor();
   }
 
   function removeCommunity(communityId) {
     setCommunities((prev) => communitiesService.deleteCommunity(prev, communityId));
-    if (selectedCommunityId === communityId) {
-      setSelectedCommunityId('');
-    }
+    if (selectedCommunityId === communityId) setSelectedCommunityId('');
+    setMenuOpenId('');
   }
 
   function toggleMembership(community) {
-    const joined = community.members.includes(currentUser.id);
-    setCommunities((prev) => (joined ? communitiesService.leaveCommunity(prev, community.id) : communitiesService.joinCommunity(prev, community.id)));
-  }
-
-  function canManageCommunity(community) {
-    return community.creatorId === currentUser.id || community.admins.includes(currentUser.id);
+    setCommunities((prev) =>
+      isJoined(community) ? communitiesService.leaveCommunity(prev, community.id) : communitiesService.joinCommunity(prev, community.id)
+    );
+    setMenuOpenId('');
   }
 
   async function onPostImageFile(event, target = 'post', key = '') {
@@ -191,7 +195,7 @@ export default function BuzzCommunitiesPanel() {
   }
 
   function submitPost() {
-    if (!selectedCommunity) return;
+    if (!selectedCommunity || !isJoined(selectedCommunity)) return;
     const text = postDraft.text.trim();
     if (!text && !postDraft.imageUrl) {
       setError('Escreva algo ou anexe uma imagem no post.');
@@ -210,6 +214,7 @@ export default function BuzzCommunitiesPanel() {
         imageUrl: postDraft.imageUrl || null
       });
     });
+
     setPostDraft({ text: '', imageUrl: '' });
     setPostEditId('');
     setError('');
@@ -230,12 +235,12 @@ export default function BuzzCommunitiesPanel() {
   }
 
   function togglePostLike(postId) {
-    if (!selectedCommunity) return;
+    if (!selectedCommunity || !isJoined(selectedCommunity)) return;
     setCommunities((prev) => communitiesService.togglePostLike(prev, selectedCommunity.id, postId));
   }
 
   function submitComment(postId) {
-    if (!selectedCommunity) return;
+    if (!selectedCommunity || !isJoined(selectedCommunity)) return;
     const key = `comment:${postId}`;
     const draft = commentDrafts[key] || { text: '', imageUrl: '' };
     const text = String(draft.text || '').trim();
@@ -245,17 +250,18 @@ export default function BuzzCommunitiesPanel() {
   }
 
   function toggleCommentLike(postId, commentId) {
-    if (!selectedCommunity) return;
+    if (!selectedCommunity || !isJoined(selectedCommunity)) return;
     setCommunities((prev) => communitiesService.toggleCommentLike(prev, selectedCommunity.id, postId, commentId));
   }
 
   function toggleReply(postId, commentId) {
+    if (!selectedCommunity || !isJoined(selectedCommunity)) return;
     const key = `reply-open:${postId}:${commentId}`;
     setReplyOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
   function submitReply(postId, commentId) {
-    if (!selectedCommunity) return;
+    if (!selectedCommunity || !isJoined(selectedCommunity)) return;
     const key = `reply:${postId}:${commentId}`;
     const draft = replyDrafts[key] || { text: '', imageUrl: '' };
     const text = String(draft.text || '').trim();
@@ -265,9 +271,47 @@ export default function BuzzCommunitiesPanel() {
     setReplyOpen((prev) => ({ ...prev, [`reply-open:${postId}:${commentId}`]: false }));
   }
 
-  if (loading) {
-    return <div className="feed-empty">Carregando comunidades...</div>;
+  function renderCommunityMenu(community, compact = false) {
+    const creator = isCreator(community);
+    const joined = isJoined(community);
+    if (!creator && !joined) return null;
+    const open = menuOpenId === community.id;
+
+    return (
+      <div className="buzz-menu-wrap" onClick={(event) => event.stopPropagation()}>
+        <button
+          type="button"
+          className={compact ? 'social-comment-like' : 'feed-link secondary'}
+          onClick={() => setMenuOpenId(open ? '' : community.id)}
+          aria-expanded={open ? 'true' : 'false'}
+          aria-haspopup="menu"
+        >
+          <MoreHorizontal size={14} />
+        </button>
+        {open ? (
+          <div className="buzz-menu" role="menu">
+            {creator ? (
+              <>
+                <button type="button" role="menuitem" onClick={() => openEditCommunity(community)}>
+                  Editar
+                </button>
+                <button type="button" role="menuitem" onClick={() => removeCommunity(community.id)}>
+                  Excluir
+                </button>
+              </>
+            ) : null}
+            {joined ? (
+              <button type="button" role="menuitem" onClick={() => toggleMembership(community)}>
+                Sair da comunidade
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
   }
+
+  if (loading) return <div className="feed-empty">Carregando comunidades...</div>;
 
   if (!selectedCommunity) {
     return (
@@ -279,6 +323,14 @@ export default function BuzzCommunitiesPanel() {
             Nova comunidade
           </button>
         </div>
+
+        <input
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Buscar comunidade por nome"
+          className="buzz-search-input"
+          aria-label="Buscar comunidades"
+        />
 
         {error ? <p className="buzz-error">{error}</p> : null}
 
@@ -292,17 +344,24 @@ export default function BuzzCommunitiesPanel() {
               placeholder="Descrição"
               rows={3}
             />
-            <input
-              value={communityEditor.category}
-              onChange={(event) => setCommunityEditor((prev) => ({ ...prev, category: event.target.value }))}
-              placeholder="Categoria (opcional)"
-            />
-            <label className="buzz-upload-btn" htmlFor="community-cover-upload">
-              <ImageIcon size={14} />
-              Capa
-            </label>
-            <input id="community-cover-upload" type="file" accept="image/*" onChange={onCommunityCoverFile} className="buzz-hidden-input" />
+
+            <div className="buzz-inline-actions">
+              <label className="buzz-upload-btn" htmlFor="community-preview-upload">
+                <ImageIcon size={14} />
+                Imagem quadrada
+              </label>
+              <input id="community-preview-upload" type="file" accept="image/*" onChange={(event) => onCommunityFile(event, 'preview')} className="buzz-hidden-input" />
+
+              <label className="buzz-upload-btn" htmlFor="community-cover-upload">
+                <ImageIcon size={14} />
+                Capa retangular
+              </label>
+              <input id="community-cover-upload" type="file" accept="image/*" onChange={(event) => onCommunityFile(event, 'cover')} className="buzz-hidden-input" />
+            </div>
+
+            {communityEditor.previewUrl ? <img src={communityEditor.previewUrl} alt="Preview da comunidade" className="buzz-preview-square" /> : null}
             {communityEditor.coverUrl ? <img src={communityEditor.coverUrl} alt="Capa da comunidade" className="buzz-cover-preview" /> : null}
+
             <div className="buzz-inline-actions">
               <button type="button" className="show-ticket-btn" onClick={saveCommunity}>
                 Salvar
@@ -314,56 +373,39 @@ export default function BuzzCommunitiesPanel() {
           </div>
         ) : null}
 
-        <div className="buzz-communities-grid">
-          {communities.map((community) => {
-            const joined = community.members.includes(currentUser.id);
-            const manager = canManageCommunity(community);
-            return (
-              <article key={community.id} className="buzz-card buzz-community-item">
-                <img src={community.coverUrl || 'https://picsum.photos/seed/community-default/800/320'} alt={community.name} className="buzz-community-cover" />
-                <div className="buzz-community-copy">
-                  <h4>{community.name}</h4>
-                  {community.category ? <p className="buzz-category">{community.category}</p> : null}
-                  <p>{community.description}</p>
-                  <div className="buzz-stats-row">
-                    <span>
-                      <Users size={13} /> {community.membersCount}
-                    </span>
-                    <span>
-                      <PenSquare size={13} /> {community.postsCount}
-                    </span>
-                    <span>Atividade: {formatRelativeDate(community.lastActivity)}</span>
-                  </div>
-                </div>
-                <div className="buzz-community-actions">
-                  <button type="button" className="feed-link secondary" onClick={() => toggleMembership(community)}>
-                    {joined ? 'Sair' : 'Entrar'}
-                  </button>
-                  <button type="button" className="show-ticket-btn" onClick={() => setSelectedCommunityId(community.id)}>
-                    Acessar
-                  </button>
-                  {manager ? (
-                    <>
-                      <button type="button" className="feed-link secondary" onClick={() => openEditCommunity(community)}>
-                        Editar
-                      </button>
-                      <button type="button" className="feed-link secondary" onClick={() => removeCommunity(community.id)}>
-                        Excluir
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              </article>
-            );
-          })}
-          {!communities.length && <div className="feed-empty">Nenhuma comunidade criada.</div>}
+        <div className="buzz-communities-row" role="list">
+          {filteredCommunities.map((community) => (
+            <article
+              key={community.id}
+              role="listitem"
+              className="show-card buzz-community-card"
+              onClick={() => setSelectedCommunityId(community.id)}
+            >
+              <img src={community.previewUrl || community.coverUrl || 'https://picsum.photos/seed/community-default/240/240'} alt={community.name} className="show-thumb buzz-square-thumb" />
+              <div className="show-copy buzz-community-copy">
+                <button
+                  type="button"
+                  className="show-artist buzz-community-title"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedCommunityId(community.id);
+                  }}
+                >
+                  {community.name}
+                </button>
+                <p className="show-meta">{community.membersCount} membros • {community.postsCount} posts • {formatRelativeDate(community.lastActivity)}</p>
+              </div>
+              {renderCommunityMenu(community)}
+            </article>
+          ))}
+          {!filteredCommunities.length ? <div className="feed-empty">Nenhuma comunidade encontrada.</div> : null}
         </div>
       </section>
     );
   }
 
-  const joined = selectedCommunity.members.includes(currentUser.id);
-  const manager = canManageCommunity(selectedCommunity);
+  const joined = isJoined(selectedCommunity);
+  const creator = isCreator(selectedCommunity);
 
   return (
     <section className="buzz-layout">
@@ -372,25 +414,29 @@ export default function BuzzCommunitiesPanel() {
           <ArrowLeft size={14} /> Voltar
         </button>
         <h3>{selectedCommunity.name}</h3>
-        <button type="button" className="feed-link secondary" onClick={() => toggleMembership(selectedCommunity)}>
-          {joined ? 'Sair' : 'Entrar'}
-        </button>
+        <div className="buzz-inline-actions">
+          {!joined ? (
+            <button type="button" className="show-ticket-btn" onClick={() => toggleMembership(selectedCommunity)}>
+              Participar
+            </button>
+          ) : null}
+          {renderCommunityMenu(selectedCommunity, true)}
+        </div>
       </div>
 
       <div className="buzz-card buzz-community-header">
-        <img src={selectedCommunity.coverUrl || 'https://picsum.photos/seed/community-default-detail/1200/420'} alt={selectedCommunity.name} className="buzz-community-cover" />
-        {selectedCommunity.category ? <p className="buzz-category">{selectedCommunity.category}</p> : null}
+        <img src={selectedCommunity.coverUrl || selectedCommunity.previewUrl || 'https://picsum.photos/seed/community-default-detail/1200/420'} alt={selectedCommunity.name} className="buzz-community-cover" />
         <p>{selectedCommunity.description}</p>
         <div className="buzz-stats-row">
           <span>
             <Users size={13} /> {selectedCommunity.membersCount} membros
           </span>
           <span>
-            <PenSquare size={13} /> {selectedCommunity.postsCount} posts
+            <MessageCircle size={13} /> {selectedCommunity.postsCount} posts
           </span>
           <span>Última atividade: {formatRelativeDate(selectedCommunity.lastActivity)}</span>
         </div>
-        {manager ? (
+        {creator ? (
           <div className="buzz-inline-actions">
             <button type="button" className="feed-link secondary" onClick={() => openEditCommunity(selectedCommunity)}>
               Editar comunidade
@@ -404,7 +450,7 @@ export default function BuzzCommunitiesPanel() {
 
       <div className="buzz-card buzz-editor">
         <h4>{postEditId ? 'Editar post' : 'Novo post'}</h4>
-        {!joined ? <p className="buzz-error">Entre na comunidade para publicar e interagir.</p> : null}
+        {!joined ? <p className="buzz-error">Participe da comunidade para publicar e interagir.</p> : null}
         <textarea value={postDraft.text} onChange={(event) => setPostDraft((prev) => ({ ...prev, text: event.target.value }))} rows={3} placeholder="Compartilhe algo com a comunidade" />
         <label className="buzz-upload-btn" htmlFor="post-image-upload">
           <ImageIcon size={14} />
