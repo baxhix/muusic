@@ -432,6 +432,7 @@ export default function App() {
       <AuthPage
         simpleAccess={!showAuthForm}
         onQuickEnter={() => {
+          setAuthMode('login');
           setShowAuthForm(true);
           if (window.location.hash !== '#login') {
             window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#login`);

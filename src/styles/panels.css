@@ -855,7 +855,7 @@
   font-size: 16px;
   line-height: 1.4;
   max-width: 720px;
-  text-align: left;
+  text-align: center;
   width: min(720px, calc(100vw - 72px));
 }
 
@@ -905,7 +905,7 @@
   color: #babec9;
   font-size: 14px;
   width: min(720px, calc(100vw - 72px));
-  text-align: left;
+  text-align: center;
 }
 
 .landing-platforms {
