@@ -76,13 +76,20 @@ export default function AuthPage({
             <div className="landing-brand" aria-label="Muusic">
               <img src={muusicLogo} alt="Muusic" className="landing-logo" />
             </div>
-            <button type="button" className="landing-login-btn" onClick={onQuickEnter}>
+            <a
+              href="#login"
+              className="landing-login-btn"
+              onClick={(event) => {
+                event.preventDefault();
+                onQuickEnter?.();
+              }}
+            >
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
                 <path d="M14 7L19 12L14 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M5 12H18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
               Login
-            </button>
+            </a>
           </div>
         </header>
 
@@ -130,13 +137,10 @@ export default function AuthPage({
           <div className="landing-shell landing-footer-inner">
             <div className="landing-footer-left">
               <button type="button">
-                Artists
-              </button>
-              <button type="button">
                 Blog
               </button>
             </div>
-            <p className="landing-footer-center">© 2025 Muusic. Todos os direitos reservados.</p>
+            <p className="landing-footer-center">© 2026 Muusic. Todos os direitos reservados.</p>
             <div className="landing-footer-right">
               <button type="button" aria-label="Instagram">
                 <Instagram size={16} />

@@ -713,7 +713,6 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(760px 520px at 32% 30%, rgba(13, 106, 170, 0.42), transparent 66%),
     radial-gradient(740px 520px at 70% 36%, rgba(120, 18, 18, 0.28), transparent 70%),
     linear-gradient(180deg, #03060c 0%, #010207 100%);
 }
@@ -784,8 +783,8 @@
 }
 
 .landing-login-btn {
-  min-width: 102px;
-  min-height: 40px;
+  width: 106px;
+  height: 42px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.84);
   background: rgba(247, 247, 247, 0.95);
