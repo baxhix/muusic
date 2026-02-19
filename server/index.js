@@ -74,6 +74,7 @@ const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 24);
 const allowedOrigins = new Set([...FRONTEND_URLS, 'http://localhost:5173', 'http://127.0.0.1:5173']);
 const spotifyExchangeCodes = new Map();
 const SPOTIFY_EXCHANGE_TTL_MS = 2 * 60 * 1000;
+const SOCKET_GEO_CELL_DEG = Math.max(1, Math.min(30, Number(process.env.SOCKET_GEO_CELL_DEG || 8)));
 const ADMIN_EMAILS = new Set(
   String(process.env.ADMIN_EMAILS || '')
     .split(',')
@@ -87,6 +88,44 @@ function corsOriginValidator(origin, callback) {
     return;
   }
   callback(new Error('Not allowed by CORS'));
+}
+
+function safeNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function clampLat(lat) {
+  return Math.max(-90, Math.min(90, lat));
+}
+
+function normalizeLng(lng) {
+  if (!Number.isFinite(lng)) return 0;
+  let normalized = lng;
+  while (normalized < -180) normalized += 360;
+  while (normalized > 180) normalized -= 360;
+  return normalized;
+}
+
+function resolveAreaRoomId(baseRoomId, lat, lng) {
+  const safeLat = safeNumber(lat);
+  const safeLng = safeNumber(lng);
+  if (safeLat === null || safeLng === null) return null;
+  const clampedLat = clampLat(safeLat);
+  const clampedLng = normalizeLng(safeLng);
+  const latBucket = Math.floor((clampedLat + 90) / SOCKET_GEO_CELL_DEG);
+  const lngBucket = Math.floor((clampedLng + 180) / SOCKET_GEO_CELL_DEG);
+  return `geo:${String(baseRoomId)}:${latBucket}:${lngBucket}`;
+}
+
+function filterPresenceForArea(presence, baseRoomId, areaRoomId) {
+  if (!Array.isArray(presence) || !areaRoomId) return [];
+  return presence.filter((user) => {
+    const lat = safeNumber(user?.location?.lat);
+    const lng = safeNumber(user?.location?.lng);
+    if (lat === null || lng === null) return false;
+    return resolveAreaRoomId(baseRoomId, lat, lng) === areaRoomId;
+  });
 }
 
 const app = express();
@@ -241,6 +280,7 @@ io.on('connection', (socket) => {
   let joinedRoom = null;
   let joinedUserId = null;
   let joinedUserName = null;
+  let joinedAreaRoom = null;
 
   socket.on('room:join', async ({ roomId = 'global', userId, name, spotify, token, sessionId } = {}, ack) => {
     const startedAt = performance.now();
@@ -328,7 +368,26 @@ io.on('connection', (socket) => {
         updatedAt: Date.now()
       });
       if (!presence) return;
-      io.to(joinedRoom).emit('presence:update', presence);
+      const previousAreaRoom = joinedAreaRoom;
+      const nextAreaRoom = resolveAreaRoomId(joinedRoom, lat, lng);
+      if (nextAreaRoom && nextAreaRoom !== previousAreaRoom) {
+        if (previousAreaRoom) socket.leave(previousAreaRoom);
+        socket.join(nextAreaRoom);
+        joinedAreaRoom = nextAreaRoom;
+      }
+
+      if (joinedAreaRoom) {
+        const areaPresence = filterPresenceForArea(presence, joinedRoom, joinedAreaRoom);
+        io.to(joinedAreaRoom).emit('presence:update', areaPresence);
+      } else {
+        io.to(joinedRoom).emit('presence:update', presence);
+      }
+
+      if (previousAreaRoom && previousAreaRoom !== joinedAreaRoom) {
+        const previousAreaPresence = filterPresenceForArea(presence, joinedRoom, previousAreaRoom);
+        io.to(previousAreaRoom).emit('presence:update', previousAreaPresence);
+      }
+
       performanceService.recordSocketEvent({
         event: 'location:update',
         durationMs: performance.now() - startedAt,
@@ -390,7 +449,12 @@ io.on('connection', (socket) => {
     if (!joinedRoom || !joinedUserId) return;
     try {
       const presence = await realtimeCluster.removeUser(joinedRoom, joinedUserId);
-      io.to(joinedRoom).emit('presence:update', presence);
+      if (joinedAreaRoom) {
+        const areaPresence = filterPresenceForArea(presence, joinedRoom, joinedAreaRoom);
+        io.to(joinedAreaRoom).emit('presence:update', areaPresence);
+      } else {
+        io.to(joinedRoom).emit('presence:update', presence);
+      }
       performanceService.recordSocketEvent({
         event: 'disconnect',
         durationMs: performance.now() - startedAt,
