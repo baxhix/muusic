@@ -76,11 +76,10 @@ export default function AuthPage({
             <div className="landing-brand" aria-label="Muusic">
               <img src={muusicLogo} alt="Muusic" className="landing-logo" />
             </div>
-            <a
-              href="#login"
+            <button
+              type="button"
               className="landing-login-btn"
               onClick={(event) => {
-                event.preventDefault();
                 onQuickEnter?.();
               }}
             >
@@ -89,7 +88,7 @@ export default function AuthPage({
                 <path d="M5 12H18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
               Login
-            </a>
+            </button>
           </div>
         </header>
 
