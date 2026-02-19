@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import redisService from '../services/redis.js';
 
 const MAP_USERS_CACHE_TTL_MS = Number(process.env.MAP_USERS_CACHE_TTL_MS || 8000);
 const MAP_USERS_CACHE_MAX_KEYS = Number(process.env.MAP_USERS_CACHE_MAX_KEYS || 128);
@@ -81,6 +82,14 @@ async function resolveSingleFlight(inFlightMap, key, resolver) {
   return promise;
 }
 
+function redisShowsKey(key) {
+  return `muusic:cache:api:shows:${Buffer.from(String(key)).toString('base64url')}`;
+}
+
+function redisMapUsersKey(key) {
+  return `muusic:cache:api:map-users:${Buffer.from(String(key)).toString('base64url')}`;
+}
+
 export function createPublicRouter({
   isProduction,
   cacheArtistsMiddleware,
@@ -114,8 +123,20 @@ export function createPublicRouter({
       const { page, limit, search } = parseListQuery(_req.query || {});
       const city = String(_req.query?.city || '').trim();
       const cacheKey = JSON.stringify({ page, limit, search, city, upcomingOnly: true });
-      const cachedPayload = showCacheService.getCachedShows(cacheKey);
+      if (redisService.enabled) {
+        const redisCached = await redisService.get(redisShowsKey(cacheKey)).catch(() => null);
+        performanceService.recordCacheLookup({ scope: 'api:shows', layer: 'redis', hit: Boolean(redisCached) });
+        if (redisCached) {
+          res.setHeader('X-Cache', 'HIT-REDIS');
+          res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
+          return res.json(redisCached);
+        }
+      }
+
+      const cachedPayload = await showCacheService.getCachedShows(cacheKey);
+      performanceService.recordCacheLookup({ scope: 'api:shows', layer: 'local', hit: Boolean(cachedPayload) });
       if (cachedPayload) {
+        res.setHeader('X-Cache', 'HIT-LOCAL');
         res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
         return res.json(cachedPayload);
       }
@@ -137,7 +158,11 @@ export function createPublicRouter({
           total: result.total
         }
       };
-      showCacheService.setCachedShows(cacheKey, payload);
+      await showCacheService.setCachedShows(cacheKey, payload);
+      if (redisService.enabled) {
+        await redisService.set(redisShowsKey(cacheKey), payload, 30).catch(() => {});
+      }
+      res.setHeader('X-Cache', 'MISS');
       res.setHeader('Cache-Control', isProduction ? 'public, max-age=10' : 'no-store');
       return res.json(payload);
     } catch (error) {
@@ -154,8 +179,21 @@ export function createPublicRouter({
         scanPages,
         bbox: bbox ? [bbox.west, bbox.south, bbox.east, bbox.north] : null
       });
+
+      if (redisService.enabled) {
+        const redisCached = await redisService.get(redisMapUsersKey(cacheKey)).catch(() => null);
+        performanceService.recordCacheLookup({ scope: 'api:map-users', layer: 'redis', hit: Boolean(redisCached) });
+        if (redisCached) {
+          res.setHeader('X-Cache', 'HIT-REDIS');
+          res.setHeader('Cache-Control', isProduction ? 'public, max-age=10' : 'no-store');
+          return res.json(redisCached);
+        }
+      }
+
       const cachedPayload = getCachedMapUsers(cacheKey);
+      performanceService.recordCacheLookup({ scope: 'api:map-users', layer: 'local', hit: Boolean(cachedPayload) });
       if (cachedPayload) {
+        res.setHeader('X-Cache', 'HIT-LOCAL');
         res.setHeader('Cache-Control', isProduction ? 'public, max-age=10' : 'no-store');
         return res.json(cachedPayload);
       }
@@ -219,6 +257,10 @@ export function createPublicRouter({
       });
 
       setCachedMapUsers(cacheKey, payload);
+      if (redisService.enabled) {
+        await redisService.set(redisMapUsersKey(cacheKey), payload, Math.max(1, Math.ceil(MAP_USERS_CACHE_TTL_MS / 1000))).catch(() => {});
+      }
+      res.setHeader('X-Cache', 'MISS');
       res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
       return res.json(payload);
     } catch (error) {

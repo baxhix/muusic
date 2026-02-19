@@ -5,6 +5,7 @@ const REQUEST_WINDOW_SIZE = 2000;
 const ROUTE_WINDOW_SIZE = 120;
 const SOCKET_WINDOW_SIZE = 3000;
 const CLIENT_FPS_WINDOW_SIZE = 800;
+const CACHE_WINDOW_SIZE = 2000;
 
 function nowIso() {
   return new Date().toISOString();
@@ -28,6 +29,7 @@ class PerformanceService {
     this.routeStats = new Map();
     this.socketEvents = [];
     this.clientFpsEvents = [];
+    this.cacheEvents = [];
     this.startedAt = Date.now();
     this.loopDelay = monitorEventLoopDelay({ resolution: 20 });
     this.loopDelay.enable();
@@ -78,6 +80,18 @@ class PerformanceService {
     }
   }
 
+  recordCacheLookup({ scope = 'unknown', layer = 'local', hit = false, at = Date.now() } = {}) {
+    this.cacheEvents.push({
+      at,
+      scope: String(scope || 'unknown'),
+      layer: String(layer || 'local'),
+      hit: Boolean(hit)
+    });
+    if (this.cacheEvents.length > CACHE_WINDOW_SIZE) {
+      this.cacheEvents.splice(0, this.cacheEvents.length - CACHE_WINDOW_SIZE);
+    }
+  }
+
   getSnapshot() {
     const mem = process.memoryUsage();
     const now = Date.now();
@@ -87,6 +101,7 @@ class PerformanceService {
     const socketLastMinuteEvents = this.socketEvents.filter((event) => event.at >= oneMinuteAgo);
     const socketDurations = this.socketEvents.map((event) => event.durationMs);
     const clientFpsLastMinute = this.clientFpsEvents.filter((event) => event.at >= oneMinuteAgo);
+    const cacheLastMinuteEvents = this.cacheEvents.filter((event) => event.at >= oneMinuteAgo);
 
     const byStatus = this.requestEvents.reduce(
       (acc, event) => {
@@ -132,6 +147,27 @@ class PerformanceService {
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
+
+    const cacheByScope = this.cacheEvents.reduce((acc, event) => {
+      const key = `${event.scope}:${event.layer}`;
+      const current = acc.get(key) || { scope: event.scope, layer: event.layer, total: 0, hits: 0 };
+      current.total += 1;
+      if (event.hit) current.hits += 1;
+      acc.set(key, current);
+      return acc;
+    }, new Map());
+
+    const cacheStats = Array.from(cacheByScope.values())
+      .map((item) => ({
+        scope: item.scope,
+        layer: item.layer,
+        total: item.total,
+        hits: item.hits,
+        misses: Math.max(0, item.total - item.hits),
+        hitRatePct: round((item.hits / Math.max(1, item.total)) * 100, 2)
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
 
     const lagMeanMs = this.loopDelay.mean / 1e6;
     const lagP95Ms = this.loopDelay.percentile(95) / 1e6;
@@ -188,6 +224,15 @@ class PerformanceService {
         ),
         p95: round(percentile(this.clientFpsEvents.map((event) => event.fps), 95), 2),
         latest: this.clientFpsEvents.length ? this.clientFpsEvents[this.clientFpsEvents.length - 1].fps : 0
+      },
+      cache: {
+        sampleSize: this.cacheEvents.length,
+        lookupsPerSecLast1m: round(cacheLastMinuteEvents.length / 60, 2),
+        hitRatePct: round(
+          (this.cacheEvents.filter((event) => event.hit).length / Math.max(1, this.cacheEvents.length)) * 100,
+          2
+        ),
+        stats: cacheStats
       }
     };
   }

@@ -101,6 +101,7 @@ export default function PerformancePage({ apiFetch }) {
             <KpiCard align="left" label="Socket p95 (ms)" value={snapshot.socket?.p95Ms ?? 0} />
             <KpiCard align="left" label="Eventos socket/s" value={snapshot.socket?.eventsPerSecLast1m ?? 0} />
             <KpiCard align="left" label="FPS cliente p95" value={snapshot.clientFps?.p95 ?? 0} />
+            <KpiCard align="left" label="Cache hit rate (%)" value={snapshot.cache?.hitRatePct ?? 0} />
             <KpiCard align="left" label="Uptime" value={formatUptime(snapshot.process?.uptimeSec)} />
             <KpiCard align="left" label="Heap usado (MB)" value={snapshot.process?.heapUsedMb ?? 0} />
           </section>
@@ -214,6 +215,17 @@ export default function PerformancePage({ apiFetch }) {
                   value={snapshot.clientFps?.latest ?? 0}
                   level={metricLevel(Math.max(0, 60 - Number(snapshot.clientFps?.latest || 0)), { attention: 20, critical: 30 })}
                 />
+                <MetricRow
+                  label="Cache hit rate"
+                  description="Taxa total de acerto de cache (redis + local) na janela recente."
+                  value={`${snapshot.cache?.hitRatePct ?? 0}%`}
+                  level={metricLevel(Math.max(0, 100 - Number(snapshot.cache?.hitRatePct || 0)), { attention: 40, critical: 60 })}
+                />
+                <MetricRow
+                  label="Cache lookups/s"
+                  description="Total de consultas de cache por segundo no ultimo minuto."
+                  value={snapshot.cache?.lookupsPerSecLast1m ?? 0}
+                />
               </CardContent>
             </Card>
           </section>
@@ -282,6 +294,45 @@ export default function PerformancePage({ apiFetch }) {
                     <TableRow>
                       <TableCell className="text-muted-foreground" colSpan={5}>
                         Sem eventos de socket suficientes na janela atual.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Cache por escopo/camada</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Escopo</TableHead>
+                    <TableHead>Camada</TableHead>
+                    <TableHead>Lookups</TableHead>
+                    <TableHead>Hits</TableHead>
+                    <TableHead>Misses</TableHead>
+                    <TableHead>Hit rate (%)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(snapshot.cache?.stats || []).map((row) => (
+                    <TableRow key={`${row.scope}-${row.layer}`}>
+                      <TableCell className="font-medium">{row.scope}</TableCell>
+                      <TableCell>{row.layer}</TableCell>
+                      <TableCell>{row.total}</TableCell>
+                      <TableCell>{row.hits}</TableCell>
+                      <TableCell>{row.misses}</TableCell>
+                      <TableCell>{row.hitRatePct}</TableCell>
+                    </TableRow>
+                  ))}
+                  {!snapshot.cache?.stats?.length ? (
+                    <TableRow>
+                      <TableCell className="text-muted-foreground" colSpan={6}>
+                        Sem dados de cache suficientes na janela atual.
                       </TableCell>
                     </TableRow>
                   ) : null}

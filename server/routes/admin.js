@@ -182,7 +182,7 @@ export function createAdminRouter({
       const payload = parseShowPayload(req.body);
       if (payload.error) return res.status(400).json({ error: payload.error });
       const show = await showService.createShow(payload);
-      showCacheService.invalidateShowsCache();
+      await showCacheService.invalidateShowsCache();
       const sanitizedShow = sanitizeShowResponse(show);
       io.emit('shows:changed', { type: 'created', showId: show.id, show: sanitizedShow });
       return res.status(201).json({ show: sanitizedShow });
@@ -204,7 +204,7 @@ export function createAdminRouter({
       const updated = await showService.updateShowById(showId, payload);
       if (!updated) return res.status(404).json({ error: 'Show nao encontrado.' });
 
-      showCacheService.invalidateShowsCache();
+      await showCacheService.invalidateShowsCache();
       const sanitizedShow = sanitizeShowResponse(updated);
       io.emit('shows:changed', { type: 'updated', showId: updated.id, show: sanitizedShow });
       return res.json({ show: sanitizedShow });
@@ -223,7 +223,7 @@ export function createAdminRouter({
       const deleted = await showService.deleteShowById(showId);
       if (!deleted) return res.status(404).json({ error: 'Show nao encontrado.' });
 
-      showCacheService.invalidateShowsCache();
+      await showCacheService.invalidateShowsCache();
       io.emit('shows:changed', { type: 'deleted', showId });
       return res.json({ ok: true });
     } catch (error) {
