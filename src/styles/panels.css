@@ -704,7 +704,8 @@
   position: relative;
   width: 100%;
   min-height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #010308;
   color: #ffffff;
 }
@@ -926,10 +927,7 @@
 }
 
 .landing-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
   min-height: 74px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(2, 4, 9, 0.86);
@@ -974,6 +972,20 @@
   font-size: 14px;
   font-weight: 400;
   text-align: center;
+}
+
+.landing-auth-section {
+  padding: 34px 0 50px;
+  background: linear-gradient(180deg, rgba(2, 4, 9, 0.1) 0%, rgba(2, 4, 9, 0.85) 100%);
+}
+
+.landing-auth-inner {
+  display: grid;
+  justify-items: center;
+}
+
+.landing-auth-inner .auth-modern-card {
+  width: min(520px, calc(100vw - 24px));
 }
 
 .auth-page {

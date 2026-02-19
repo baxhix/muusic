@@ -70,6 +70,7 @@ export function useMapEngine({
   mapVisibility = { users: true, shows: true },
   onViewportChange
 }) {
+  const minZoomLatam = isMobileDevice ? 1.7 : 2.2;
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const mapboxRef = useRef(null);
@@ -231,7 +232,8 @@ export function useMapEngine({
         container,
         style: MAPBOX_TOKEN ? 'mapbox://styles/mapbox/dark-v11' : FALLBACK_STYLE,
         center: [0, 18],
-        zoom: isMobileDevice ? 1.7 : 2.2
+        zoom: isMobileDevice ? 1.7 : 2.2,
+        minZoom: minZoomLatam
       });
 
       map.on('click', (event) => {

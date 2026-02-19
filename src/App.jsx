@@ -447,7 +447,7 @@ export default function App() {
   if (!activeUser) {
     return (
       <AuthPage
-        simpleAccess={!showAuthForm}
+        simpleAccess
         onQuickEnter={() => {
           setAuthMode('login');
           setShowAuthForm(true);

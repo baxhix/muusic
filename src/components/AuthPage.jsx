@@ -51,6 +51,110 @@ export default function AuthPage({
     setWaitlistEmail('');
   };
 
+  const authFormCard = (
+    <form className="auth-modern-card" onSubmit={forgotMode ? (resetMode ? submitResetPassword : submitForgotPassword) : submitAuth}>
+      <h2>{forgotMode ? 'Recuperar senha' : authMode === 'login' ? 'Entrar na conta' : 'Criar conta'}</h2>
+      <p>{forgotMode ? (resetMode ? 'Informe o token de recuperacao e sua nova senha.' : 'Informe seu e-mail para receber o link de recuperacao.') : 'Acesse para entrar na rede social geolocalizada.'}</p>
+
+      {!forgotMode && (
+        <div className="auth-modern-switch">
+          <button type="button" className={authMode === 'login' ? 'active' : ''} onClick={() => setAuthMode('login')}>
+            Entrar
+          </button>
+          <button type="button" className={authMode === 'register' ? 'active' : ''} onClick={() => setAuthMode('register')}>
+            Criar conta
+          </button>
+        </div>
+      )}
+
+      {!forgotMode && authMode === 'register' && (
+        <label>
+          Nome completo
+          <input value={authForm.name} onChange={(event) => updateAuthField('name', event.target.value)} placeholder="Seu nome" />
+        </label>
+      )}
+
+      {!forgotMode || !resetMode ? (
+        <label>
+          E-mail
+          <input type="email" value={authForm.email} onChange={(event) => updateAuthField('email', event.target.value)} placeholder="voce@email.com" />
+        </label>
+      ) : null}
+
+      {!forgotMode && (
+        <>
+          <label>
+            Senha
+            <input type="password" value={authForm.password} onChange={(event) => updateAuthField('password', event.target.value)} placeholder="Minimo 6 caracteres" />
+          </label>
+
+          {authMode === 'register' && (
+            <label>
+              Confirmar senha
+              <input
+                type="password"
+                value={authForm.confirmPassword}
+                onChange={(event) => updateAuthField('confirmPassword', event.target.value)}
+                placeholder="Repita sua senha"
+              />
+            </label>
+          )}
+        </>
+      )}
+
+      {forgotMode && resetMode && (
+        <>
+          <label>
+            Token de recuperacao
+            <input
+              value={authForm.resetToken}
+              onChange={(event) => updateAuthField('resetToken', event.target.value)}
+              placeholder="Cole o token recebido"
+            />
+          </label>
+          <label>
+            Nova senha
+            <input
+              type="password"
+              value={authForm.resetPassword}
+              onChange={(event) => updateAuthField('resetPassword', event.target.value)}
+              placeholder="Minimo 6 caracteres"
+            />
+          </label>
+          <label>
+            Confirmar nova senha
+            <input
+              type="password"
+              value={authForm.resetConfirmPassword}
+              onChange={(event) => updateAuthField('resetConfirmPassword', event.target.value)}
+              placeholder="Repita a nova senha"
+            />
+          </label>
+        </>
+      )}
+
+      {authError && <p className="auth-error">{authError}</p>}
+      {forgotMessage && <p className="auth-ok">{forgotMessage}</p>}
+
+      <button type="submit" className="auth-primary-btn">
+        {forgotMode ? (resetMode ? 'Redefinir senha' : 'Enviar recuperacao') : authMode === 'login' ? 'Entrar' : 'Cadastrar'}
+      </button>
+
+      <div className="auth-bottom-links">
+        {!forgotMode && (
+          <button type="button" onClick={openForgotMode}>
+            Esqueci a senha
+          </button>
+        )}
+        {forgotMode && (
+          <button type="button" onClick={closeForgotMode}>
+            Voltar para login
+          </button>
+        )}
+      </div>
+    </form>
+  );
+
   if (simpleAccess) {
     return (
       <div className="landing-page">
@@ -76,7 +180,7 @@ export default function AuthPage({
             <div className="landing-brand" aria-label="Muusic">
               <img src={muusicLogo} alt="Muusic" className="landing-logo" />
             </div>
-            <a href="?login=1#login" className="landing-login-btn" onClick={() => onQuickEnter?.()}>
+            <a href="#login" className="landing-login-btn" onClick={() => onQuickEnter?.()}>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
                 <path d="M14 7L19 12L14 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M5 12H18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
@@ -126,6 +230,10 @@ export default function AuthPage({
           </div>
         </main>
 
+        <section id="login" className="landing-auth-section">
+          <div className="landing-shell landing-auth-inner">{authFormCard}</div>
+        </section>
+
         <footer className="landing-footer">
           <div className="landing-shell landing-footer-inner">
             <div className="landing-footer-left">
@@ -165,107 +273,7 @@ export default function AuthPage({
       </section>
 
       <section className="auth-panel">
-        <form className="auth-modern-card" onSubmit={forgotMode ? (resetMode ? submitResetPassword : submitForgotPassword) : submitAuth}>
-          <h2>{forgotMode ? 'Recuperar senha' : authMode === 'login' ? 'Entrar na conta' : 'Criar conta'}</h2>
-          <p>{forgotMode ? (resetMode ? 'Informe o token de recuperacao e sua nova senha.' : 'Informe seu e-mail para receber o link de recuperacao.') : 'Acesse para entrar na rede social geolocalizada.'}</p>
-
-          {!forgotMode && (
-            <div className="auth-modern-switch">
-              <button type="button" className={authMode === 'login' ? 'active' : ''} onClick={() => setAuthMode('login')}>
-                Entrar
-              </button>
-              <button type="button" className={authMode === 'register' ? 'active' : ''} onClick={() => setAuthMode('register')}>
-                Criar conta
-              </button>
-            </div>
-          )}
-
-          {!forgotMode && authMode === 'register' && (
-            <label>
-              Nome completo
-              <input value={authForm.name} onChange={(event) => updateAuthField('name', event.target.value)} placeholder="Seu nome" />
-            </label>
-          )}
-
-          {!forgotMode || !resetMode ? (
-            <label>
-              E-mail
-              <input type="email" value={authForm.email} onChange={(event) => updateAuthField('email', event.target.value)} placeholder="voce@email.com" />
-            </label>
-          ) : null}
-
-          {!forgotMode && (
-            <>
-              <label>
-                Senha
-                <input type="password" value={authForm.password} onChange={(event) => updateAuthField('password', event.target.value)} placeholder="Minimo 6 caracteres" />
-              </label>
-
-              {authMode === 'register' && (
-                <label>
-                  Confirmar senha
-                  <input
-                    type="password"
-                    value={authForm.confirmPassword}
-                    onChange={(event) => updateAuthField('confirmPassword', event.target.value)}
-                    placeholder="Repita sua senha"
-                  />
-                </label>
-              )}
-            </>
-          )}
-
-          {forgotMode && resetMode && (
-            <>
-              <label>
-                Token de recuperacao
-                <input
-                  value={authForm.resetToken}
-                  onChange={(event) => updateAuthField('resetToken', event.target.value)}
-                  placeholder="Cole o token recebido"
-                />
-              </label>
-              <label>
-                Nova senha
-                <input
-                  type="password"
-                  value={authForm.resetPassword}
-                  onChange={(event) => updateAuthField('resetPassword', event.target.value)}
-                  placeholder="Minimo 6 caracteres"
-                />
-              </label>
-              <label>
-                Confirmar nova senha
-                <input
-                  type="password"
-                  value={authForm.resetConfirmPassword}
-                  onChange={(event) => updateAuthField('resetConfirmPassword', event.target.value)}
-                  placeholder="Repita a nova senha"
-                />
-              </label>
-            </>
-          )}
-
-          {authError && <p className="auth-error">{authError}</p>}
-          {forgotMessage && <p className="auth-ok">{forgotMessage}</p>}
-
-          <button type="submit" className="auth-primary-btn">
-            {forgotMode ? (resetMode ? 'Redefinir senha' : 'Enviar recuperacao') : authMode === 'login' ? 'Entrar' : 'Cadastrar'}
-          </button>
-
-          <div className="auth-bottom-links">
-            {!forgotMode && (
-              <button type="button" onClick={openForgotMode}>
-                Esqueci a senha
-              </button>
-            )}
-            {forgotMode && (
-              <button type="button" onClick={closeForgotMode}>
-                Voltar para login
-              </button>
-            )}
-          </div>
-        </form>
+        {authFormCard}
       </section>
     </div>
   );
