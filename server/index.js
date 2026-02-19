@@ -174,7 +174,8 @@ app.use(
     showCacheService,
     sanitizeShowResponse,
     userService,
-    accountSettingsService
+    accountSettingsService,
+    performanceService
   })
 );
 
@@ -242,6 +243,7 @@ io.on('connection', (socket) => {
   let joinedUserName = null;
 
   socket.on('room:join', async ({ roomId = 'global', userId, name, spotify, token, sessionId } = {}, ack) => {
+    const startedAt = performance.now();
     try {
       const joinLimit = await socketRateLimiter.consume({
         key: `join:${socket.id}`,
@@ -293,63 +295,114 @@ io.on('connection', (socket) => {
       const messages = await realtimeCluster.getMessages(joinedRoom);
       socket.emit('chat:history', messages);
       ack?.({ ok: true, roomId: joinedRoom, userId: joinedUserId });
+      performanceService.recordSocketEvent({
+        event: 'room:join',
+        durationMs: performance.now() - startedAt,
+        ok: true
+      });
     } catch {
       ack?.({ ok: false, error: 'Join failed' });
+      performanceService.recordSocketEvent({
+        event: 'room:join',
+        durationMs: performance.now() - startedAt,
+        ok: false
+      });
     }
   });
 
   socket.on('location:update', async ({ lat, lng } = {}) => {
+    const startedAt = performance.now();
     if (!joinedRoom || !joinedUserId) return;
     if (typeof lat !== 'number' || typeof lng !== 'number') return;
+    try {
+      const locationLimit = await socketRateLimiter.consume({
+        key: `loc:${joinedUserId}`,
+        limit: 30,
+        windowSec: 10
+      });
+      if (!locationLimit.allowed) return;
 
-    const locationLimit = await socketRateLimiter.consume({
-      key: `loc:${joinedUserId}`,
-      limit: 30,
-      windowSec: 10
-    });
-    if (!locationLimit.allowed) return;
-
-    const presence = await realtimeCluster.updateLocation(joinedRoom, joinedUserId, {
-      lat,
-      lng,
-      updatedAt: Date.now()
-    });
-    if (!presence) return;
-    io.to(joinedRoom).emit('presence:update', presence);
+      const presence = await realtimeCluster.updateLocation(joinedRoom, joinedUserId, {
+        lat,
+        lng,
+        updatedAt: Date.now()
+      });
+      if (!presence) return;
+      io.to(joinedRoom).emit('presence:update', presence);
+      performanceService.recordSocketEvent({
+        event: 'location:update',
+        durationMs: performance.now() - startedAt,
+        ok: true
+      });
+    } catch {
+      performanceService.recordSocketEvent({
+        event: 'location:update',
+        durationMs: performance.now() - startedAt,
+        ok: false
+      });
+    }
   });
 
   socket.on('chat:message', async ({ text } = {}, ack) => {
+    const startedAt = performance.now();
     if (!joinedRoom || !joinedUserId) return;
     const normalized = typeof text === 'string' ? text.trim() : '';
     if (!normalized) return;
+    try {
+      const chatLimit = await socketRateLimiter.consume({
+        key: `chat:${joinedUserId}`,
+        limit: 8,
+        windowSec: 10
+      });
+      if (!chatLimit.allowed) {
+        ack?.({ ok: false, error: 'Rate limit exceeded', retryAfterSec: chatLimit.retryAfterSec });
+        return;
+      }
 
-    const chatLimit = await socketRateLimiter.consume({
-      key: `chat:${joinedUserId}`,
-      limit: 8,
-      windowSec: 10
-    });
-    if (!chatLimit.allowed) {
-      ack?.({ ok: false, error: 'Rate limit exceeded', retryAfterSec: chatLimit.retryAfterSec });
-      return;
+      const message = {
+        id: nanoid(12),
+        userId: joinedUserId,
+        name: joinedUserName || `User ${joinedUserId}`,
+        text: normalized.slice(0, 500),
+        createdAt: Date.now()
+      };
+
+      await realtimeCluster.appendMessage(joinedRoom, message);
+      io.to(joinedRoom).emit('chat:new', message);
+      ack?.({ ok: true, id: message.id });
+      performanceService.recordSocketEvent({
+        event: 'chat:message',
+        durationMs: performance.now() - startedAt,
+        ok: true
+      });
+    } catch {
+      ack?.({ ok: false, error: 'Message failed' });
+      performanceService.recordSocketEvent({
+        event: 'chat:message',
+        durationMs: performance.now() - startedAt,
+        ok: false
+      });
     }
-
-    const message = {
-      id: nanoid(12),
-      userId: joinedUserId,
-      name: joinedUserName || `User ${joinedUserId}`,
-      text: normalized.slice(0, 500),
-      createdAt: Date.now()
-    };
-
-    await realtimeCluster.appendMessage(joinedRoom, message);
-    io.to(joinedRoom).emit('chat:new', message);
-    ack?.({ ok: true, id: message.id });
   });
 
   socket.on('disconnect', async () => {
+    const startedAt = performance.now();
     if (!joinedRoom || !joinedUserId) return;
-    const presence = await realtimeCluster.removeUser(joinedRoom, joinedUserId);
-    io.to(joinedRoom).emit('presence:update', presence);
+    try {
+      const presence = await realtimeCluster.removeUser(joinedRoom, joinedUserId);
+      io.to(joinedRoom).emit('presence:update', presence);
+      performanceService.recordSocketEvent({
+        event: 'disconnect',
+        durationMs: performance.now() - startedAt,
+        ok: true
+      });
+    } catch {
+      performanceService.recordSocketEvent({
+        event: 'disconnect',
+        durationMs: performance.now() - startedAt,
+        ok: false
+      });
+    }
   });
 });
 

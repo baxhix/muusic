@@ -75,6 +75,7 @@ export default function PerformancePage({ apiFetch }) {
   }, [apiFetch]);
 
   const topRoutes = useMemo(() => snapshot?.http?.topRoutes || [], [snapshot?.http?.topRoutes]);
+  const topSocketEvents = useMemo(() => snapshot?.socket?.events || [], [snapshot?.socket?.events]);
 
   return (
     <div className="space-y-6">
@@ -94,9 +95,12 @@ export default function PerformancePage({ apiFetch }) {
 
       {snapshot ? (
         <>
-          <section className="grid gap-4 lg:grid-cols-4">
+          <section className="grid gap-4 lg:grid-cols-6">
             <KpiCard align="left" label="RPS (1 min)" value={snapshot.http?.rpsLast1m ?? 0} />
             <KpiCard align="left" label="Latência p95 (ms)" value={snapshot.http?.p95Ms ?? 0} />
+            <KpiCard align="left" label="Socket p95 (ms)" value={snapshot.socket?.p95Ms ?? 0} />
+            <KpiCard align="left" label="Eventos socket/s" value={snapshot.socket?.eventsPerSecLast1m ?? 0} />
+            <KpiCard align="left" label="FPS cliente p95" value={snapshot.clientFps?.p95 ?? 0} />
             <KpiCard align="left" label="Uptime" value={formatUptime(snapshot.process?.uptimeSec)} />
             <KpiCard align="left" label="Heap usado (MB)" value={snapshot.process?.heapUsedMb ?? 0} />
           </section>
@@ -186,6 +190,30 @@ export default function PerformancePage({ apiFetch }) {
                   value={snapshot.http?.byStatus?.s5xx ?? 0}
                   level={metricLevel(snapshot.http?.byStatus?.s5xx, { attention: 1, critical: 3 })}
                 />
+                <MetricRow
+                  label="Socket p95"
+                  description="Latência p95 dos handlers de eventos de socket."
+                  value={`${snapshot.socket?.p95Ms ?? 0} ms`}
+                  level={metricLevel(snapshot.socket?.p95Ms, { attention: 120, critical: 300 })}
+                />
+                <MetricRow
+                  label="Socket erros"
+                  description="Total de eventos de socket com falha na janela recente."
+                  value={snapshot.socket?.errorCount ?? 0}
+                  level={metricLevel(snapshot.socket?.errorCount, { attention: 1, critical: 5 })}
+                />
+                <MetricRow
+                  label="FPS cliente p95"
+                  description="Percentil 95 dos reports de FPS enviados pelo frontend."
+                  value={snapshot.clientFps?.p95 ?? 0}
+                  level={metricLevel(Math.max(0, 60 - Number(snapshot.clientFps?.p95 || 0)), { attention: 20, critical: 30 })}
+                />
+                <MetricRow
+                  label="FPS cliente último"
+                  description="Último FPS reportado pelo frontend."
+                  value={snapshot.clientFps?.latest ?? 0}
+                  level={metricLevel(Math.max(0, 60 - Number(snapshot.clientFps?.latest || 0)), { attention: 20, critical: 30 })}
+                />
               </CardContent>
             </Card>
           </section>
@@ -217,6 +245,43 @@ export default function PerformancePage({ apiFetch }) {
                     <TableRow>
                       <TableCell className="text-muted-foreground" colSpan={4}>
                         Sem tráfego suficiente para exibir rotas.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Top eventos socket (janela recente)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Evento</TableHead>
+                    <TableHead>Ocorrências</TableHead>
+                    <TableHead>Média (ms)</TableHead>
+                    <TableHead>P95 (ms)</TableHead>
+                    <TableHead>Erros</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topSocketEvents.map((event) => (
+                    <TableRow key={event.event}>
+                      <TableCell className="font-medium">{event.event}</TableCell>
+                      <TableCell>{event.count}</TableCell>
+                      <TableCell>{event.avgMs}</TableCell>
+                      <TableCell>{event.p95Ms}</TableCell>
+                      <TableCell>{event.errors}</TableCell>
+                    </TableRow>
+                  ))}
+                  {!topSocketEvents.length ? (
+                    <TableRow>
+                      <TableCell className="text-muted-foreground" colSpan={5}>
+                        Sem eventos de socket suficientes na janela atual.
                       </TableCell>
                     </TableRow>
                   ) : null}

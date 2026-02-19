@@ -3,6 +3,8 @@ import { monitorEventLoopDelay } from 'perf_hooks';
 
 const REQUEST_WINDOW_SIZE = 2000;
 const ROUTE_WINDOW_SIZE = 120;
+const SOCKET_WINDOW_SIZE = 3000;
+const CLIENT_FPS_WINDOW_SIZE = 800;
 
 function nowIso() {
   return new Date().toISOString();
@@ -24,6 +26,8 @@ class PerformanceService {
   constructor() {
     this.requestEvents = [];
     this.routeStats = new Map();
+    this.socketEvents = [];
+    this.clientFpsEvents = [];
     this.startedAt = Date.now();
     this.loopDelay = monitorEventLoopDelay({ resolution: 20 });
     this.loopDelay.enable();
@@ -48,12 +52,41 @@ class PerformanceService {
     this.routeStats.set(routeKey, route);
   }
 
+  recordSocketEvent({ event = 'unknown', durationMs = 0, ok = true, at = Date.now() } = {}) {
+    const safeDuration = Math.max(0, Number(durationMs) || 0);
+    const safeEvent = String(event || 'unknown');
+    this.socketEvents.push({
+      at,
+      event: safeEvent,
+      durationMs: safeDuration,
+      ok: Boolean(ok)
+    });
+    if (this.socketEvents.length > SOCKET_WINDOW_SIZE) {
+      this.socketEvents.splice(0, this.socketEvents.length - SOCKET_WINDOW_SIZE);
+    }
+  }
+
+  recordClientFps({ fps = 0, at = Date.now() } = {}) {
+    const safeFps = Number(fps);
+    if (!Number.isFinite(safeFps) || safeFps < 1 || safeFps > 240) return;
+    this.clientFpsEvents.push({
+      at,
+      fps: Math.round(safeFps)
+    });
+    if (this.clientFpsEvents.length > CLIENT_FPS_WINDOW_SIZE) {
+      this.clientFpsEvents.splice(0, this.clientFpsEvents.length - CLIENT_FPS_WINDOW_SIZE);
+    }
+  }
+
   getSnapshot() {
     const mem = process.memoryUsage();
     const now = Date.now();
     const oneMinuteAgo = now - 60_000;
     const lastMinuteEvents = this.requestEvents.filter((event) => event.at >= oneMinuteAgo);
     const durations = this.requestEvents.map((event) => event.durationMs);
+    const socketLastMinuteEvents = this.socketEvents.filter((event) => event.at >= oneMinuteAgo);
+    const socketDurations = this.socketEvents.map((event) => event.durationMs);
+    const clientFpsLastMinute = this.clientFpsEvents.filter((event) => event.at >= oneMinuteAgo);
 
     const byStatus = this.requestEvents.reduce(
       (acc, event) => {
@@ -73,6 +106,29 @@ class PerformanceService {
         count: stats.count,
         avgMs: round(stats.durations.reduce((sum, value) => sum + value, 0) / Math.max(1, stats.durations.length), 2),
         p95Ms: round(percentile(stats.durations, 95), 2)
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    const bySocketEvent = this.socketEvents.reduce((acc, event) => {
+      const current = acc.get(event.event) || { count: 0, durations: [], errors: 0 };
+      current.count += 1;
+      current.durations.push(event.durationMs);
+      if (!event.ok) current.errors += 1;
+      if (current.durations.length > ROUTE_WINDOW_SIZE) {
+        current.durations.splice(0, current.durations.length - ROUTE_WINDOW_SIZE);
+      }
+      acc.set(event.event, current);
+      return acc;
+    }, new Map());
+
+    const socketEvents = Array.from(bySocketEvent.entries())
+      .map(([eventName, stats]) => ({
+        event: eventName,
+        count: stats.count,
+        avgMs: round(stats.durations.reduce((sum, value) => sum + value, 0) / Math.max(1, stats.durations.length), 2),
+        p95Ms: round(percentile(stats.durations, 95), 2),
+        errors: stats.errors
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
@@ -114,6 +170,24 @@ class PerformanceService {
         p95Ms: round(percentile(durations, 95), 2),
         byStatus,
         topRoutes
+      },
+      socket: {
+        sampleSize: this.socketEvents.length,
+        eventsPerSecLast1m: round(socketLastMinuteEvents.length / 60, 2),
+        avgMs: round(socketDurations.reduce((sum, value) => sum + value, 0) / Math.max(1, socketDurations.length), 2),
+        p95Ms: round(percentile(socketDurations, 95), 2),
+        errorCount: this.socketEvents.filter((event) => !event.ok).length,
+        events: socketEvents
+      },
+      clientFps: {
+        sampleSize: this.clientFpsEvents.length,
+        reportsPerSecLast1m: round(clientFpsLastMinute.length / 60, 2),
+        avg: round(
+          this.clientFpsEvents.reduce((sum, event) => sum + event.fps, 0) / Math.max(1, this.clientFpsEvents.length),
+          2
+        ),
+        p95: round(percentile(this.clientFpsEvents.map((event) => event.fps), 95), 2),
+        latest: this.clientFpsEvents.length ? this.clientFpsEvents[this.clientFpsEvents.length - 1].fps : 0
       }
     };
   }

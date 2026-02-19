@@ -89,7 +89,8 @@ export function createPublicRouter({
   showCacheService,
   sanitizeShowResponse,
   userService,
-  accountSettingsService
+  accountSettingsService,
+  performanceService
 }) {
   const router = Router();
 
@@ -223,6 +224,18 @@ export function createPublicRouter({
     } catch (error) {
       return res.status(500).json({ error: `Erro ao listar usuarios do mapa: ${error.message}` });
     }
+  });
+
+  router.post('/api/telemetry/fps', (req, res) => {
+    const fps = Number(req.body?.fps);
+    if (!Number.isFinite(fps)) {
+      return res.status(400).json({ error: 'fps invalido' });
+    }
+    performanceService.recordClientFps({
+      fps,
+      at: Date.now()
+    });
+    return res.status(202).json({ ok: true });
   });
 
   return router;

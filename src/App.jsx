@@ -84,11 +84,6 @@ export default function App() {
   const [shows, setShows] = useState([]);
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
-  const [showAuthForm, setShowAuthForm] = useState(() => {
-    const search = typeof window !== 'undefined' ? window.location.search : '';
-    const hash = typeof window !== 'undefined' ? window.location.hash : '';
-    return hash === '#login' || search.includes('login=1');
-  });
   const lastTrendingCaptureRef = useRef({ trackId: '', isPlaying: false });
   const mapUsersRequestRef = useRef(0);
   const isAccountPage = currentPath === ACCOUNT_PATH;
@@ -220,19 +215,6 @@ export default function App() {
   useEffect(() => {
     saveMapVisibility(mapVisibility);
   }, [mapVisibility]);
-
-  useEffect(() => {
-    const syncAuthFromLocation = () => {
-      const shouldOpenAuth = window.location.hash === '#login' || window.location.search.includes('login=1');
-      setShowAuthForm(shouldOpenAuth);
-    };
-    window.addEventListener('hashchange', syncAuthFromLocation);
-    window.addEventListener('popstate', syncAuthFromLocation);
-    return () => {
-      window.removeEventListener('hashchange', syncAuthFromLocation);
-      window.removeEventListener('popstate', syncAuthFromLocation);
-    };
-  }, []);
 
   useEffect(() => {
     if (!selectedSimProfile?.id) return;
@@ -372,6 +354,27 @@ export default function App() {
     };
   }, [activeUser?.spotifyToken, refreshSpotifyNowPlaying]);
 
+  useEffect(() => {
+    if (!activeUser || !fps || !Number.isFinite(fps)) return undefined;
+    const timerId = window.setTimeout(() => {
+      const payload = JSON.stringify({ fps: Number(fps) });
+      const url = `${API_URL}/api/telemetry/fps`;
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: 'application/json' });
+        navigator.sendBeacon(url, blob);
+        return;
+      }
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {});
+    }, 15000);
+
+    return () => window.clearTimeout(timerId);
+  }, [activeUser, fps]);
+
   function handleLogout() {
     logout().catch(() => {});
   }
@@ -450,7 +453,6 @@ export default function App() {
         simpleAccess
         onQuickEnter={() => {
           setAuthMode('login');
-          setShowAuthForm(true);
           if (window.location.hash !== '#login') {
             window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#login`);
           }
