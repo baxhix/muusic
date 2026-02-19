@@ -84,6 +84,7 @@ export default function App() {
   const [shows, setShows] = useState([]);
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  const [showAuthForm, setShowAuthForm] = useState(false);
   const lastTrendingCaptureRef = useRef({ trackId: '', isPlaying: false });
   const mapUsersRequestRef = useRef(0);
   const isAccountPage = currentPath === ACCOUNT_PATH;
@@ -429,6 +430,8 @@ export default function App() {
   if (!activeUser) {
     return (
       <AuthPage
+        simpleAccess={!showAuthForm}
+        onQuickEnter={() => setShowAuthForm(true)}
         authMode={authMode}
         setAuthMode={setAuthMode}
         authForm={authForm}

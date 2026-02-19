@@ -705,7 +705,7 @@
   width: 100%;
   min-height: 100dvh;
   overflow: hidden;
-  background: #040508;
+  background: #010308;
   color: #ffffff;
 }
 
@@ -713,9 +713,9 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(900px 320px at 18% -8%, rgba(219, 0, 53, 0.18), transparent 58%),
-    radial-gradient(820px 280px at 82% 108%, rgba(219, 0, 53, 0.12), transparent 64%),
-    linear-gradient(160deg, #030407 0%, #05070b 52%, #020306 100%);
+    radial-gradient(760px 520px at 32% 30%, rgba(13, 106, 170, 0.42), transparent 66%),
+    radial-gradient(740px 520px at 70% 36%, rgba(120, 18, 18, 0.28), transparent 70%),
+    linear-gradient(180deg, #03060c 0%, #010207 100%);
 }
 
 .landing-dot-field {
@@ -727,8 +727,8 @@
 
 .landing-dot {
   position: absolute;
-  width: 3px;
-  height: 3px;
+  width: 2px;
+  height: 2px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   animation: landingTwinkle ease-in-out infinite;
@@ -754,7 +754,7 @@
 }
 
 .landing-shell {
-  width: min(1350px, calc(100% - 48px));
+  width: min(1320px, calc(100% - 72px));
   margin: 0 auto;
 }
 
@@ -763,7 +763,10 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 88px;
+  height: 84px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(2, 4, 9, 0.92);
+  backdrop-filter: blur(8px);
 }
 
 .landing-header-inner {
@@ -774,86 +777,70 @@
 }
 
 .landing-logo {
-  width: 46px;
+  width: 42px;
   height: auto;
   object-fit: contain;
+  opacity: 0.96;
 }
 
 .landing-login-btn {
-  width: 100px;
-  min-height: 42px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  min-width: 102px;
+  min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  background: rgba(247, 247, 247, 0.95);
+  color: #121316;
+  font-size: 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-weight: 500;
-  transition: background 0.25s ease, border-color 0.25s ease;
+  transition: filter 0.2s ease;
 }
 
 .landing-login-btn:hover {
-  background: rgba(219, 0, 53, 0.25);
-  border-color: rgba(219, 0, 53, 0.65);
+  filter: brightness(1.06);
 }
 
 .landing-main {
   min-height: 100dvh;
   display: grid;
   align-items: center;
-  padding: 130px 0 120px;
+  padding: 122px 0 162px;
 }
 
 .landing-main-inner {
   display: grid;
   justify-items: center;
   text-align: center;
-  gap: 26px;
+  gap: 14px;
 }
 
 .landing-title {
   margin: 0;
   display: grid;
-  gap: 4px;
+  gap: 0;
   justify-items: center;
-}
-
-.typed-line {
-  display: block;
-  width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  border-right: 2px solid rgba(255, 255, 255, 0.72);
-  font-size: clamp(44px, 7.2vw, 96px);
+  font-size: clamp(56px, 8.2vw, 128px);
   font-weight: 700;
-  line-height: 1.02;
+  line-height: 1.01;
   letter-spacing: -0.02em;
-  animation: typedIn 1.1s steps(18, end) forwards, caretBlink 0.75s step-end infinite;
+  color: #f2f4f5;
 }
 
-.typed-line-1 {
-  max-width: 10ch;
-  animation-delay: 0.3s;
+.landing-title span:nth-child(n + 2) {
+  color: #b7bcc6;
 }
 
-.typed-line-2 {
-  max-width: 9ch;
-  animation-delay: 1.55s;
+.landing-title-cursor {
+  display: inline-block;
+  padding-right: 10px;
+  border-right: 2px solid rgba(255, 255, 255, 0.72);
+  animation: landingCaret 0.82s step-end infinite;
 }
 
-.typed-line-3 {
-  max-width: 14ch;
-  animation-delay: 2.8s;
-}
-
-@keyframes typedIn {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
-}
-
-@keyframes caretBlink {
+@keyframes landingCaret {
   from,
   to {
     border-right-color: transparent;
@@ -865,48 +852,78 @@
 
 .landing-subtitle {
   margin: 0;
-  color: #c4c7d1;
-  font-size: clamp(16px, 1.55vw, 22px);
-  line-height: 1.45;
-  max-width: 840px;
+  color: #e1e6eb;
+  font-size: clamp(20px, 1.85vw, 38px);
+  line-height: 1.4;
+  max-width: 720px;
+  text-align: left;
+  width: min(720px, calc(100vw - 72px));
+}
+
+.landing-subtitle-secondary {
+  color: #9aa4b0;
+  font-size: clamp(14px, 1.25vw, 24px);
+  margin-top: -3px;
 }
 
 .landing-waitlist {
-  width: min(720px, calc(100vw - 42px));
+  width: min(720px, calc(100vw - 72px));
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .landing-waitlist input {
-  min-height: 54px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(9, 11, 18, 0.72);
+  min-height: 64px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(1, 4, 10, 0.65);
   color: #ffffff;
-  padding: 0 22px;
+  padding: 0 20px;
+  font-size: 28px;
 }
 
 .landing-waitlist input:focus {
   outline: none;
-  border-color: rgba(219, 0, 53, 0.78);
+  border-color: rgba(170, 184, 205, 0.72);
 }
 
 .landing-waitlist button {
-  min-height: 54px;
-  padding: 0 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(219, 0, 53, 0.82);
-  background: #db0035;
-  color: #ffffff;
+  min-height: 64px;
+  padding: 0 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: #c8c9cc;
+  color: #080a0e;
+  font-size: 24px;
   font-weight: 600;
 }
 
 .landing-waitlist-msg {
-  margin: -8px 0 0;
+  margin: -2px 0 0;
   min-height: 20px;
   color: #babec9;
-  font-size: 13px;
+  font-size: 14px;
+  width: min(720px, calc(100vw - 72px));
+  text-align: left;
+}
+
+.landing-platforms {
+  width: min(720px, calc(100vw - 72px));
+  margin-top: 54px;
+  display: flex;
+  align-items: center;
+  gap: 44px;
+  color: rgba(235, 238, 244, 0.8);
+}
+
+.landing-platform-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(26px, 2vw, 32px);
+  font-weight: 600;
 }
 
 .landing-footer {
@@ -914,8 +931,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  min-height: 76px;
-  background: linear-gradient(180deg, rgba(4, 5, 8, 0) 0%, rgba(4, 5, 8, 0.82) 46%, rgba(4, 5, 8, 0.96) 100%);
+  min-height: 74px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(2, 4, 9, 0.86);
+  backdrop-filter: blur(7px);
 }
 
 .landing-footer-inner {
@@ -923,7 +942,7 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 18px;
-  min-height: 76px;
+  min-height: 74px;
 }
 
 .landing-footer-left,
@@ -941,8 +960,8 @@
 .landing-footer button {
   color: #ffffff;
   text-decoration: none;
-  font-size: 14px;
-  opacity: 0.88;
+  font-size: 28px;
+  opacity: 0.76;
   border: 0;
   background: transparent;
   padding: 0;
@@ -952,7 +971,7 @@
 .landing-footer-center {
   margin: 0;
   color: #b3b7c2;
-  font-size: 13px;
+  font-size: 24px;
   text-align: center;
 }
 

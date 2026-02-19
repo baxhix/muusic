@@ -23,7 +23,7 @@ export default function AuthPage({
   const [waitlistMessage, setWaitlistMessage] = useState('');
   const landingDots = useMemo(
     () =>
-      Array.from({ length: 180 }, (_, index) => ({
+      Array.from({ length: 160 }, (_, index) => ({
         id: index,
         left: `${Math.random() * 100}%`,
         top: `${Math.random() * 100}%`,
@@ -73,12 +73,14 @@ export default function AuthPage({
 
         <header className="landing-header">
           <div className="landing-shell landing-header-inner">
-            <img
-              src={muusicLogo}
-              alt="Muusic"
-              className="landing-logo"
-            />
+            <div className="landing-brand" aria-label="Muusic">
+              <img src={muusicLogo} alt="Muusic" className="landing-logo" />
+            </div>
             <button type="button" className="landing-login-btn" onClick={onQuickEnter}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M14 7L19 12L14 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 12H18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
               Login
             </button>
           </div>
@@ -87,28 +89,40 @@ export default function AuthPage({
         <main className="landing-main">
           <div className="landing-shell landing-main-inner">
             <h1 className="landing-title">
-              <span className="typed-line typed-line-1">A musica.</span>
-              <span className="typed-line typed-line-2">O mundo.</span>
-              <span className="typed-line typed-line-3">Em tempo real.</span>
+              <span>Voce nunca</span>
+              <span>ouviu musica</span>
+              <span className="landing-title-cursor">sozinho.</span>
             </h1>
 
-            <p className="landing-subtitle">
-              Descubra o que o mundo esta ouvindo, em tempo real.
-              <br />
-              Deixe seu e-mail e entre para a lista de acesso antecipado do muusic.
-            </p>
+            <p className="landing-subtitle">Descubra o que o mundo esta ouvindo, em tempo real.</p>
+            <p className="landing-subtitle landing-subtitle-secondary">Deixe seu e-mail e entre para a lista de acesso antecipado do muusic.</p>
 
             <form className="landing-waitlist" onSubmit={submitWaitlist}>
               <input
                 type="email"
                 value={waitlistEmail}
                 onChange={(event) => setWaitlistEmail(event.target.value)}
-                placeholder="Seu melhor e-mail"
+                placeholder="seu@email.com"
                 aria-label="Cadastrar e-mail na lista de espera"
               />
               <button type="submit">Entrar na lista</button>
             </form>
             {waitlistMessage && <p className="landing-waitlist-msg">{waitlistMessage}</p>}
+
+            <div className="landing-platforms" aria-hidden>
+              <span className="landing-platform-item">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                  <path d="M12 1.6a10.4 10.4 0 1 0 10.4 10.4A10.41 10.41 0 0 0 12 1.6Zm4.77 14.95a.65.65 0 0 1-.9.22 9.87 9.87 0 0 0-8.15-.87.65.65 0 1 1-.39-1.24 11.16 11.16 0 0 1 9.27.98.65.65 0 0 1 .17.91Zm1.27-2.8a.8.8 0 0 1-1.09.27 12.18 12.18 0 0 0-10.09-1.05.8.8 0 1 1-.49-1.52 13.77 13.77 0 0 1 11.43 1.2.8.8 0 0 1 .24 1.1Zm.1-2.94A14.54 14.54 0 0 0 6.32 9.6a.95.95 0 1 1-.57-1.81 16.44 16.44 0 0 1 13.37 1.35.95.95 0 1 1-.98 1.67Z" />
+                </svg>
+                Spotify
+              </span>
+              <span className="landing-platform-item">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                  <path d="M17.37 12.13c-.02-2.53 2.07-3.74 2.17-3.8-1.18-1.72-3.02-1.95-3.67-1.98-1.56-.16-3.04.92-3.84.92-.8 0-2.03-.9-3.34-.88-1.72.03-3.3 1-4.18 2.53-1.79 3.1-.46 7.68 1.29 10.2.86 1.23 1.88 2.61 3.22 2.56 1.29-.05 1.78-.83 3.34-.83 1.56 0 2 .83 3.36.8 1.39-.02 2.26-1.26 3.11-2.5.98-1.43 1.39-2.82 1.41-2.89-.03-.01-2.7-1.03-2.73-4.13Zm-2.54-6.44c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.25.68-2.98 1.54-.65.75-1.22 1.97-1.07 3.13 1.14.09 2.29-.58 2.99-1.42Z" />
+                </svg>
+                Apple Music
+              </span>
+            </div>
           </div>
         </main>
 
