@@ -1,5 +1,12 @@
 import { Router } from 'express';
 
+const MAP_USERS_CACHE_TTL_MS = Number(process.env.MAP_USERS_CACHE_TTL_MS || 8000);
+const MAP_USERS_CACHE_MAX_KEYS = Number(process.env.MAP_USERS_CACHE_MAX_KEYS || 128);
+
+const mapUsersCache = new Map();
+const mapUsersInFlight = new Map();
+const showsInFlight = new Map();
+
 function parseMapUsersQuery(query = {}) {
   const limit = Number.isFinite(Number(query.limit)) ? Math.min(500, Math.max(20, Number(query.limit))) : 200;
   const cursor = String(query.cursor || '').trim() || null;
@@ -28,6 +35,50 @@ function isInsideBbox(location, bbox) {
     return lng >= bbox.west && lng <= bbox.east;
   }
   return lng >= bbox.west || lng <= bbox.east;
+}
+
+function pruneExpiringMapUsersCache() {
+  const now = Date.now();
+  for (const [key, entry] of mapUsersCache.entries()) {
+    if (!entry || entry.expiresAt <= now) {
+      mapUsersCache.delete(key);
+    }
+  }
+}
+
+function getCachedMapUsers(key) {
+  const entry = mapUsersCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    mapUsersCache.delete(key);
+    return null;
+  }
+  mapUsersCache.delete(key);
+  mapUsersCache.set(key, entry);
+  return entry.payload;
+}
+
+function setCachedMapUsers(key, payload) {
+  pruneExpiringMapUsersCache();
+  mapUsersCache.delete(key);
+  mapUsersCache.set(key, {
+    payload,
+    expiresAt: Date.now() + MAP_USERS_CACHE_TTL_MS
+  });
+  if (mapUsersCache.size > MAP_USERS_CACHE_MAX_KEYS) {
+    const firstKey = mapUsersCache.keys().next().value;
+    if (firstKey) mapUsersCache.delete(firstKey);
+  }
+}
+
+async function resolveSingleFlight(inFlightMap, key, resolver) {
+  const current = inFlightMap.get(key);
+  if (current) return current;
+  const promise = Promise.resolve()
+    .then(resolver)
+    .finally(() => inFlightMap.delete(key));
+  inFlightMap.set(key, promise);
+  return promise;
 }
 
 export function createPublicRouter({
@@ -68,13 +119,15 @@ export function createPublicRouter({
         return res.json(cachedPayload);
       }
 
-      const result = await showService.listShows({
-        page,
-        limit,
-        search,
-        city,
-        upcomingOnly: true
-      });
+      const result = await resolveSingleFlight(showsInFlight, cacheKey, async () =>
+        showService.listShows({
+          page,
+          limit,
+          search,
+          city,
+          upcomingOnly: true
+        })
+      );
       const payload = {
         shows: result.items.map((show) => sanitizeShowResponse(show)).filter(Boolean),
         pagination: {
@@ -84,7 +137,7 @@ export function createPublicRouter({
         }
       };
       showCacheService.setCachedShows(cacheKey, payload);
-      res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
+      res.setHeader('Cache-Control', isProduction ? 'public, max-age=10' : 'no-store');
       return res.json(payload);
     } catch (error) {
       return res.status(500).json({ error: `Erro ao listar shows: ${error.message}` });
@@ -94,62 +147,79 @@ export function createPublicRouter({
   router.get('/api/map-users', async (_req, res) => {
     try {
       const { limit, cursor, scanPages, bbox } = parseMapUsersQuery(_req.query || {});
-      const items = [];
-      let nextCursor = cursor;
-      let scannedPages = 0;
-      let hasMore = true;
-
-      while (items.length < limit && scannedPages < scanPages && hasMore) {
-        const usersPayload = await userService.listUsersCursor({
-          limit: Math.min(200, limit),
-          cursor: nextCursor,
-          search: ''
-        });
-        const users = Array.isArray(usersPayload?.items) ? usersPayload.items : [];
-        nextCursor = usersPayload?.nextCursor || null;
-        hasMore = Boolean(usersPayload?.hasMore && nextCursor);
-        scannedPages += 1;
-        if (users.length === 0) {
-          hasMore = false;
-          break;
-        }
-
-        const settingsMap = await accountSettingsService.getManyByUserIds(users.map((user) => user.id));
-        users.forEach((user) => {
-          if (items.length >= limit) return;
-          const settings = settingsMap.get(user.id);
-          if (!settings || settings.locationEnabled === false) return;
-          const location = accountSettingsService.buildRandomLocation(
-            user.id,
-            settings.city,
-            settings.cityCenterLat,
-            settings.cityCenterLng
-          );
-          if (!isInsideBbox(location, bbox)) return;
-          items.push({
-            id: user.id,
-            name: user.name || user.username || 'Usuario',
-            city: settings.city,
-            bio: settings.bio || '',
-            showMusicHistory: settings.showMusicHistory !== false,
-            avatarUrl: user.avatarUrl || null,
-            location
-          });
-        });
-
-        if (!hasMore) break;
+      const cacheKey = JSON.stringify({
+        limit,
+        cursor: cursor || '',
+        scanPages,
+        bbox: bbox ? [bbox.west, bbox.south, bbox.east, bbox.north] : null
+      });
+      const cachedPayload = getCachedMapUsers(cacheKey);
+      if (cachedPayload) {
+        res.setHeader('Cache-Control', isProduction ? 'public, max-age=10' : 'no-store');
+        return res.json(cachedPayload);
       }
 
-      res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
-      return res.json({
-        users: items,
-        pagination: {
-          limit,
-          nextCursor: hasMore ? String(nextCursor || '') : null,
-          hasMore,
-          scannedPages
+      const payload = await resolveSingleFlight(mapUsersInFlight, cacheKey, async () => {
+        const items = [];
+        let nextCursor = cursor;
+        let scannedPages = 0;
+        let hasMore = true;
+
+        while (items.length < limit && scannedPages < scanPages && hasMore) {
+          const usersPayload = await userService.listUsersCursor({
+            limit: Math.min(200, limit),
+            cursor: nextCursor,
+            search: ''
+          });
+          const users = Array.isArray(usersPayload?.items) ? usersPayload.items : [];
+          nextCursor = usersPayload?.nextCursor || null;
+          hasMore = Boolean(usersPayload?.hasMore && nextCursor);
+          scannedPages += 1;
+          if (users.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          const settingsMap = await accountSettingsService.getManyByUserIds(users.map((user) => user.id));
+          users.forEach((user) => {
+            if (items.length >= limit) return;
+            const settings = settingsMap.get(user.id);
+            if (!settings || settings.locationEnabled === false) return;
+            const location = accountSettingsService.buildRandomLocation(
+              user.id,
+              settings.city,
+              settings.cityCenterLat,
+              settings.cityCenterLng
+            );
+            if (!isInsideBbox(location, bbox)) return;
+            items.push({
+              id: user.id,
+              name: user.name || user.username || 'Usuario',
+              city: settings.city,
+              bio: settings.bio || '',
+              showMusicHistory: settings.showMusicHistory !== false,
+              avatarUrl: user.avatarUrl || null,
+              location
+            });
+          });
+
+          if (!hasMore) break;
         }
+
+        return {
+          users: items,
+          pagination: {
+            limit,
+            nextCursor: hasMore ? String(nextCursor || '') : null,
+            hasMore,
+            scannedPages
+          }
+        };
       });
+
+      setCachedMapUsers(cacheKey, payload);
+      res.setHeader('Cache-Control', isProduction ? 'public, max-age=30' : 'no-store');
+      return res.json(payload);
     } catch (error) {
       return res.status(500).json({ error: `Erro ao listar usuarios do mapa: ${error.message}` });
     }

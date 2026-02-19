@@ -33,11 +33,24 @@ function deriveUsername(name, email) {
 }
 
 class UserService {
+  constructor() {
+    this.localUsersCache = null;
+    this.localUsersCacheLoadedAt = 0;
+    this.localUsersCacheTtlMs = Number(process.env.LOCAL_USERS_CACHE_TTL_MS || 5000);
+  }
+
   async readJSON() {
+    const now = Date.now();
+    if (this.localUsersCache && now - this.localUsersCacheLoadedAt < this.localUsersCacheTtlMs) {
+      return this.localUsersCache;
+    }
     try {
       const raw = await fs.readFile(LOCAL_USERS_PATH, 'utf8');
       const parsed = JSON.parse(raw);
-      return parseUsersPayload(parsed);
+      const users = parseUsersPayload(parsed);
+      this.localUsersCache = users;
+      this.localUsersCacheLoadedAt = now;
+      return users;
     } catch (error) {
       if (error.code === 'ENOENT') return [];
       throw error;
@@ -47,6 +60,8 @@ class UserService {
   async writeJSON(users) {
     await fs.mkdir(path.dirname(LOCAL_USERS_PATH), { recursive: true });
     await fs.writeFile(LOCAL_USERS_PATH, JSON.stringify(users, null, 2), 'utf8');
+    this.localUsersCache = Array.isArray(users) ? users : [];
+    this.localUsersCacheLoadedAt = Date.now();
   }
 
   toAppUser(user) {
