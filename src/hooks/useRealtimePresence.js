@@ -44,8 +44,47 @@ export function useRealtimePresence(authUser) {
 
       socketRef.current = socket;
 
+      const applyPresencePatch = (patch) => {
+        if (!patch || typeof patch !== 'object') return;
+        const type = String(patch.type || '');
+        if (type === 'remove') {
+          const removeId = String(patch.userId || '');
+          if (!removeId) return;
+          setUsers((prev) => prev.filter((user) => String(user?.id || '') !== removeId));
+          return;
+        }
+        if (type === 'upsert') {
+          const nextUser = patch.user;
+          const nextId = String(nextUser?.id || '');
+          if (!nextId) return;
+          setUsers((prev) => {
+            const list = Array.isArray(prev) ? [...prev] : [];
+            const idx = list.findIndex((user) => String(user?.id || '') === nextId);
+            if (idx >= 0) {
+              list[idx] = {
+                ...list[idx],
+                ...nextUser
+              };
+            } else {
+              list.push(nextUser);
+            }
+            return list;
+          });
+        }
+      };
+
       socket.on('presence:update', (presence) => {
-        setUsers(presence);
+        setUsers(Array.isArray(presence) ? presence : []);
+      });
+
+      socket.on('presence:patch', (patch) => {
+        applyPresencePatch(patch);
+      });
+
+      socket.on('presence:batch', (payload) => {
+        const patches = Array.isArray(payload?.patches) ? payload.patches : [];
+        if (!patches.length) return;
+        patches.forEach((patch) => applyPresencePatch(patch));
       });
 
       socket.on('connect', () => {

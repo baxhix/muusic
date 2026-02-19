@@ -75,6 +75,7 @@ const allowedOrigins = new Set([...FRONTEND_URLS, 'http://localhost:5173', 'http
 const spotifyExchangeCodes = new Map();
 const SPOTIFY_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 const SOCKET_GEO_CELL_DEG = Math.max(1, Math.min(30, Number(process.env.SOCKET_GEO_CELL_DEG || 8)));
+const PRESENCE_PATCH_FLUSH_MS = Math.max(80, Math.min(1000, Number(process.env.PRESENCE_PATCH_FLUSH_MS || 250)));
 const ADMIN_EMAILS = new Set(
   String(process.env.ADMIN_EMAILS || '')
     .split(',')
@@ -118,14 +119,53 @@ function resolveAreaRoomId(baseRoomId, lat, lng) {
   return `geo:${String(baseRoomId)}:${latBucket}:${lngBucket}`;
 }
 
-function filterPresenceForArea(presence, baseRoomId, areaRoomId) {
-  if (!Array.isArray(presence) || !areaRoomId) return [];
-  return presence.filter((user) => {
-    const lat = safeNumber(user?.location?.lat);
-    const lng = safeNumber(user?.location?.lng);
-    if (lat === null || lng === null) return false;
-    return resolveAreaRoomId(baseRoomId, lat, lng) === areaRoomId;
-  });
+function toPresenceUserSummary(user) {
+  if (!user) return null;
+  return {
+    id: user.id || '',
+    name: user.name || 'Usuario',
+    spotify: user.spotify || null,
+    location: user.location || null,
+    connectedAt: user.connectedAt || Date.now()
+  };
+}
+
+const presencePatchQueues = new Map();
+const presencePatchTimers = new Map();
+
+function queuePresencePatch({ roomId, patch, ioInstance, cluster }) {
+  const targetRoom = String(roomId || '');
+  if (!targetRoom || !patch) return;
+
+  const queue = presencePatchQueues.get(targetRoom) || new Map();
+  const patchType = String(patch.type || '');
+  if (patchType === 'remove') {
+    const id = String(patch.userId || '');
+    if (!id) return;
+    queue.set(id, { type: 'remove', userId: id, at: patch.at || Date.now() });
+  } else if (patchType === 'upsert') {
+    const id = String(patch.user?.id || '');
+    if (!id) return;
+    queue.set(id, { type: 'upsert', user: patch.user, at: patch.at || Date.now() });
+  } else {
+    return;
+  }
+  presencePatchQueues.set(targetRoom, queue);
+
+  if (presencePatchTimers.has(targetRoom)) return;
+  const timerId = setTimeout(async () => {
+    presencePatchTimers.delete(targetRoom);
+    const current = presencePatchQueues.get(targetRoom);
+    if (!current || current.size === 0) return;
+    presencePatchQueues.delete(targetRoom);
+    const payload = {
+      patches: Array.from(current.values()),
+      at: Date.now()
+    };
+    ioInstance.to(targetRoom).emit('presence:batch', payload);
+    await cluster.broadcast('presence:batch', targetRoom, payload);
+  }, PRESENCE_PATCH_FLUSH_MS);
+  presencePatchTimers.set(targetRoom, timerId);
 }
 
 const app = express();
@@ -324,16 +364,36 @@ io.on('connection', (socket) => {
       joinedUserName = name || finalSpotify?.display_name || `User ${joinedUserId}`;
       socket.join(joinedRoom);
 
-      const presence = await realtimeCluster.upsertUser(joinedRoom, {
-        id: joinedUserId,
-        name: joinedUserName,
-        spotify: finalSpotify,
-        location: null,
-        connectedAt: Date.now()
+      const presence = await realtimeCluster.upsertUser(
+        joinedRoom,
+        {
+          id: joinedUserId,
+          name: joinedUserName,
+          spotify: finalSpotify,
+          location: null,
+          connectedAt: Date.now()
+        },
+        { publishPresence: false }
+      );
+      const selfUser = toPresenceUserSummary(
+        presence.find((user) => user?.id === joinedUserId) || {
+          id: joinedUserId,
+          name: joinedUserName,
+          spotify: finalSpotify,
+          location: null,
+          connectedAt: Date.now()
+        }
+      );
+      const patch = { type: 'upsert', user: selfUser, at: Date.now() };
+      queuePresencePatch({
+        roomId: joinedRoom,
+        patch,
+        ioInstance: io,
+        cluster: realtimeCluster
       });
-      io.to(joinedRoom).emit('presence:update', presence);
       const messages = await realtimeCluster.getMessages(joinedRoom);
       socket.emit('chat:history', messages);
+      socket.emit('presence:update', []);
       ack?.({ ok: true, roomId: joinedRoom, userId: joinedUserId });
       performanceService.recordSocketEvent({
         event: 'room:join',
@@ -362,12 +422,21 @@ io.on('connection', (socket) => {
       });
       if (!locationLimit.allowed) return;
 
-      const presence = await realtimeCluster.updateLocation(joinedRoom, joinedUserId, {
-        lat,
-        lng,
-        updatedAt: Date.now()
-      });
+      const presence = await realtimeCluster.updateLocation(
+        joinedRoom,
+        joinedUserId,
+        {
+          lat,
+          lng,
+          updatedAt: Date.now()
+        },
+        { publishPresence: false }
+      );
       if (!presence) return;
+      const selfUser = toPresenceUserSummary(presence.find((user) => user?.id === joinedUserId));
+      if (!selfUser) return;
+      const upsertPatch = { type: 'upsert', user: selfUser, at: Date.now() };
+      const removePatch = { type: 'remove', userId: joinedUserId, at: Date.now() };
       const previousAreaRoom = joinedAreaRoom;
       const nextAreaRoom = resolveAreaRoomId(joinedRoom, lat, lng);
       if (nextAreaRoom && nextAreaRoom !== previousAreaRoom) {
@@ -377,15 +446,28 @@ io.on('connection', (socket) => {
       }
 
       if (joinedAreaRoom) {
-        const areaPresence = filterPresenceForArea(presence, joinedRoom, joinedAreaRoom);
-        io.to(joinedAreaRoom).emit('presence:update', areaPresence);
+        queuePresencePatch({
+          roomId: joinedAreaRoom,
+          patch: upsertPatch,
+          ioInstance: io,
+          cluster: realtimeCluster
+        });
       } else {
-        io.to(joinedRoom).emit('presence:update', presence);
+        queuePresencePatch({
+          roomId: joinedRoom,
+          patch: upsertPatch,
+          ioInstance: io,
+          cluster: realtimeCluster
+        });
       }
 
       if (previousAreaRoom && previousAreaRoom !== joinedAreaRoom) {
-        const previousAreaPresence = filterPresenceForArea(presence, joinedRoom, previousAreaRoom);
-        io.to(previousAreaRoom).emit('presence:update', previousAreaPresence);
+        queuePresencePatch({
+          roomId: previousAreaRoom,
+          patch: removePatch,
+          ioInstance: io,
+          cluster: realtimeCluster
+        });
       }
 
       performanceService.recordSocketEvent({
@@ -448,12 +530,22 @@ io.on('connection', (socket) => {
     const startedAt = performance.now();
     if (!joinedRoom || !joinedUserId) return;
     try {
-      const presence = await realtimeCluster.removeUser(joinedRoom, joinedUserId);
+      await realtimeCluster.removeUser(joinedRoom, joinedUserId, { publishPresence: false });
+      const removePatch = { type: 'remove', userId: joinedUserId, at: Date.now() };
       if (joinedAreaRoom) {
-        const areaPresence = filterPresenceForArea(presence, joinedRoom, joinedAreaRoom);
-        io.to(joinedAreaRoom).emit('presence:update', areaPresence);
+        queuePresencePatch({
+          roomId: joinedAreaRoom,
+          patch: removePatch,
+          ioInstance: io,
+          cluster: realtimeCluster
+        });
       } else {
-        io.to(joinedRoom).emit('presence:update', presence);
+        queuePresencePatch({
+          roomId: joinedRoom,
+          patch: removePatch,
+          ioInstance: io,
+          cluster: realtimeCluster
+        });
       }
       performanceService.recordSocketEvent({
         event: 'disconnect',
@@ -475,6 +567,11 @@ httpServer.listen(PORT, () => {
 });
 
 async function shutdown() {
+  for (const timer of presencePatchTimers.values()) {
+    clearTimeout(timer);
+  }
+  presencePatchTimers.clear();
+  presencePatchQueues.clear();
   await trendingPlaybackService.stopBackgroundWorker();
   await geolocationService.disconnect();
   await disconnectPrisma();

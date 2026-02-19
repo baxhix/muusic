@@ -1,0 +1,91 @@
+{
+  "at": "2026-02-19T19:10:37.706Z",
+  "baseUrl": "http://127.0.0.1:3001",
+  "users": {
+    "target": 5,
+    "concurrency": 2,
+    "ok": 5,
+    "failed": 0
+  },
+  "durationMs": 263.57,
+  "usersPerSec": 18.97,
+  "httpStatus": {
+    "200": 22,
+    "201": 5,
+    "202": 5,
+    "401": 3
+  },
+  "socket": {
+    "joinOk": 5,
+    "joinFail": 0,
+    "locationSent": 15,
+    "chatAckOk": 5,
+    "chatAckFail": 0
+  },
+  "steps": {
+    "auth:register": {
+      "calls": 5,
+      "ok": 5,
+      "fail": 0,
+      "avgMs": 75.37,
+      "p95Ms": 100.99,
+      "p99Ms": 100.99
+    },
+    "auth:me": {
+      "calls": 5,
+      "ok": 4,
+      "fail": 1,
+      "avgMs": 2.31,
+      "p95Ms": 5.25,
+      "p99Ms": 5.25
+    },
+    "api:shows": {
+      "calls": 5,
+      "ok": 5,
+      "fail": 0,
+      "avgMs": 1.64,
+      "p95Ms": 3.02,
+      "p99Ms": 3.02
+    },
+    "api:map-users": {
+      "calls": 5,
+      "ok": 5,
+      "fail": 0,
+      "avgMs": 4.11,
+      "p95Ms": 9.71,
+      "p99Ms": 9.71
+    },
+    "spotify:connect": {
+      "calls": 5,
+      "ok": 4,
+      "fail": 1,
+      "avgMs": 2.84,
+      "p95Ms": 4.96,
+      "p99Ms": 4.96
+    },
+    "spotify:playback": {
+      "calls": 5,
+      "ok": 4,
+      "fail": 1,
+      "avgMs": 1.33,
+      "p95Ms": 2.1,
+      "p99Ms": 2.1
+    },
+    "client:fps": {
+      "calls": 5,
+      "ok": 5,
+      "fail": 0,
+      "avgMs": 1.58,
+      "p95Ms": 4.1,
+      "p99Ms": 4.1
+    },
+    "socket:join": {
+      "calls": 5,
+      "ok": 5,
+      "fail": 0,
+      "avgMs": 5.38,
+      "p95Ms": 10.68,
+      "p99Ms": 10.68
+    }
+  }
+}

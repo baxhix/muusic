@@ -1,0 +1,38 @@
+{
+  "at": "2026-02-19T18:07:05.568Z",
+  "baseUrl": "http://127.0.0.1:3001",
+  "users": 50,
+  "concurrency": 10,
+  "reports": [
+    {
+      "path": "/api/shows?page=1&limit=20",
+      "totalRequests": 50,
+      "totalMs": 11.87,
+      "rps": 4211.46,
+      "avgMs": 2.15,
+      "p95Ms": 3.97,
+      "p99Ms": 4.3,
+      "statuses": {
+        "200": 50
+      },
+      "cache": {
+        "MISS": 50
+      }
+    },
+    {
+      "path": "/api/map-users?limit=180&scanPages=4",
+      "totalRequests": 50,
+      "totalMs": 8.23,
+      "rps": 6074.47,
+      "avgMs": 1.51,
+      "p95Ms": 2.45,
+      "p99Ms": 3.31,
+      "statuses": {
+        "200": 50
+      },
+      "cache": {
+        "HIT-LOCAL": 50
+      }
+    }
+  ]
+}

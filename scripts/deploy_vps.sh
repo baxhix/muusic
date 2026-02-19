@@ -49,4 +49,10 @@ pm2 save
 
 ./scripts/post_deploy_smoke.sh
 
+if [[ "${RUN_LOAD_SMOKE_AFTER_DEPLOY:-1}" == "1" ]]; then
+  ./scripts/run_load_smoke_report.sh
+else
+  echo "Skipping load smoke report (RUN_LOAD_SMOKE_AFTER_DEPLOY=${RUN_LOAD_SMOKE_AFTER_DEPLOY:-0})"
+fi
+
 echo "Deploy finished"

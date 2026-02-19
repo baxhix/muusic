@@ -1,54 +1,6 @@
 {
   "events": [
     {
-      "userId": "bench-1771453255080-u-1",
-      "artistId": "artist-1",
-      "artistName": "Artist 1",
-      "artistKey": "artist:artist-1",
-      "trackId": "track-r1-1",
-      "trackName": "Track R1 1",
-      "trackKey": "track:track-r1-1",
-      "trackFingerprint": "track-r1-1",
-      "playedAt": "2026-02-18T22:20:55.081Z",
-      "isPlaying": true
-    },
-    {
-      "userId": "bench-1771453255080-u-2",
-      "artistId": "artist-2",
-      "artistName": "Artist 2",
-      "artistKey": "artist:artist-2",
-      "trackId": "track-r1-2",
-      "trackName": "Track R1 2",
-      "trackKey": "track:track-r1-2",
-      "trackFingerprint": "track-r1-2",
-      "playedAt": "2026-02-18T22:20:55.081Z",
-      "isPlaying": true
-    },
-    {
-      "userId": "bench-1771453255080-u-3",
-      "artistId": "artist-3",
-      "artistName": "Artist 3",
-      "artistKey": "artist:artist-3",
-      "trackId": "track-r1-3",
-      "trackName": "Track R1 3",
-      "trackKey": "track:track-r1-3",
-      "trackFingerprint": "track-r1-3",
-      "playedAt": "2026-02-18T22:20:55.081Z",
-      "isPlaying": true
-    },
-    {
-      "userId": "bench-1771453255080-u-4",
-      "artistId": "artist-4",
-      "artistName": "Artist 4",
-      "artistKey": "artist:artist-4",
-      "trackId": "track-r1-4",
-      "trackName": "Track R1 4",
-      "trackKey": "track:track-r1-4",
-      "trackFingerprint": "track-r1-4",
-      "playedAt": "2026-02-18T22:20:55.081Z",
-      "isPlaying": true
-    },
-    {
       "userId": "bench-1771453255080-u-5",
       "artistId": "artist-5",
       "artistName": "Artist 5",
@@ -59998,6 +59950,54 @@
       "trackKey": "track:track-r5-200",
       "trackFingerprint": "track-r5-200",
       "playedAt": "2026-02-18T22:20:59.162Z",
+      "isPlaying": true
+    },
+    {
+      "userId": "u-1771528237463-w8ih4k",
+      "artistId": null,
+      "artistName": "Karol G",
+      "artistKey": "artist:karol g",
+      "trackId": null,
+      "trackName": "Si Antes Te Hubiera Conocido",
+      "trackKey": "track:si antes te hubiera conocido:artist:karol g",
+      "trackFingerprint": "karol g::si antes te hubiera conocido",
+      "playedAt": "2026-02-19T19:10:37.566Z",
+      "isPlaying": true
+    },
+    {
+      "userId": "u-1771528237618-0aeu10",
+      "artistId": null,
+      "artistName": "Bizarrap",
+      "artistKey": "artist:bizarrap",
+      "trackId": null,
+      "trackName": "Bzrp Music Sessions",
+      "trackKey": "track:bzrp music sessions:artist:bizarrap",
+      "trackFingerprint": "bizarrap::bzrp music sessions",
+      "playedAt": "2026-02-19T19:10:37.658Z",
+      "isPlaying": true
+    },
+    {
+      "userId": "u-1771528237583-8syv8g",
+      "artistId": null,
+      "artistName": "Anitta",
+      "artistKey": "artist:anitta",
+      "trackId": null,
+      "trackName": "Envolver",
+      "trackKey": "track:envolver:artist:anitta",
+      "trackFingerprint": "anitta::envolver",
+      "playedAt": "2026-02-19T19:10:37.659Z",
+      "isPlaying": true
+    },
+    {
+      "userId": "u-1771528237664-xoh1ru",
+      "artistId": null,
+      "artistName": "Bad Bunny",
+      "artistKey": "artist:bad bunny",
+      "trackId": null,
+      "trackName": "MONACO",
+      "trackKey": "track:monaco:artist:bad bunny",
+      "trackFingerprint": "bad bunny::monaco",
+      "playedAt": "2026-02-19T19:10:37.702Z",
       "isPlaying": true
     }
   ]

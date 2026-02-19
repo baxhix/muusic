@@ -22,5 +22,41 @@
     "email": "demari.lets@gmail.com",
     "passwordHash": "5f64f502442c4a3d38bcd74c0ff7e877:a6f9581b25be0da18be58f25e17c60f567bb6f9c9ce5882c60ff1ebbd2131ab8bd26c88280a1fe71790260c4c0b89b145f79f06085bfb2027fc121a96090179f",
     "createdAt": "2026-02-16T01:40:55.696Z"
+  },
+  {
+    "id": "u-1771528237463-w8ih4k",
+    "name": "Load User 1",
+    "username": "load_user_1",
+    "email": "load500_1771528237443_1@muusic.live",
+    "role": "USER",
+    "passwordHash": "4ad904c8464eb6e6d1831946d7d178e6:f1a3ac42d984c4fd993690e8152e2be884cd9e3fa648dc42a54e01315126c7ffaf1917f9bc32080e8b15ccc5b8ed39ef5570c57a85d2a66e53bbbf8146ccf561",
+    "createdAt": "2026-02-19T19:10:37.498Z"
+  },
+  {
+    "id": "u-1771528237583-8syv8g",
+    "name": "Load User 3",
+    "username": "load_user_3",
+    "email": "load500_1771528237582_3@muusic.live",
+    "role": "USER",
+    "passwordHash": "bce4327ca83cdc705cdff678602300b1:744dc560d0fbe10b4af04724f000fc8523fb2e7d0d6c0b47da4548f2dabe19363881abaf784204493a86877efcf1bd89f399a1f27e2849247c986f1a36d4e2cf",
+    "createdAt": "2026-02-19T19:10:37.616Z"
+  },
+  {
+    "id": "u-1771528237618-0aeu10",
+    "name": "Load User 4",
+    "username": "load_user_4",
+    "email": "load500_1771528237583_4@muusic.live",
+    "role": "USER",
+    "passwordHash": "4496c49b2707717c584175a13b7a1bcc:847672343434c0ec2418020c8935b840ceada49048a9acaac688d0b48122103450c690cc44fa26fdb2e409394e3b42395daaf10e003649b76dabebf87857b5f4",
+    "createdAt": "2026-02-19T19:10:37.651Z"
+  },
+  {
+    "id": "u-1771528237664-xoh1ru",
+    "name": "Load User 5",
+    "username": "load_user_5",
+    "email": "load500_1771528237664_5@muusic.live",
+    "role": "USER",
+    "passwordHash": "8dd256d62be32384c8a4ee3e5049c12b:a4fa6bc8ac76436c64dc1d6902e3dd7aefaed0b7145b08652ee02ebfa70311c9fd2d7367ce9b65834df276159b40ec1beed038ce0cff79f4ee35213821987b5e",
+    "createdAt": "2026-02-19T19:10:37.696Z"
   }
 ]

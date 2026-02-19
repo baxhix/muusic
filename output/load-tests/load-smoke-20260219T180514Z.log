@@ -1,0 +1,60 @@
+Running load smoke against http://127.0.0.1:3001
+Virtual users/requests per endpoint: 50, concurrency: 10
+
+---
+Endpoint: /api/shows?page=1&limit=20
+Requests: 50 in 4.12ms
+RPS: 12138.62
+Avg: 0.63ms | P95: 1.01ms | P99: 1.12ms
+Status: {"0":50}
+Cache: {"NONE":50}
+
+---
+Endpoint: /api/map-users?limit=180&scanPages=4
+Requests: 50 in 3.81ms
+RPS: 13112.17
+Avg: 0.62ms | P95: 0.95ms | P99: 1.01ms
+Status: {"0":50}
+Cache: {"NONE":50}
+
+Saved JSON report to: /Users/marcelodemaribaxhix/Documents/muusic2.0/output/load-tests/load-smoke-20260219T180514Z.json
+
+=== JSON SUMMARY ===
+{
+  "at": "2026-02-19T18:05:14.841Z",
+  "baseUrl": "http://127.0.0.1:3001",
+  "users": 50,
+  "concurrency": 10,
+  "reports": [
+    {
+      "path": "/api/shows?page=1&limit=20",
+      "totalRequests": 50,
+      "totalMs": 4.12,
+      "rps": 12138.62,
+      "avgMs": 0.63,
+      "p95Ms": 1.01,
+      "p99Ms": 1.12,
+      "statuses": {
+        "0": 50
+      },
+      "cache": {
+        "NONE": 50
+      }
+    },
+    {
+      "path": "/api/map-users?limit=180&scanPages=4",
+      "totalRequests": 50,
+      "totalMs": 3.81,
+      "rps": 13112.17,
+      "avgMs": 0.62,
+      "p95Ms": 0.95,
+      "p99Ms": 1.01,
+      "statuses": {
+        "0": 50
+      },
+      "cache": {
+        "NONE": 50
+      }
+    }
+  ]
+}

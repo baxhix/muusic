@@ -65,6 +65,11 @@ export function createRealtimeClusterService({
     );
   }
 
+  async function broadcast(event, roomId, payload) {
+    const room = String(roomId);
+    await publish(event, room, payload);
+  }
+
   async function start(ioInstance) {
     io = ioInstance;
     if (!redisUrl) return;
@@ -143,7 +148,7 @@ export function createRealtimeClusterService({
       .reverse();
   }
 
-  async function upsertUser(roomId, user) {
+  async function upsertUser(roomId, user, { publishPresence = true } = {}) {
     const room = String(roomId);
     if (!redisEnabled || !stateClient) {
       const local = getLocalRoom(room);
@@ -153,11 +158,13 @@ export function createRealtimeClusterService({
 
     await stateClient.hset(usersKey(room), user.id, JSON.stringify(user));
     const presence = await getPresence(room);
-    await publish('presence:update', room, presence);
+    if (publishPresence) {
+      await publish('presence:update', room, presence);
+    }
     return presence;
   }
 
-  async function updateLocation(roomId, userId, location) {
+  async function updateLocation(roomId, userId, location, { publishPresence = true } = {}) {
     const room = String(roomId);
     if (!redisEnabled || !stateClient) {
       const local = getLocalRoom(room);
@@ -174,11 +181,13 @@ export function createRealtimeClusterService({
     user.location = location;
     await stateClient.hset(usersKey(room), userId, JSON.stringify(user));
     const presence = await getPresence(room);
-    await publish('presence:update', room, presence);
+    if (publishPresence) {
+      await publish('presence:update', room, presence);
+    }
     return presence;
   }
 
-  async function removeUser(roomId, userId) {
+  async function removeUser(roomId, userId, { publishPresence = true } = {}) {
     const room = String(roomId);
     if (!redisEnabled || !stateClient) {
       const local = localRooms.get(room);
@@ -195,7 +204,9 @@ export function createRealtimeClusterService({
       await stateClient.del(messagesKey(room));
     }
     const presence = usersCount === 0 ? [] : await getPresence(room);
-    await publish('presence:update', room, presence);
+    if (publishPresence) {
+      await publish('presence:update', room, presence);
+    }
     return presence;
   }
 
@@ -232,6 +243,7 @@ export function createRealtimeClusterService({
   return {
     start,
     stop,
+    broadcast,
     getPresence,
     getMessages,
     upsertUser,
