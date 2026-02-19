@@ -76,19 +76,13 @@ export default function AuthPage({
             <div className="landing-brand" aria-label="Muusic">
               <img src={muusicLogo} alt="Muusic" className="landing-logo" />
             </div>
-            <button
-              type="button"
-              className="landing-login-btn"
-              onClick={(event) => {
-                onQuickEnter?.();
-              }}
-            >
+            <a href="?login=1#login" className="landing-login-btn" onClick={() => onQuickEnter?.()}>
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
                 <path d="M14 7L19 12L14 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M5 12H18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
               Login
-            </button>
+            </a>
           </div>
         </header>
 
