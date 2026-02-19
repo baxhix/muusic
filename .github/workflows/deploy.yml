@@ -9,6 +9,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Debug network to VPS
+        run: |
+          echo "Host: ${{ secrets.VPS_HOST }}"
+          echo "Port: ${{ secrets.VPS_PORT }}"
+          nslookup "${{ secrets.VPS_HOST }}" || true
+          nc -vz -w 10 "${{ secrets.VPS_HOST }}" "${{ secrets.VPS_PORT }}"
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -16,6 +23,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          timeout: 60s
+          command_timeout: 20m
           script: |
             cd /var/www/muusic2.0
             ./scripts/deploy_vps.sh main
