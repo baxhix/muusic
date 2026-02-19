@@ -404,21 +404,21 @@ class TrendingPlaybackService {
           by: ['artistKey', 'artistId', 'artistName'],
           where,
           _count: { _all: true },
-          orderBy: { _count: { _all: 'desc' } },
+          orderBy: { _count: { artistKey: 'desc' } },
           take: safeLimit
         }),
         prismaClient.trendingPlayback.groupBy({
           by: ['trackKey', 'trackId', 'trackName', 'artistId', 'artistName'],
           where,
           _count: { _all: true },
-          orderBy: { _count: { _all: 'desc' } },
+          orderBy: { _count: { trackKey: 'desc' } },
           take: safeLimit
         }),
         prismaClient.trendingPlayback.groupBy({
           by: ['userId'],
           where,
           _count: { _all: true },
-          orderBy: { _count: { _all: 'desc' } },
+          orderBy: { _count: { userId: 'desc' } },
           take: Math.max(safeLimit * 4, 200)
         })
       ]);
