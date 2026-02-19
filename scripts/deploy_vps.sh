@@ -29,7 +29,17 @@ if ! command -v pm2 >/dev/null 2>&1; then
   exit 1
 fi
 
-npm ci --include=optional
+install_deps() {
+  rm -rf node_modules
+  npm ci --no-audit --no-fund
+}
+
+if ! install_deps; then
+  echo "npm ci falhou na primeira tentativa. Limpando cache e tentando novamente..."
+  npm cache clean --force || true
+  install_deps
+fi
+
 npm run prisma:generate
 npm run db:migrate
 npm run build
