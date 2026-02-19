@@ -822,7 +822,7 @@
   display: grid;
   gap: 0;
   justify-items: center;
-  font-size: clamp(56px, 8.2vw, 128px);
+  font-size: 96px;
   font-weight: 700;
   line-height: 1.01;
   letter-spacing: -0.02em;
@@ -852,8 +852,8 @@
 
 .landing-subtitle {
   margin: 0;
-  color: #e1e6eb;
-  font-size: clamp(20px, 1.85vw, 38px);
+  color: #9aa4b0;
+  font-size: 16px;
   line-height: 1.4;
   max-width: 720px;
   text-align: left;
@@ -862,8 +862,8 @@
 
 .landing-subtitle-secondary {
   color: #9aa4b0;
-  font-size: clamp(14px, 1.25vw, 24px);
-  margin-top: -3px;
+  font-size: 16px;
+  margin-top: -4px;
 }
 
 .landing-waitlist {
@@ -875,13 +875,13 @@
 }
 
 .landing-waitlist input {
-  min-height: 64px;
+  min-height: 52px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(1, 4, 10, 0.65);
   color: #ffffff;
   padding: 0 20px;
-  font-size: 28px;
+  font-size: 16px;
 }
 
 .landing-waitlist input:focus {
@@ -890,14 +890,14 @@
 }
 
 .landing-waitlist button {
-  min-height: 64px;
-  padding: 0 32px;
+  min-height: 52px;
+  padding: 0 24px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.72);
   background: #c8c9cc;
   color: #080a0e;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .landing-waitlist-msg {
@@ -960,18 +960,20 @@
 .landing-footer button {
   color: #ffffff;
   text-decoration: none;
-  font-size: 28px;
+  font-size: 14px;
   opacity: 0.76;
   border: 0;
   background: transparent;
   padding: 0;
   cursor: pointer;
+  font-weight: 400;
 }
 
 .landing-footer-center {
   margin: 0;
   color: #b3b7c2;
-  font-size: 24px;
+  font-size: 14px;
+  font-weight: 400;
   text-align: center;
 }
 

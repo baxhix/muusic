@@ -122,17 +122,17 @@
   }
 
   .landing-title {
-    font-size: clamp(44px, 14vw, 74px);
+    font-size: clamp(44px, 14vw, 64px);
   }
 
   .landing-subtitle {
-    font-size: clamp(17px, 4.6vw, 24px);
+    font-size: 16px;
     line-height: 1.5;
     width: calc(100vw - 24px);
   }
 
   .landing-subtitle-secondary {
-    font-size: clamp(13px, 3.7vw, 18px);
+    font-size: 16px;
   }
 
   .landing-waitlist {
@@ -142,8 +142,8 @@
 
   .landing-waitlist input,
   .landing-waitlist button {
-    min-height: 50px;
-    font-size: 18px;
+    min-height: 48px;
+    font-size: 16px;
   }
 
   .landing-waitlist-msg {
@@ -179,12 +179,12 @@
   }
 
   .landing-footer-center {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .landing-footer a,
   .landing-footer button {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .account-page {
