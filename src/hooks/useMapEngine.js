@@ -70,7 +70,7 @@ export function useMapEngine({
   mapVisibility = { users: true, shows: true },
   onViewportChange
 }) {
-  const minZoomLatam = isMobileDevice ? 1.7 : 2.2;
+  const minZoomLatam = isMobileDevice ? 1.9 : 2.4;
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const mapboxRef = useRef(null);
