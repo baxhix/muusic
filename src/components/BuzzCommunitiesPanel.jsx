@@ -376,7 +376,7 @@ export default function BuzzCommunitiesPanel() {
           </div>
         ) : null}
 
-        <div className="buzz-communities-row" role="list">
+        <div className="shows-list buzz-communities-row" role="list">
           {filteredCommunities.map((community) => (
             <div
               key={community.id}

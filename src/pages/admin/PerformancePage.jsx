@@ -30,14 +30,12 @@ function metricLevel(value, { attention, critical }) {
 
 function MetricRow({ label, description, value, level = 'healthy' }) {
   return (
-    <p className="flex items-center justify-between gap-3">
-      <span className="inline-flex items-center gap-2">
-        <span className={`h-[3px] w-[3px] rounded-full ${statusColorClass(level)}`} aria-hidden="true" />
-        <Tooltip content={description}>
-          <span className="cursor-help text-muted-foreground">{label}</span>
-        </Tooltip>
-      </span>
-      <span className="text-right font-medium text-white">{value}</span>
+    <p className="flex items-center gap-2 text-sm">
+      <span className={`h-[3px] w-[3px] rounded-full ${statusColorClass(level)}`} aria-hidden="true" />
+      <Tooltip content={description}>
+        <span className="cursor-help text-muted-foreground">{label}:</span>
+      </Tooltip>
+      <span className="font-medium text-white">{value}</span>
     </p>
   );
 }

@@ -402,6 +402,44 @@ export default function App() {
     [handleMapUserSelect]
   );
 
+  const handleLocateCurrentUser = useCallback(() => {
+    const current = mapUsers.find((user) => user?.id === activeUser?.id);
+    const lat = Number(current?.location?.lat);
+    const lng = Number(current?.location?.lng);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      focusFeedItem({
+        coords: [lng, lat],
+        city: current?.city || accountSettings.city || '',
+        country: 'Brasil'
+      });
+      return;
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const fallbackLat = Number(position?.coords?.latitude);
+          const fallbackLng = Number(position?.coords?.longitude);
+          if (!Number.isFinite(fallbackLat) || !Number.isFinite(fallbackLng)) return;
+
+          socketRef.current?.emit('location:update', {
+            lat: fallbackLat,
+            lng: fallbackLng
+          });
+
+          focusFeedItem({
+            coords: [fallbackLng, fallbackLat],
+            city: accountSettings.city || '',
+            country: 'Brasil'
+          });
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 7000, maximumAge: 30000 }
+      );
+    }
+  }, [mapUsers, activeUser?.id, focusFeedItem, accountSettings.city, socketRef]);
+
   const spotifyIsPlaying = Boolean(activeUser?.nowPlaying?.isPlaying);
   const spotifyTrackName = activeUser?.nowPlaying?.trackName || '';
   const spotifyArtistName = activeUser?.nowPlaying?.artistName || activeUser?.nowPlaying?.artists || 'Artista indisponivel';
@@ -519,6 +557,7 @@ export default function App() {
 
       <SidebarNavLite
         onProfileOpen={() => navigateTo(ACCOUNT_PATH)}
+        onLocationClick={handleLocateCurrentUser}
         onSpotifyConnect={() => connectSpotify('duo-room')}
         spotifyConnected={Boolean(activeUser?.spotify)}
         spotifyConnecting={spotifyConnecting}

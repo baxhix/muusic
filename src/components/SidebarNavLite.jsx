@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Disc3, Eye, Home, MapPin, MessageCircle, Settings, Shield, User } from 'lucide-react';
+import { Bell, Disc3, Eye, Home, MapPin, MessageCircle, User } from 'lucide-react';
 import muusicLogo from '../assets/logo-muusic.png';
 
 export default function SidebarNavLite({
   onProfileOpen,
+  onLocationClick,
   onSpotifyConnect,
   spotifyConnected,
   spotifyConnecting,
@@ -72,7 +73,7 @@ export default function SidebarNavLite({
         <button type="button" className="rail-btn active" aria-label="Home" data-tooltip="Home">
           <Home />
         </button>
-        <button type="button" className="rail-btn" aria-label="Localização" data-tooltip="Localização">
+        <button type="button" className="rail-btn" aria-label="Localização" data-tooltip="Localização" onClick={onLocationClick}>
           <MapPin />
         </button>
         <button type="button" className={chatOpen ? 'rail-btn active' : 'rail-btn'} aria-label="Chat" onClick={onChatToggle} data-tooltip="Chat">
@@ -139,12 +140,6 @@ export default function SidebarNavLite({
           data-tooltip={spotifyConnected ? 'Spotify conectado' : spotifyConnecting ? 'Conectando Spotify...' : 'Conectar Spotify'}
         >
           <Disc3 />
-        </button>
-        <button type="button" className="rail-btn" aria-label="Configurações" data-tooltip="Configurações">
-          <Settings />
-        </button>
-        <button type="button" className="rail-btn" aria-label="Admin" data-tooltip="Proteção">
-          <Shield />
         </button>
         <button type="button" className="rail-btn" aria-label="Perfil" onClick={onProfileOpen} data-tooltip="Perfil">
           <User />
