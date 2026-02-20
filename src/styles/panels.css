@@ -1658,6 +1658,20 @@
 .buzz-layout {
   display: grid;
   gap: 12px;
+  align-content: start;
+  grid-auto-rows: max-content;
+}
+
+.buzz-home-top {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.buzz-header-group {
+  display: grid;
+  gap: 10px;
+  align-content: start;
 }
 
 .buzz-toolbar {
@@ -1687,6 +1701,8 @@
 
 .buzz-communities-row {
   width: 100%;
+  align-content: start;
+  grid-auto-rows: max-content;
 }
 
 .buzz-community-card {

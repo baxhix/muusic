@@ -319,97 +319,101 @@ export default function BuzzCommunitiesPanel() {
   if (!selectedCommunity) {
     return (
       <section className="buzz-layout">
-        <div className="buzz-toolbar">
-          <h3>Comunidades</h3>
-          <button type="button" className="show-ticket-btn" onClick={openCreateCommunity}>
-            <Plus size={14} />
-            Nova comunidade
-          </button>
-        </div>
+        <div className="buzz-home-top">
+          <header className="buzz-header-group">
+            <div className="buzz-toolbar">
+              <h3>Comunidades</h3>
+              <button type="button" className="show-ticket-btn" onClick={openCreateCommunity}>
+                <Plus size={14} />
+                Nova comunidade
+              </button>
+            </div>
 
-        <input
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Buscar comunidade por nome"
-          className="buzz-search-input"
-          aria-label="Buscar comunidades"
-        />
-
-        {error ? <p className="buzz-error">{error}</p> : null}
-
-        {communityEditor.open ? (
-          <div className="buzz-card buzz-editor">
-            <h4>{communityEditor.mode === 'edit' ? 'Editar comunidade' : 'Criar comunidade'}</h4>
-            <input value={communityEditor.name} onChange={(event) => setCommunityEditor((prev) => ({ ...prev, name: event.target.value }))} placeholder="Nome" />
-            <textarea
-              value={communityEditor.description}
-              onChange={(event) => setCommunityEditor((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Descrição"
-              rows={3}
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Buscar comunidade por nome"
+              className="buzz-search-input"
+              aria-label="Buscar comunidades"
             />
+          </header>
 
-            <div className="buzz-inline-actions">
-              <label className="buzz-upload-btn" htmlFor="community-preview-upload">
-                <ImageIcon size={14} />
-                Imagem quadrada
-              </label>
-              <input id="community-preview-upload" type="file" accept="image/*" onChange={(event) => onCommunityFile(event, 'preview')} className="buzz-hidden-input" />
+          {error ? <p className="buzz-error">{error}</p> : null}
 
-              <label className="buzz-upload-btn" htmlFor="community-cover-upload">
-                <ImageIcon size={14} />
-                Capa retangular
-              </label>
-              <input id="community-cover-upload" type="file" accept="image/*" onChange={(event) => onCommunityFile(event, 'cover')} className="buzz-hidden-input" />
-            </div>
+          {communityEditor.open ? (
+            <div className="buzz-card buzz-editor">
+              <h4>{communityEditor.mode === 'edit' ? 'Editar comunidade' : 'Criar comunidade'}</h4>
+              <input value={communityEditor.name} onChange={(event) => setCommunityEditor((prev) => ({ ...prev, name: event.target.value }))} placeholder="Nome" />
+              <textarea
+                value={communityEditor.description}
+                onChange={(event) => setCommunityEditor((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Descrição"
+                rows={3}
+              />
 
-            {communityEditor.previewUrl ? <img src={communityEditor.previewUrl} alt="Preview da comunidade" className="buzz-preview-square" /> : null}
-            {communityEditor.coverUrl ? <img src={communityEditor.coverUrl} alt="Capa da comunidade" className="buzz-cover-preview" /> : null}
+              <div className="buzz-inline-actions">
+                <label className="buzz-upload-btn" htmlFor="community-preview-upload">
+                  <ImageIcon size={14} />
+                  Imagem quadrada
+                </label>
+                <input id="community-preview-upload" type="file" accept="image/*" onChange={(event) => onCommunityFile(event, 'preview')} className="buzz-hidden-input" />
 
-            <div className="buzz-inline-actions">
-              <button type="button" className="show-ticket-btn" onClick={saveCommunity}>
-                Salvar
-              </button>
-              <button type="button" className="feed-link secondary" onClick={closeCommunityEditor}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="shows-list buzz-communities-row" role="list">
-          {filteredCommunities.map((community) => (
-            <div
-              key={community.id}
-              role="button"
-              tabIndex={0}
-              className="show-card buzz-community-card"
-              aria-label={`Abrir comunidade ${community.name}`}
-              onClick={() => setSelectedCommunityId(community.id)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  setSelectedCommunityId(community.id);
-                }
-              }}
-            >
-              <img src={community.previewUrl || community.coverUrl || 'https://picsum.photos/seed/community-default/240/240'} alt={community.name} className="show-thumb buzz-square-thumb" />
-              <div className="show-copy buzz-community-copy">
-                <button
-                  type="button"
-                  className="show-artist buzz-community-title"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setSelectedCommunityId(community.id);
-                  }}
-                >
-                  {community.name}
-                </button>
-                <p className="show-meta">{community.membersCount} membros • {community.postsCount} posts • {formatRelativeDate(community.lastActivity)}</p>
+                <label className="buzz-upload-btn" htmlFor="community-cover-upload">
+                  <ImageIcon size={14} />
+                  Capa retangular
+                </label>
+                <input id="community-cover-upload" type="file" accept="image/*" onChange={(event) => onCommunityFile(event, 'cover')} className="buzz-hidden-input" />
               </div>
-              {renderCommunityMenu(community)}
+
+              {communityEditor.previewUrl ? <img src={communityEditor.previewUrl} alt="Preview da comunidade" className="buzz-preview-square" /> : null}
+              {communityEditor.coverUrl ? <img src={communityEditor.coverUrl} alt="Capa da comunidade" className="buzz-cover-preview" /> : null}
+
+              <div className="buzz-inline-actions">
+                <button type="button" className="show-ticket-btn" onClick={saveCommunity}>
+                  Salvar
+                </button>
+                <button type="button" className="feed-link secondary" onClick={closeCommunityEditor}>
+                  Cancelar
+                </button>
+              </div>
             </div>
-          ))}
-          {!filteredCommunities.length ? <div className="feed-empty">Nenhuma comunidade encontrada.</div> : null}
+          ) : null}
+
+          <div className="shows-list buzz-communities-row" role="list">
+            {filteredCommunities.map((community) => (
+              <div
+                key={community.id}
+                role="button"
+                tabIndex={0}
+                className="show-card buzz-community-card"
+                aria-label={`Abrir comunidade ${community.name}`}
+                onClick={() => setSelectedCommunityId(community.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedCommunityId(community.id);
+                  }
+                }}
+              >
+                <img src={community.previewUrl || community.coverUrl || 'https://picsum.photos/seed/community-default/240/240'} alt={community.name} className="show-thumb buzz-square-thumb" />
+                <div className="show-copy buzz-community-copy">
+                  <button
+                    type="button"
+                    className="show-artist buzz-community-title"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedCommunityId(community.id);
+                    }}
+                  >
+                    {community.name}
+                  </button>
+                  <p className="show-meta">{community.membersCount} membros • {community.postsCount} posts • {formatRelativeDate(community.lastActivity)}</p>
+                </div>
+                {renderCommunityMenu(community)}
+              </div>
+            ))}
+            {!filteredCommunities.length ? <div className="feed-empty">Nenhuma comunidade encontrada.</div> : null}
+          </div>
         </div>
       </section>
     );
