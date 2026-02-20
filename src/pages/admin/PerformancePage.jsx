@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/admin/PageHeader';
 import Alert from '../../components/ui/Alert';
-import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import KpiCard from '../../components/ui/KpiCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
@@ -77,15 +76,7 @@ export default function PerformancePage({ apiFetch }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Performance"
-        subtitle="Métricas técnicas reais do servidor e da API da aplicação."
-        actions={
-          <Button type="button" variant="secondary" onClick={() => window.location.reload()}>
-            Atualizar agora
-          </Button>
-        }
-      />
+      <PageHeader title="Performance" subtitle="Métricas técnicas reais do servidor e da API da aplicação." />
 
       {error ? <Alert>{error}</Alert> : null}
 
@@ -150,7 +141,7 @@ export default function PerformancePage({ apiFetch }) {
               <CardHeader>
                 <CardTitle>Event Loop / HTTP</CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-2 text-sm">
+              <CardContent className="grid gap-x-8 gap-y-2 text-sm md:grid-cols-2">
                 <MetricRow
                   label="Event loop médio"
                   description="Tempo médio de atraso no event loop."

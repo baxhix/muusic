@@ -95,11 +95,6 @@ export default function UsersPage({ apiFetch }) {
       <PageHeader
         title="Usuarios"
         subtitle="Gestao de acesso administrativo e cadastro de contas"
-        actions={
-          <Button variant="secondary" onClick={() => loadData(page)}>
-            Atualizar
-          </Button>
-        }
       />
 
       <section className="grid gap-4 lg:grid-cols-3">

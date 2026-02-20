@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Menu,
   ShieldCheck,
+  Sparkles,
   Ticket,
   Users
 } from 'lucide-react';
@@ -26,6 +27,27 @@ const navSections = [
       { key: 'moderacao', label: 'Moderação', icon: ShieldCheck },
       { key: 'performance', label: 'Performance', icon: Activity }
     ]
+  },
+  {
+    label: 'Growth',
+    items: [
+      { key: 'lista_espera', label: 'Lista de Espera', icon: Users },
+      { key: 'landing_pages', label: 'Landing Pages', icon: LayoutDashboard },
+      { key: 'campanhas', label: 'Campanhas', icon: Sparkles }
+    ]
+  },
+  {
+    label: 'Publicidade',
+    items: [
+      { key: 'publicidade_dashboard', label: 'Dashboard', icon: BarChart3 },
+      { key: 'anuncios', label: 'Anúncios', icon: Ticket },
+      { key: 'clientes', label: 'Clientes', icon: Users },
+      { key: 'convites_publicidade', label: 'Convites', icon: ShieldCheck }
+    ]
+  },
+  {
+    label: 'Blog',
+    items: [{ key: 'blog', label: 'Blog', icon: CalendarDays }]
   }
 ];
 

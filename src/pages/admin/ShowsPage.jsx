@@ -304,9 +304,6 @@ export default function ShowsPage({ apiFetch }) {
               <Plus className="h-4 w-4" />
               Novo show
             </Button>
-            <Button variant="secondary" onClick={() => loadData(page)}>
-              Atualizar
-            </Button>
           </div>
         }
       />

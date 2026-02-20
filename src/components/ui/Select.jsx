@@ -65,7 +65,7 @@ export default function Select({ value, onValueChange, options = [], placeholder
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm text-foreground transition hover:border-border/90"
+        className="admin-select-trigger flex h-10 w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm text-foreground transition hover:border-border/90"
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={onKeyDown}
       >
@@ -76,7 +76,7 @@ export default function Select({ value, onValueChange, options = [], placeholder
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 z-40 mt-2 w-full rounded-lg border border-border bg-popover p-1 shadow-md"
+          className="admin-select-list absolute right-0 z-40 mt-2 w-full rounded-lg border border-border bg-popover p-1 shadow-md"
           tabIndex={-1}
           onKeyDown={onKeyDown}
         >
@@ -85,7 +85,7 @@ export default function Select({ value, onValueChange, options = [], placeholder
               <button
                 type="button"
                 className={cn(
-                  'flex h-9 w-full items-center justify-between rounded-md px-2 text-sm text-foreground transition hover:bg-secondary/60',
+                  'admin-select-item flex h-9 w-full items-center justify-between rounded-md px-2 text-sm text-foreground transition hover:bg-secondary/60',
                   highlighted === index && 'bg-secondary/60'
                 )}
                 onMouseEnter={() => setHighlighted(index)}
@@ -95,7 +95,7 @@ export default function Select({ value, onValueChange, options = [], placeholder
                 }}
               >
                 <span>{option.label}</span>
-                {option.value === value && <Check className="h-4 w-4 text-primary" />}
+                {option.value === value && <Check className="h-4 w-4 text-slate-500" />}
               </button>
             </li>
           ))}

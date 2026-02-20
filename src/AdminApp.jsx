@@ -9,7 +9,9 @@ import PerformancePage from './pages/admin/PerformancePage';
 import ShowsPage from './pages/admin/ShowsPage';
 import TrendingsPage from './pages/admin/TrendingsPage';
 import UsersPage from './pages/admin/UsersPage';
+import MockSectionPage from './pages/admin/MockSectionPage';
 import { useAuthFlow } from './hooks/useAuthFlow';
+import { mockAdminSections } from './mocks/adminGrowthAdsBlog';
 import './styles/global.css';
 
 const ROUTE_BY_PAGE = {
@@ -18,7 +20,15 @@ const ROUTE_BY_PAGE = {
   shows: '/shows',
   trendings: '/trendings',
   moderacao: '/moderacao',
-  performance: '/performance'
+  performance: '/performance',
+  lista_espera: '/growth/lista-espera',
+  landing_pages: '/growth/landing-pages',
+  campanhas: '/growth/campanhas',
+  publicidade_dashboard: '/publicidade/dashboard',
+  anuncios: '/publicidade/anuncios',
+  clientes: '/publicidade/clientes',
+  convites_publicidade: '/publicidade/convites',
+  blog: '/blog'
 };
 
 const PAGE_BY_ROUTE = {
@@ -27,7 +37,15 @@ const PAGE_BY_ROUTE = {
   '/shows': 'shows',
   '/trendings': 'trendings',
   '/moderacao': 'moderacao',
-  '/performance': 'performance'
+  '/performance': 'performance',
+  '/growth/lista-espera': 'lista_espera',
+  '/growth/landing-pages': 'landing_pages',
+  '/growth/campanhas': 'campanhas',
+  '/publicidade/dashboard': 'publicidade_dashboard',
+  '/publicidade/anuncios': 'anuncios',
+  '/publicidade/clientes': 'clientes',
+  '/publicidade/convites': 'convites_publicidade',
+  '/blog': 'blog'
 };
 
 export default function AdminApp() {
@@ -147,7 +165,15 @@ export default function AdminApp() {
     shows: <ShowsPage apiFetch={adminFetch} />,
     trendings: <TrendingsPage apiFetch={adminFetch} />,
     moderacao: <ModerationPage />,
-    performance: <PerformancePage apiFetch={adminFetch} />
+    performance: <PerformancePage apiFetch={adminFetch} />,
+    lista_espera: <MockSectionPage {...mockAdminSections.lista_espera} />,
+    landing_pages: <MockSectionPage {...mockAdminSections.landing_pages} />,
+    campanhas: <MockSectionPage {...mockAdminSections.campanhas} />,
+    publicidade_dashboard: <MockSectionPage {...mockAdminSections.publicidade_dashboard} />,
+    anuncios: <MockSectionPage {...mockAdminSections.anuncios} />,
+    clientes: <MockSectionPage {...mockAdminSections.clientes} />,
+    convites_publicidade: <MockSectionPage {...mockAdminSections.convites_publicidade} />,
+    blog: <MockSectionPage {...mockAdminSections.blog} />
   };
 
   return (

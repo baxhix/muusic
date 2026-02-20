@@ -93,6 +93,40 @@
   border-color: rgb(148 163 184) !important;
 }
 
+.admin-root .admin-select-trigger,
+.admin-root .admin-select-list {
+  border-radius: var(--radius-button) !important;
+}
+
+.admin-root .admin-select-trigger {
+  border-color: rgb(203 213 225 / 0.45) !important;
+  background: rgb(15 23 42 / 0.18) !important;
+}
+
+.admin-root .admin-select-trigger:hover {
+  border-color: rgb(203 213 225 / 0.75) !important;
+}
+
+.admin-root .admin-select-list {
+  border-color: rgb(203 213 225 / 0.35) !important;
+  background: rgb(15 23 42 / 0.98) !important;
+}
+
+.admin-root .admin-select-item {
+  border-radius: var(--radius-button) !important;
+}
+
+.admin-root .admin-pagination-link {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: rgb(148 163 184) !important;
+}
+
+.admin-root .admin-pagination-link:hover {
+  background: rgb(148 163 184 / 0.1) !important;
+  color: rgb(226 232 240) !important;
+}
+
 .admin-root .admin-sidebar-item {
   color: rgb(148 163 184) !important;
   background: transparent !important;
