@@ -48,6 +48,24 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   const [confirmPassword, setConfirmPassword] = useState('');
   const fileInputRef = useRef(null);
   const tabRefs = useRef([]);
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onBack?.();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onBack]);
+
+  useEffect(() => {
+    const onPointerDown = (event) => {
+      if (!cardRef.current) return;
+      if (!cardRef.current.contains(event.target)) onBack?.();
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [onBack]);
 
   useEffect(() => {
     let active = true;
@@ -243,14 +261,14 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   if (loading) {
     return (
       <main className="account-page">
-        <div className="account-card account-loading">Carregando Minha Conta...</div>
+        <div ref={cardRef} className="account-card account-loading">Carregando Minha Conta...</div>
       </main>
     );
   }
 
   return (
     <main className="account-page">
-      <section className="account-card">
+      <section ref={cardRef} className="account-card">
         <header className="account-header">
           <button type="button" className="account-back-btn" onClick={onBack}>
             <ArrowLeft size={16} />
@@ -260,9 +278,6 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
             <h1>Minha Conta</h1>
             <p>{authUser?.name || 'Usuario'}</p>
           </div>
-          <button type="button" className="account-logout-btn" onClick={onLogout}>
-            Sair
-          </button>
         </header>
 
         {feedback && <p className={feedback.type === 'error' ? 'account-feedback error' : 'account-feedback success'}>{feedback.message}</p>}
@@ -387,6 +402,12 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
             </div>
           </div>
         )}
+
+        <div className="account-actions account-footer-actions">
+          <button type="button" className="account-logout-btn" onClick={onLogout}>
+            Sair
+          </button>
+        </div>
       </section>
     </main>
   );

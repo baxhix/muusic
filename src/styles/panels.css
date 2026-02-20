@@ -1542,18 +1542,19 @@
 }
 
 .account-page {
+  position: absolute;
+  inset: 0;
   min-height: 100dvh;
   padding: 24px;
-  background:
-    radial-gradient(900px 360px at 18% -8%, rgba(219, 0, 53, 0.18), transparent 58%),
-    radial-gradient(820px 280px at 82% 108%, rgba(219, 0, 53, 0.1), transparent 64%),
-    linear-gradient(160deg, #030407 0%, #05070b 52%, #020306 100%);
+  background: rgba(3, 7, 12, 0.42);
+  backdrop-filter: blur(8px);
   display: grid;
   place-items: center;
+  z-index: 34;
 }
 
 .account-card {
-  width: min(860px, calc(100vw - 32px));
+  width: min(660px, calc(100vw - 32px));
   background: rgba(8, 12, 18, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 14px;
@@ -1613,6 +1614,10 @@
   background: var(--brand-red);
   border-color: hsl(var(--brand-red-hsl) / 0.5);
   color: #fff4f6;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 3px;
+  font-weight: 700;
 }
 
 .account-feedback {
@@ -2076,6 +2081,12 @@
 .account-actions.account-actions-start {
   justify-content: flex-start;
   padding-top: 0;
+}
+
+.account-footer-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 4px;
+  padding-top: 12px;
 }
 
 .missing-token {

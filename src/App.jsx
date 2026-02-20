@@ -87,7 +87,6 @@ export default function App() {
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   const lastTrendingCaptureRef = useRef({ trackId: '', isPlaying: false });
   const mapUsersRequestRef = useRef(0);
-  const isAccountPage = currentPath === ACCOUNT_PATH;
 
   const mapUsers = useMemo(() => {
     const byId = new Map();
@@ -201,7 +200,7 @@ export default function App() {
     runBenchmark,
     focusFeedItem
   } = useMapEngine({
-    enabled: Boolean(activeUser) && !isAccountPage,
+    enabled: Boolean(activeUser),
     isMobileDevice,
     perfProfile,
     simulatedPoints,
@@ -527,12 +526,15 @@ export default function App() {
 
   if (currentPath === ACCOUNT_PATH) {
     return (
-      <MyAccountPage
-        authUser={activeUser}
-        onBack={() => navigateTo('/')}
-        onLogout={handleLogout}
-        onSettingsChange={setAccountSettings}
-      />
+      <div className="app-root account-page-open">
+        <div ref={mapContainerRef} className="map-canvas" />
+        <MyAccountPage
+          authUser={activeUser}
+          onBack={() => navigateTo('/')}
+          onLogout={handleLogout}
+          onSettingsChange={setAccountSettings}
+        />
+      </div>
     );
   }
 
