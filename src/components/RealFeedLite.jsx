@@ -698,29 +698,34 @@ export default function RealFeedLite({
         {!isDetailOpen && activeTab === 'buzz' && <BuzzCommunitiesPanel />}
 
         {!isDetailOpen && activeTab === 'shows' && (
-          <div className="shows-list">
-            {showsForRender.map((show) => (
-              <div key={show.id} className="show-card">
-                <img src={show.thumb} alt={show.artist} width="56" height="56" className="show-thumb" />
-                <div className="show-copy">
-                  <p className="show-artist">{show.artist}</p>
-                  <p className="show-meta">
-                    {show.dateLabel} •{' '}
-                    <button type="button" className="show-venue-link" onClick={() => onFocusItem({ coords: show.coords, city: show.city, country: show.country })}>
-                      {show.venue} - {show.city}
-                    </button>
-                  </p>
+          <div className="shows-list-wrap">
+            <div className="shows-toolbar">
+              <h3>Shows</h3>
+            </div>
+            <div className="shows-list">
+              {showsForRender.map((show) => (
+                <div key={show.id} className="show-card">
+                  <img src={show.thumb} alt={show.artist} width="56" height="56" className="show-thumb" />
+                  <div className="show-copy">
+                    <p className="show-artist">{show.artist}</p>
+                    <p className="show-meta">
+                      {show.dateLabel} •{' '}
+                      <button type="button" className="show-venue-link" onClick={() => onFocusItem({ coords: show.coords, city: show.city, country: show.country })}>
+                        {show.venue} - {show.city}
+                      </button>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="show-ticket-btn"
+                    onClick={() => onOpenItem({ artist: show.artist, city: show.city, country: show.country, coords: show.coords, listeners: 0, likes: 0, comments: 0 })}
+                  >
+                    Ingressos
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="show-ticket-btn"
-                  onClick={() => onOpenItem({ artist: show.artist, city: show.city, country: show.country, coords: show.coords, listeners: 0, likes: 0, comments: 0 })}
-                >
-                  Ingressos
-                </button>
-              </div>
-            ))}
-            {showsForRender.length === 0 && <div className="feed-empty">Nenhum show cadastrado.</div>}
+              ))}
+              {showsForRender.length === 0 && <div className="feed-empty">Nenhum show cadastrado.</div>}
+            </div>
           </div>
         )}
       </div>

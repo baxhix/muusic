@@ -33,6 +33,8 @@ function readImageAsDataUrl(file) {
   });
 }
 
+const TRENDING_TOPICS = ['#agroplayverao', '#countrybeat', '#barretos2026', '#expolondrina2026'];
+
 export default function BuzzCommunitiesPanel() {
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -323,7 +325,7 @@ export default function BuzzCommunitiesPanel() {
           <header className="buzz-header-group">
             <div className="buzz-toolbar">
               <h3>Comunidades</h3>
-              <button type="button" className="show-ticket-btn" onClick={openCreateCommunity}>
+              <button type="button" className="show-ticket-btn buzz-new-btn" onClick={openCreateCommunity}>
                 <Plus size={14} />
                 Nova comunidade
               </button>
@@ -378,6 +380,17 @@ export default function BuzzCommunitiesPanel() {
               </div>
             </div>
           ) : null}
+
+          <div className="buzz-card buzz-topics-card" aria-label="Topicos em alta">
+            <h4>Tópicos em alta</h4>
+            <div className="buzz-topics-row">
+              {TRENDING_TOPICS.map((topic) => (
+                <span key={topic} className="buzz-topic-chip">
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
 
           <div className="shows-list buzz-communities-row" role="list">
             {filteredCommunities.map((community) => (
