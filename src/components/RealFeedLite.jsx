@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Heart, MessageCircle, X } from 'lucide-react';
 import { API_URL } from '../config/appConfig';
 import BuzzCommunitiesPanel from './BuzzCommunitiesPanel';
+import UserProfile from './user-profile/UserProfile';
 
 const SHOWS_POLL_INTERVAL_MS = 30000;
 const MAX_FORUM_SHOWS = 20;
@@ -395,30 +396,32 @@ export default function RealFeedLite({
   const isUserDetailOpen = !isShowDetailOpen && Boolean(selectedUserDetail);
   const isDetailOpen = isShowDetailOpen || isUserDetailOpen;
   const showDetailThumb = selectedShowDetail?.thumbUrl || `https://picsum.photos/seed/${encodeURIComponent(selectedShowDetail?.artist || 'evento')}/900/560`;
-  const userDetailCover = selectedUserDetail?.avatar || `https://i.pravatar.cc/320?u=${encodeURIComponent(selectedUserDetail?.id || selectedUserDetail?.name || 'user')}`;
+  const rightPanelClassName = isUserDetailOpen ? 'right-panel user-profile-mode' : 'right-panel';
 
   return (
-    <div className="right-panel">
-      <div className="right-head">
-        {!isDetailOpen ? (
-          <div className="feed-tabs">
-            <button type="button" className={activeTab === 'feed' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('feed')}>
-              Feed
-            </button>
-            <button type="button" className={activeTab === 'buzz' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('buzz')}>
-              Buzz
-            </button>
-            <button type="button" className={activeTab === 'shows' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('shows')}>
-              Shows
-            </button>
-          </div>
-        ) : (
-          <div className="feed-tabs" />
-        )}
-        <button type="button" className="right-panel-collapse" onClick={onToggleCollapse} aria-label="Recolher painel">
-          <ChevronRight size={18} />
-        </button>
-      </div>
+    <div className={rightPanelClassName}>
+      {!isUserDetailOpen && (
+        <div className="right-head">
+          {!isDetailOpen ? (
+            <div className="feed-tabs">
+              <button type="button" className={activeTab === 'feed' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('feed')}>
+                Feed
+              </button>
+              <button type="button" className={activeTab === 'buzz' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('buzz')}>
+                Buzz
+              </button>
+              <button type="button" className={activeTab === 'shows' ? 'feed-tab active' : 'feed-tab'} onClick={() => setActiveTab('shows')}>
+                Shows
+              </button>
+            </div>
+          ) : (
+            <div className="feed-tabs" />
+          )}
+          <button type="button" className="right-panel-collapse" onClick={onToggleCollapse} aria-label="Recolher painel">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
 
       <div className={isDetailOpen ? 'feed-box show-detail-mode' : 'feed-box'}>
         {isShowDetailOpen && (
@@ -567,55 +570,7 @@ export default function RealFeedLite({
         )}
 
         {isUserDetailOpen && (
-          <article className="show-detail-card">
-            <img src={userDetailCover} alt={selectedUserDetail?.name || 'Usuário'} className="show-detail-cover user-detail-cover" />
-            <div className="show-detail-body">
-              <div className="show-detail-head">
-                <h3>{selectedUserDetail?.name || 'Usuário'}</h3>
-                <button type="button" className="show-detail-close" onClick={onCloseUserDetail} aria-label="Fechar">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="show-detail-pane">
-                <div className="show-detail-meta-group">
-                  <p className="show-detail-line">{selectedUserDetail?.city || 'Cidade indisponível'}</p>
-                </div>
-                <p className="show-detail-desc">{selectedUserDetail?.bio || 'Bio não informada.'}</p>
-                <div className="show-user-tracks">
-                  {selectedUserDetail?.showMusicHistory !== false && (
-                    <>
-                      <p className="show-detail-line">Músicas ouvidas recentemente</p>
-                      <ul className="show-user-track-list">
-                        {(selectedUserDetail?.recentTracks || ['Sem histórico recente']).map((track, index) => (
-                          <li key={`${track}-${index}`}>{track}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-                <div className="show-detail-actions">
-                  <button type="button" className="show-ticket-btn" onClick={onCloseUserDetail}>
-                    Voltar
-                  </button>
-                  <button
-                    type="button"
-                    className="feed-link secondary"
-                    onClick={() => {
-                      if (!selectedUserDetail?.coords) return;
-                      onFocusItem({
-                        coords: selectedUserDetail.coords,
-                        city: selectedUserDetail.city
-                      });
-                    }}
-                    disabled={!selectedUserDetail?.coords}
-                  >
-                    Ver no mapa
-                  </button>
-                </div>
-              </div>
-            </div>
-          </article>
+          <UserProfile profile={selectedUserDetail} onBack={onCloseUserDetail} onForward={onToggleCollapse} />
         )}
 
         {!isDetailOpen && activeTab === 'feed' && (
