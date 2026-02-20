@@ -15,7 +15,7 @@ import { useAuthFlow } from './hooks/useAuthFlow';
 import { useRealtimePresence } from './hooks/useRealtimePresence';
 import { useMapEngine } from './hooks/useMapEngine';
 import { accountService, DEFAULT_ACCOUNT_SETTINGS } from './services/accountService';
-import { API_URL } from './config/appConfig';
+import { API_URL, MAP_USERS_POLL_INTERVAL_MS, MAP_USERS_REQUEST_LIMIT, MAP_USERS_SCAN_PAGES } from './config/appConfig';
 import { trendingsService } from './services/trendingsService';
 
 const ACCOUNT_PATH = '/minha-conta';
@@ -271,8 +271,8 @@ export default function App() {
         while (hasMore && loops < 8 && merged.size < 800) {
           loops += 1;
           const params = new URLSearchParams({
-            limit: '180',
-            scanPages: '6'
+            limit: String(Math.min(220, Math.max(40, Number(MAP_USERS_REQUEST_LIMIT) || 120))),
+            scanPages: String(Math.min(8, Math.max(1, Number(MAP_USERS_SCAN_PAGES) || 3)))
           });
           if (cursor) params.set('cursor', cursor);
           if (bbox) params.set('bbox', bbox);
@@ -298,7 +298,7 @@ export default function App() {
     };
 
     fetchMapUsers();
-    intervalId = window.setInterval(fetchMapUsers, 45000);
+    intervalId = window.setInterval(fetchMapUsers, Math.max(15000, Number(MAP_USERS_POLL_INTERVAL_MS) || 60000));
     return () => {
       cancelled = true;
       if (intervalId) window.clearInterval(intervalId);

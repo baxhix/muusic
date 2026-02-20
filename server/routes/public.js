@@ -9,9 +9,9 @@ const mapUsersInFlight = new Map();
 const showsInFlight = new Map();
 
 function parseMapUsersQuery(query = {}) {
-  const limit = Number.isFinite(Number(query.limit)) ? Math.min(500, Math.max(20, Number(query.limit))) : 200;
+  const limit = Number.isFinite(Number(query.limit)) ? Math.min(300, Math.max(20, Number(query.limit))) : 120;
   const cursor = String(query.cursor || '').trim() || null;
-  const scanPages = Number.isFinite(Number(query.scanPages)) ? Math.min(20, Math.max(1, Number(query.scanPages))) : 5;
+  const scanPages = Number.isFinite(Number(query.scanPages)) ? Math.min(10, Math.max(1, Number(query.scanPages))) : 3;
   const rawBbox = String(query.bbox || '').trim();
   let bbox = null;
   if (rawBbox) {

@@ -75,7 +75,7 @@ const allowedOrigins = new Set([...FRONTEND_URLS, 'http://localhost:5173', 'http
 const spotifyExchangeCodes = new Map();
 const SPOTIFY_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 const SOCKET_GEO_CELL_DEG = Math.max(1, Math.min(30, Number(process.env.SOCKET_GEO_CELL_DEG || 8)));
-const PRESENCE_PATCH_FLUSH_MS = Math.max(80, Math.min(1000, Number(process.env.PRESENCE_PATCH_FLUSH_MS || 250)));
+const PRESENCE_PATCH_FLUSH_MS = Math.max(80, Math.min(1000, Number(process.env.PRESENCE_PATCH_FLUSH_MS || 350)));
 const ADMIN_EMAILS = new Set(
   String(process.env.ADMIN_EMAILS || '')
     .split(',')
