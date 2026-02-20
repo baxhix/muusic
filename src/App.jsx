@@ -585,7 +585,7 @@ export default function App() {
         onMapVisibilityChange={setMapVisibility}
       />
 
-      <ChatListLite open={chatPanelOpen} onToggle={() => setChatPanelOpen((prev) => !prev)} openChatRequest={chatOpenRequest} />
+      <ChatListLite open={chatPanelOpen} onToggle={() => setChatPanelOpen((prev) => !prev)} openChatRequest={chatOpenRequest} onUserClick={openUserProfileDetail} />
       <NotificationsListLite open={notificationsPanelOpen} onToggle={() => setNotificationsPanelOpen(false)} />
 
       <RealFeedLite

@@ -170,6 +170,36 @@
   font-weight: 700;
 }
 
+.social-username.as-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.social-username.as-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.social-inline-user {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.social-inline-user:hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .social-location {
   display: inline-flex;
   align-items: center;

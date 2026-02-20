@@ -88,7 +88,7 @@ function nowTime() {
   return `${h}:${m}`;
 }
 
-export default function ChatListLite({ open, onToggle, openChatRequest }) {
+export default function ChatListLite({ open, onToggle, openChatRequest, onUserClick }) {
   const [query, setQuery] = useState('');
   const [conversations, setConversations] = useState(() => buildConversations());
   const [menuOpenId, setMenuOpenId] = useState(null);
@@ -136,7 +136,9 @@ export default function ChatListLite({ open, onToggle, openChatRequest }) {
     if (lastAutoOpenedRequestRef.current === requestId) return;
     const existing = conversations.find((chat) => chat.name.toLowerCase() === target.toLowerCase());
     if (existing) {
-      openConversation(existing.id);
+      setActiveChatId(existing.id);
+      setConversations((prev) => prev.map((chat) => (chat.id === existing.id ? { ...chat, unread: 0 } : chat)));
+      setMenuOpenId(null);
       lastAutoOpenedRequestRef.current = requestId;
       return;
     }
@@ -245,7 +247,24 @@ export default function ChatListLite({ open, onToggle, openChatRequest }) {
                 <img src={chat.avatar} alt={chat.name} className="chat-list-avatar" width="44" height="44" />
                 <div className="chat-list-copy">
                   <div className="chat-list-row">
-                    <p className="chat-list-name">{chat.name}</p>
+                    <p className="chat-list-name">
+                      <button
+                        type="button"
+                        className="chat-user-link"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onUserClick?.({
+                            name: chat.name,
+                            avatar: chat.avatar,
+                            city: 'Cidade indisponivel',
+                            bio: '',
+                            recentTracks: []
+                          });
+                        }}
+                      >
+                        {chat.name}
+                      </button>
+                    </p>
                   </div>
                   <div className="chat-list-row">
                     <p className={chat.unread > 0 ? 'chat-list-last' : 'chat-list-last read'}>{chat.message}</p>
@@ -293,7 +312,23 @@ export default function ChatListLite({ open, onToggle, openChatRequest }) {
             </button>
             <img src={activeChat.avatar} alt={activeChat.name} className="chat-thread-avatar" width="34" height="34" />
             <div className="chat-thread-user">
-              <p>{activeChat.name}</p>
+              <p>
+                <button
+                  type="button"
+                  className="chat-user-link"
+                  onClick={() =>
+                    onUserClick?.({
+                      name: activeChat.name,
+                      avatar: activeChat.avatar,
+                      city: 'Cidade indisponivel',
+                      bio: '',
+                      recentTracks: []
+                    })
+                  }
+                >
+                  {activeChat.name}
+                </button>
+              </p>
               <small>@{activeChat.user}</small>
             </div>
             <button type="button" className="chat-thread-close" onClick={onToggle} aria-label="Fechar chat">

@@ -307,6 +307,22 @@
   text-overflow: ellipsis;
 }
 
+.chat-user-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.chat-user-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .chat-list-time {
   color: #8e96a3;
   font-size: 10px;
