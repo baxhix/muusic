@@ -72,6 +72,7 @@ export default function App() {
   const { setUsername, users, socketRef, joined } = useRealtimePresence(activeUser);
 
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
+  const [chatOpenRequest, setChatOpenRequest] = useState({ name: '', id: 0 });
   const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [selectedEventFeed, setSelectedEventFeed] = useState(null);
@@ -165,6 +166,18 @@ export default function App() {
     },
     [resolveUserProfile]
   );
+
+  const openUserProfileDetail = useCallback((profile) => {
+    if (!profile) return;
+    setSelectedSimProfile({
+      ...(profile || {}),
+      bio: profile?.bio || '',
+      city: profile?.city || 'Cidade indisponivel',
+      showMusicHistory: profile?.showMusicHistory !== false,
+      recentTracks: profile?.recentTracks || []
+    });
+    setRightPanelCollapsed(false);
+  }, []);
   const handleViewportChange = useCallback((nextViewport) => {
     if (!nextViewport) return;
     setMapViewport((prev) => {
@@ -543,16 +556,7 @@ export default function App() {
             country: payload.country
           });
         }}
-        onUserClick={(profile) => {
-          setSelectedSimProfile({
-            ...(profile || {}),
-            bio: profile?.bio || '',
-            city: profile?.city || 'Cidade indisponivel',
-            showMusicHistory: profile?.showMusicHistory !== false,
-            recentTracks: profile?.recentTracks || []
-          });
-          setRightPanelCollapsed(false);
-        }}
+        onUserClick={openUserProfileDetail}
       />
 
       <SidebarNavLite
@@ -581,7 +585,7 @@ export default function App() {
         onMapVisibilityChange={setMapVisibility}
       />
 
-      <ChatListLite open={chatPanelOpen} onToggle={() => setChatPanelOpen((prev) => !prev)} />
+      <ChatListLite open={chatPanelOpen} onToggle={() => setChatPanelOpen((prev) => !prev)} openChatRequest={chatOpenRequest} />
       <NotificationsListLite open={notificationsPanelOpen} onToggle={() => setNotificationsPanelOpen(false)} />
 
       <RealFeedLite
@@ -594,6 +598,12 @@ export default function App() {
         onCloseShowDetail={() => setSelectedShowDetail(null)}
         selectedUserDetail={selectedSimProfile}
         onCloseUserDetail={() => setSelectedSimProfile(null)}
+        onUserClick={(userProfile) => openUserProfileDetail(userProfile)}
+        onUserChat={(userName) => {
+          setChatOpenRequest({ name: userName || '', id: Date.now() });
+          setNotificationsPanelOpen(false);
+          setChatPanelOpen(true);
+        }}
         collapsed={rightPanelCollapsed}
         onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
       />

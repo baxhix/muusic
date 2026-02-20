@@ -124,6 +124,8 @@ export default function RealFeedLite({
   onCloseShowDetail,
   selectedUserDetail,
   onCloseUserDetail,
+  onUserClick,
+  onUserChat,
   collapsed,
   onToggleCollapse
 }) {
@@ -384,6 +386,17 @@ export default function RealFeedLite({
     setShowReplyOpen((prev) => ({ ...prev, [key]: false }));
   }
 
+  function openUserProfile(userName, extra = {}) {
+    const safeName = userName || 'Usuario';
+    onUserClick?.({
+      name: safeName,
+      avatar: extra.avatar || `https://i.pravatar.cc/120?u=${encodeURIComponent(safeName)}`,
+      city: extra.city || 'Cidade indisponivel',
+      bio: extra.bio || '',
+      recentTracks: extra.recentTracks || []
+    });
+  }
+
   if (collapsed) {
     return (
       <button type="button" className="right-panel-expand" onClick={onToggleCollapse} aria-label="Expandir painel">
@@ -497,7 +510,12 @@ export default function RealFeedLite({
                         <div key={post.id} className="social-comment-wrap show-forum-post">
                           <div className="social-comment-row">
                             <p className="social-comment">
-                              <strong>{post.user}</strong> {post.text}
+                              <strong>
+                                <button type="button" className="social-inline-user" onClick={() => openUserProfile(post.user)}>
+                                  {post.user}
+                                </button>
+                              </strong>{' '}
+                              {post.text}
                             </p>
                             <button type="button" className={post.liked ? 'social-comment-like liked' : 'social-comment-like'} onClick={() => toggleShowPostLike(post.id)}>
                               <Heart size={11} />
@@ -512,7 +530,12 @@ export default function RealFeedLite({
                                 <div key={comment.id} className="social-comment-wrap">
                                   <div className="social-comment-row">
                                     <p className="social-comment">
-                                      <strong>{comment.user}</strong> {comment.text}
+                                      <strong>
+                                        <button type="button" className="social-inline-user" onClick={() => openUserProfile(comment.user)}>
+                                          {comment.user}
+                                        </button>
+                                      </strong>{' '}
+                                      {comment.text}
                                     </p>
                                     <button
                                       type="button"
@@ -528,7 +551,12 @@ export default function RealFeedLite({
                                   </button>
                                   {comment.replies.map((reply) => (
                                     <p key={reply.id} className="social-reply">
-                                      <strong>{reply.user}</strong> {reply.text}
+                                      <strong>
+                                        <button type="button" className="social-inline-user" onClick={() => openUserProfile(reply.user)}>
+                                          {reply.user}
+                                        </button>
+                                      </strong>{' '}
+                                      {reply.text}
                                     </p>
                                   ))}
                                   {showReplyOpen[replyKey] && (
@@ -570,7 +598,7 @@ export default function RealFeedLite({
         )}
 
         {isUserDetailOpen && (
-          <UserProfile profile={selectedUserDetail} onBack={onCloseUserDetail} onForward={onToggleCollapse} />
+          <UserProfile profile={selectedUserDetail} onBack={onCloseUserDetail} onForward={onToggleCollapse} onChatOpen={onUserChat} />
         )}
 
         {!isDetailOpen && activeTab === 'feed' && (
@@ -580,7 +608,9 @@ export default function RealFeedLite({
                 <header className="social-head">
                   <img src={post.avatar} alt={post.name} width="40" height="40" className="social-avatar" />
                   <div className="social-user-copy">
-                    <p className="social-username">{post.user}</p>
+                    <button type="button" className="social-username as-link" onClick={() => openUserProfile(post.name, { avatar: post.avatar, city: post.city })}>
+                      {post.user}
+                    </button>
                     <button type="button" className="social-location" onClick={() => onFocusItem({ coords: post.coords, city: post.city, country: post.country })}>
                       {post.city}, {post.country}
                     </button>
@@ -599,7 +629,12 @@ export default function RealFeedLite({
                   </button>
                 </div>
                 <p className="social-caption">
-                  <strong>{post.user}</strong> {post.caption}
+                  <strong>
+                    <button type="button" className="social-inline-user" onClick={() => openUserProfile(post.name, { avatar: post.avatar, city: post.city })}>
+                      {post.user}
+                    </button>
+                  </strong>{' '}
+                  {post.caption}
                 </p>
                 <div className="social-comments">
                   {post.comments.map((comment) => {
@@ -608,7 +643,12 @@ export default function RealFeedLite({
                       <div key={comment.id} className="social-comment-wrap">
                         <div className="social-comment-row">
                           <p className="social-comment">
-                            <strong>{comment.user}</strong> {comment.text}
+                            <strong>
+                              <button type="button" className="social-inline-user" onClick={() => openUserProfile(comment.user)}>
+                                {comment.user}
+                              </button>
+                            </strong>{' '}
+                            {comment.text}
                           </p>
                           <button type="button" className={comment.liked ? 'social-comment-like liked' : 'social-comment-like'} onClick={() => toggleCommentLike(post.id, comment.id)}>
                             <Heart size={11} />
@@ -622,7 +662,12 @@ export default function RealFeedLite({
                           <div className="social-replies">
                             {comment.replies.map((reply) => (
                               <p key={reply.id} className="social-reply">
-                                <strong>{reply.user}</strong> {reply.text}
+                                <strong>
+                                  <button type="button" className="social-inline-user" onClick={() => openUserProfile(reply.user)}>
+                                    {reply.user}
+                                  </button>
+                                </strong>{' '}
+                                {reply.text}
                               </p>
                             ))}
                           </div>

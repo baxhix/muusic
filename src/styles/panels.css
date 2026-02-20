@@ -630,7 +630,7 @@
 .user-profile-name {
   margin: 0;
   color: #f8f8fb;
-  font-size: 42px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1.08;
   text-align: center;
@@ -642,7 +642,7 @@
   align-items: center;
   gap: 8px;
   color: #9ca1ad;
-  font-size: 30px;
+  font-size: 14px;
 }
 
 .user-profile-status-dot {
@@ -659,7 +659,7 @@
 .user-profile-bio {
   margin: 0;
   color: #9398a4;
-  font-size: 33px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -694,8 +694,6 @@
   white-space: nowrap;
   scrollbar-width: thin;
   padding: 2px 2px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .user-profile-tab {
@@ -716,7 +714,7 @@
 }
 
 .user-profile-tab.active {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: transparent;
   background: rgba(255, 255, 255, 0.08);
   color: #f5f6fa;
 }

@@ -37,14 +37,14 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
           <div className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-foreground">
             <Ticket className="h-4 w-4" />
           </div>
-          {!collapsed ? <span className="text-sm font-semibold text-foreground">Admin Panel</span> : null}
+          {!collapsed ? <span className="text-sm font-semibold text-foreground">Management</span> : null}
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggle}
           aria-label="Colapsar sidebar"
-          className="admin-neutral-control hidden text-muted-foreground hover:text-foreground lg:inline-flex"
+          className="admin-neutral-control hidden h-8 w-8 text-muted-foreground hover:text-foreground lg:inline-flex"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -145,7 +145,7 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
             </Button>
             <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
               <span>{userName}</span>
-              <Button variant="outline" className="admin-neutral-control text-muted-foreground hover:text-foreground" onClick={onLogout}>
+              <Button variant="ghost" size="sm" className="admin-neutral-control text-muted-foreground hover:text-foreground" onClick={onLogout}>
                 Sair
               </Button>
             </div>

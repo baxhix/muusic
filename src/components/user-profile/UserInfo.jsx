@@ -10,7 +10,7 @@ export default function UserInfo({ user }) {
         <span>{user.online ? 'online' : 'offline'}</span>
       </p>
       <p className="user-profile-bio">{user.bio}</p>
-      <button type="button" className="user-profile-chat-btn" aria-label={`Conversar com ${user.name}`}>
+      <button type="button" className="user-profile-chat-btn" aria-label={`Conversar com ${user.name}`} onClick={() => user.onChat?.()}>
         <MessageCircle size={16} />
         <span>{`Conversar com ${user.firstName}`}</span>
       </button>

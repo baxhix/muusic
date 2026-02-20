@@ -75,7 +75,7 @@ function toHistoryFromRecentTracks(recentTracks = []) {
   }));
 }
 
-export default function UserProfile({ profile, onBack, onForward }) {
+export default function UserProfile({ profile, onBack, onForward, onChatOpen }) {
   const [activeTab, setActiveTab] = useState('history');
 
   const user = useMemo(() => {
@@ -86,9 +86,10 @@ export default function UserProfile({ profile, onBack, onForward }) {
       firstName,
       online: profile?.online !== false,
       bio: profile?.bio || DEFAULT_USER.bio,
-      avatar: profile?.avatar || DEFAULT_USER.avatar
+      avatar: profile?.avatar || DEFAULT_USER.avatar,
+      onChat: () => onChatOpen?.(name)
     };
-  }, [profile]);
+  }, [profile, onChatOpen]);
 
   const history = useMemo(() => {
     if (Array.isArray(profile?.musicHistory) && profile.musicHistory.length > 0) return profile.musicHistory;

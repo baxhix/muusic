@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, MessageCircle, MoreVertical, Search, SendHorizontal, X } from 'lucide-react';
 
 function buildConversations() {
@@ -88,13 +88,14 @@ function nowTime() {
   return `${h}:${m}`;
 }
 
-export default function ChatListLite({ open, onToggle }) {
+export default function ChatListLite({ open, onToggle, openChatRequest }) {
   const [query, setQuery] = useState('');
   const [conversations, setConversations] = useState(() => buildConversations());
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [activeChatId, setActiveChatId] = useState(null);
   const [messagesByChat, setMessagesByChat] = useState(() => buildMessages());
   const [draft, setDraft] = useState('');
+  const lastAutoOpenedRequestRef = useRef(0);
 
   const activeChat = useMemo(() => conversations.find((chat) => chat.id === activeChatId) || null, [conversations, activeChatId]);
 
@@ -127,6 +128,38 @@ export default function ChatListLite({ open, onToggle }) {
     setConversations((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, unread: 0 } : chat)));
     setMenuOpenId(null);
   }
+
+  useEffect(() => {
+    const target = openChatRequest?.name?.trim() || '';
+    const requestId = Number(openChatRequest?.id || 0);
+    if (!target || !open) return;
+    if (lastAutoOpenedRequestRef.current === requestId) return;
+    const existing = conversations.find((chat) => chat.name.toLowerCase() === target.toLowerCase());
+    if (existing) {
+      openConversation(existing.id);
+      lastAutoOpenedRequestRef.current = requestId;
+      return;
+    }
+    const chatId = `chat-${Date.now()}`;
+    const normalizedUser = target.toLowerCase().replace(/\s+/g, '.');
+    const newConversation = {
+      id: chatId,
+      user: normalizedUser,
+      name: target,
+      message: 'Conversa iniciada.',
+      time: nowTime(),
+      unread: 0,
+      avatar: `https://i.pravatar.cc/120?u=${encodeURIComponent(target)}`
+    };
+    setConversations((prev) => [newConversation, ...prev]);
+    setMessagesByChat((prev) => ({
+      ...prev,
+      [chatId]: [{ id: `m-${chatId}-1`, text: `Oi ${target}, tudo bem?`, mine: true, time: nowTime(), reactions: 0, reacted: false }]
+    }));
+    setActiveChatId(chatId);
+    setMenuOpenId(null);
+    lastAutoOpenedRequestRef.current = requestId;
+  }, [openChatRequest, open, conversations]);
 
   function sendMessage() {
     const text = draft.trim();
