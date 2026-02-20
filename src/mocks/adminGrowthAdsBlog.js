@@ -49,11 +49,37 @@ export const mockAdminSections = {
   },
   publicidade_dashboard: {
     title: 'Publicidade Dashboard',
-    subtitle: 'Visão geral da operação de mídia paga.',
+    subtitle: 'Visão geral de crescimento e atividade da plataforma.',
     kpis: [
-      { label: 'Receita (30d)', value: 'R$ 182k' },
-      { label: 'Impressões', value: '4.2M' },
-      { label: 'CTR médio', value: '1.9%' }
+      { label: 'Usuários online', value: 482 },
+      { label: 'Shows cadastrados', value: 1247 },
+      { label: 'Crescimento de postagens', value: '+18.6%' }
+    ],
+    charts: [
+      {
+        title: 'Crescimento de usuários por dia',
+        subtitle: 'Últimos 7 dias',
+        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'],
+        values: [42, 55, 61, 73, 70, 85, 96]
+      },
+      {
+        title: 'Crescimento de usuários por mês',
+        subtitle: 'Últimos 6 meses',
+        labels: ['Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev'],
+        values: [620, 710, 780, 860, 990, 1120]
+      },
+      {
+        title: 'Usuários online (janela de 24h)',
+        subtitle: 'Média por faixa de horário',
+        labels: ['00h', '04h', '08h', '12h', '16h', '20h'],
+        values: [180, 150, 260, 420, 510, 470]
+      },
+      {
+        title: 'Taxa de crescimento de postagens nas comunidades',
+        subtitle: 'Comparação semanal (%)',
+        labels: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'],
+        values: [4.2, 6.8, 9.4, 11.2, 15.3, 18.6]
+      }
     ],
     columns: ['Canal', 'Impressões', 'Cliques', 'Receita'],
     rows: [
