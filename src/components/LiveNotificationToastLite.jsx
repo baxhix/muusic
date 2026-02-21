@@ -32,6 +32,8 @@ const COUNTRY_POINTS = {
 };
 
 const COUNTRIES = Object.keys(COUNTRY_POINTS);
+const VISIBLE_MS = 4800;
+const EXIT_MS = 520;
 
 function randomItem(list) {
   return list[Math.floor(Math.random() * list.length)];
@@ -128,12 +130,12 @@ export default function LiveNotificationToastLite({
 
     hideTimerRef.current = window.setTimeout(() => {
       setExiting(true);
-    }, 5000);
+    }, VISIBLE_MS);
 
     removeTimerRef.current = window.setTimeout(() => {
       setActiveNotification(null);
       setExiting(false);
-    }, 5400);
+    }, VISIBLE_MS + EXIT_MS);
   }, [clearLocalTimers]);
 
   useEffect(() => {
