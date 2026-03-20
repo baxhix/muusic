@@ -41,7 +41,10 @@ if ! install_deps; then
 fi
 
 npm run prisma:generate
-npm run db:migrate
+if ! npm run db:migrate; then
+  echo "db:migrate falhou. Aplicando fallback com prisma db push para este ambiente..."
+  npm run db:push
+fi
 npm run build
 
 pm2 startOrReload ecosystem.config.cjs --env production
