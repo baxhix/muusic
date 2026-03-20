@@ -64,9 +64,14 @@ export function createLocalAuthRouter({
       const parsed = parseLoginInput(req.body);
       if (parsed.error) return res.status(400).json({ error: parsed.error });
 
-      const user = await userService.findByEmail(parsed.email);
+      const normalizedEmail = String(parsed.email || '').trim().toLowerCase();
+      let user = await userService.findByEmail(normalizedEmail);
       if (!user || !verifyPassword(parsed.password, user.passwordHash)) {
         return res.status(401).json({ error: 'Credenciais invalidas.' });
+      }
+
+      if (adminEmails.has(normalizedEmail) && user.role !== 'ADMIN') {
+        user = await userService.updateUserById(user.id, { role: 'ADMIN' });
       }
 
       const sessionId = await sessionService.create(user.id);

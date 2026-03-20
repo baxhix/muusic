@@ -39,6 +39,7 @@ export function createRealtimeClusterService({
       id: user.id,
       name: user.name,
       spotify: user.spotify,
+      nowPlaying: user.nowPlaying || null,
       location: user.location || null,
       connectedAt: user.connectedAt
     }));
@@ -130,6 +131,7 @@ export function createRealtimeClusterService({
         id: user.id,
         name: user.name,
         spotify: user.spotify,
+        nowPlaying: user.nowPlaying || null,
         location: user.location || null,
         connectedAt: user.connectedAt
       }));
@@ -210,6 +212,29 @@ export function createRealtimeClusterService({
     return presence;
   }
 
+  async function updateNowPlaying(roomId, userId, nowPlaying, { publishPresence = true } = {}) {
+    const room = String(roomId);
+    if (!redisEnabled || !stateClient) {
+      const local = getLocalRoom(room);
+      const user = local.users.get(userId);
+      if (!user) return null;
+      user.nowPlaying = nowPlaying || null;
+      return getPresence(room);
+    }
+
+    const raw = await stateClient.hget(usersKey(room), userId);
+    if (!raw) return null;
+    const user = safeJsonParse(raw);
+    if (!user) return null;
+    user.nowPlaying = nowPlaying || null;
+    await stateClient.hset(usersKey(room), userId, JSON.stringify(user));
+    const presence = await getPresence(room);
+    if (publishPresence) {
+      await publish('presence:update', room, presence);
+    }
+    return presence;
+  }
+
   async function appendMessage(roomId, message) {
     const room = String(roomId);
     if (!redisEnabled || !stateClient) {
@@ -247,6 +272,7 @@ export function createRealtimeClusterService({
     getPresence,
     getMessages,
     upsertUser,
+    updateNowPlaying,
     updateLocation,
     removeUser,
     appendMessage

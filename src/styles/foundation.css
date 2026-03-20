@@ -123,6 +123,11 @@ body,
   background: rgba(12, 13, 20, 0.94);
 }
 
+.live-notif-match {
+  background: linear-gradient(135deg, rgba(14, 30, 22, 0.95), rgba(32, 82, 48, 0.9));
+  box-shadow: 0 16px 34px rgba(14, 62, 34, 0.34);
+}
+
 .live-notif-avatar-fallback {
   display: grid;
   place-items: center;

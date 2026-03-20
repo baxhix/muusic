@@ -125,8 +125,30 @@ function toPresenceUserSummary(user) {
     id: user.id || '',
     name: user.name || 'Usuario',
     spotify: user.spotify || null,
+    nowPlaying: user.nowPlaying || null,
     location: user.location || null,
     connectedAt: user.connectedAt || Date.now()
+  };
+}
+
+function sanitizeNowPlayingPayload(nowPlaying) {
+  if (!nowPlaying || typeof nowPlaying !== 'object') return null;
+  const artistName = String(nowPlaying.artistName || nowPlaying.artists || '').trim();
+  const trackName = String(nowPlaying.trackName || '').trim();
+
+  return {
+    artistId: nowPlaying.artistId || null,
+    artistName: artistName || '',
+    artists: String(nowPlaying.artists || artistName || '').trim(),
+    trackId: nowPlaying.trackId || null,
+    trackName: trackName || '',
+    progressMs: Math.max(0, Number(nowPlaying.progressMs || 0) || 0),
+    durationMs: Math.max(0, Number(nowPlaying.durationMs || 0) || 0),
+    isPlaying: Boolean(nowPlaying.isPlaying),
+    albumImage: nowPlaying.albumImage || null,
+    artistImage: nowPlaying.artistImage || null,
+    externalUrl: nowPlaying.externalUrl || null,
+    updatedAt: Date.now()
   };
 }
 
@@ -322,7 +344,7 @@ io.on('connection', (socket) => {
   let joinedUserName = null;
   let joinedAreaRoom = null;
 
-  socket.on('room:join', async ({ roomId = 'global', userId, name, spotify, token, sessionId } = {}, ack) => {
+  socket.on('room:join', async ({ roomId = 'global', userId, name, spotify, nowPlaying, token, sessionId } = {}, ack) => {
     const startedAt = performance.now();
     try {
       const joinLimit = await socketRateLimiter.consume({
@@ -370,6 +392,7 @@ io.on('connection', (socket) => {
           id: joinedUserId,
           name: joinedUserName,
           spotify: finalSpotify,
+          nowPlaying: sanitizeNowPlayingPayload(nowPlaying),
           location: null,
           connectedAt: Date.now()
         },
@@ -478,6 +501,44 @@ io.on('connection', (socket) => {
     } catch {
       performanceService.recordSocketEvent({
         event: 'location:update',
+        durationMs: performance.now() - startedAt,
+        ok: false
+      });
+    }
+  });
+
+  socket.on('playback:update', async ({ nowPlaying } = {}) => {
+    const startedAt = performance.now();
+    if (!joinedRoom || !joinedUserId) return;
+    try {
+      const playbackLimit = await socketRateLimiter.consume({
+        key: `playback:${joinedUserId}`,
+        limit: 30,
+        windowSec: 30
+      });
+      if (!playbackLimit.allowed) return;
+
+      const sanitizedNowPlaying = sanitizeNowPlayingPayload(nowPlaying);
+      const presence = await realtimeCluster.updateNowPlaying(joinedRoom, joinedUserId, sanitizedNowPlaying, { publishPresence: false });
+      if (!presence) return;
+      const selfUser = toPresenceUserSummary(presence.find((user) => user?.id === joinedUserId));
+      if (!selfUser) return;
+
+      queuePresencePatch({
+        roomId: joinedRoom,
+        patch: { type: 'upsert', user: selfUser, at: Date.now() },
+        ioInstance: io,
+        cluster: realtimeCluster
+      });
+
+      performanceService.recordSocketEvent({
+        event: 'playback:update',
+        durationMs: performance.now() - startedAt,
+        ok: true
+      });
+    } catch {
+      performanceService.recordSocketEvent({
+        event: 'playback:update',
         durationMs: performance.now() - startedAt,
         ok: false
       });

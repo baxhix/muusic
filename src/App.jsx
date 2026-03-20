@@ -19,6 +19,8 @@ import { API_URL, MAP_USERS_POLL_INTERVAL_MS, MAP_USERS_REQUEST_LIMIT, MAP_USERS
 import { trendingsService } from './services/trendingsService';
 
 const ACCOUNT_PATH = '/minha-conta';
+const MUSIC_MATCH_WINDOW_MS = 2 * 60 * 1000;
+const MUSIC_MATCH_TOAST_COOLDOWN_MS = 45 * 1000;
 
 function getAdaptivePollingDelay(nowPlaying) {
   if (!nowPlaying) return 30000;
@@ -32,6 +34,34 @@ function getAdaptivePollingDelay(nowPlaying) {
     return Math.max(3000, remaining + 1000);
   }
   return 7000;
+}
+
+function normalizeArtistKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildRealtimeNowPlayingPayload(nowPlaying) {
+  if (!nowPlaying || typeof nowPlaying !== 'object') return null;
+  return {
+    artistId: nowPlaying.artistId || null,
+    artistName: nowPlaying.artistName || '',
+    artists: nowPlaying.artists || nowPlaying.artistName || '',
+    trackId: nowPlaying.trackId || null,
+    trackName: nowPlaying.trackName || '',
+    progressMs: Number(nowPlaying.progressMs || 0) || 0,
+    durationMs: Number(nowPlaying.durationMs || 0) || 0,
+    isPlaying: Boolean(nowPlaying.isPlaying),
+    albumImage: nowPlaying.albumImage || null,
+    artistImage: nowPlaying.artistImage || null,
+    externalUrl: nowPlaying.externalUrl || null,
+    updatedAt: Date.now()
+  };
 }
 
 export default function App() {
@@ -85,8 +115,10 @@ export default function App() {
   const [shows, setShows] = useState([]);
   const [mapVisibility, setMapVisibility] = useState(() => readMapVisibility());
   const [isMobileDevice] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  const [priorityLiveNotification, setPriorityLiveNotification] = useState(null);
   const lastTrendingCaptureRef = useRef({ trackId: '', isPlaying: false });
   const mapUsersRequestRef = useRef(0);
+  const lastMatchToastRef = useRef({ signature: '', at: 0 });
 
   const mapUsers = useMemo(() => {
     const byId = new Map();
@@ -344,6 +376,11 @@ export default function App() {
       timerId = window.setTimeout(async () => {
         const nowPlaying = await refreshSpotifyNowPlaying();
         if (cancelled) return;
+        if (joined && socketRef.current) {
+          socketRef.current.emit('playback:update', {
+            nowPlaying: buildRealtimeNowPlayingPayload(nowPlaying)
+          });
+        }
         schedule(getAdaptivePollingDelay(nowPlaying));
       }, delay);
     };
@@ -351,6 +388,11 @@ export default function App() {
     refreshSpotifyNowPlaying()
       .then((nowPlaying) => {
         if (!cancelled) {
+          if (joined && socketRef.current) {
+            socketRef.current.emit('playback:update', {
+              nowPlaying: buildRealtimeNowPlayingPayload(nowPlaying)
+            });
+          }
           schedule(getAdaptivePollingDelay(nowPlaying));
         }
       })
@@ -364,7 +406,14 @@ export default function App() {
       cancelled = true;
       if (timerId) window.clearTimeout(timerId);
     };
-  }, [activeUser?.spotifyToken, refreshSpotifyNowPlaying]);
+  }, [activeUser?.spotifyToken, refreshSpotifyNowPlaying, joined, socketRef]);
+
+  useEffect(() => {
+    if (!joined || !socketRef.current) return;
+    socketRef.current.emit('playback:update', {
+      nowPlaying: buildRealtimeNowPlayingPayload(activeUser?.nowPlaying || null)
+    });
+  }, [activeUser?.nowPlaying, joined, socketRef]);
 
   useEffect(() => {
     if (!activeUser || !fps || !Number.isFinite(fps)) return undefined;
@@ -489,6 +538,80 @@ export default function App() {
     };
   }, [activeAuthPayload, activeUser?.nowPlaying]);
 
+  const currentArtistMatch = useMemo(() => {
+    const localNowPlaying = activeUser?.nowPlaying;
+    if (!localNowPlaying?.isPlaying) return null;
+
+    const localArtistName = localNowPlaying.artistName || localNowPlaying.artists || '';
+    const localArtistKey = normalizeArtistKey(localArtistName);
+    if (!localArtistKey) return null;
+
+    const now = Date.now();
+    const matches = (Array.isArray(users) ? users : [])
+      .filter((user) => user?.id && user.id !== activeUser?.id)
+      .map((user) => {
+        const remoteNowPlaying = user?.nowPlaying || null;
+        const remoteArtistName = remoteNowPlaying?.artistName || remoteNowPlaying?.artists || '';
+        const remoteArtistKey = normalizeArtistKey(remoteArtistName);
+        const updatedAt = Number(remoteNowPlaying?.updatedAt || 0);
+        const isFresh = Number.isFinite(updatedAt) && now - updatedAt <= MUSIC_MATCH_WINDOW_MS;
+        if (!remoteArtistKey || remoteArtistKey !== localArtistKey) return null;
+        if (!remoteNowPlaying?.isPlaying || !isFresh) return null;
+        return {
+          id: user.id,
+          name: user?.spotify?.display_name || user?.name || 'Usuario',
+          avatar: user?.spotify?.image || null,
+          profile: {
+            id: user.id,
+            name: user?.spotify?.display_name || user?.name || 'Usuario',
+            avatar: user?.spotify?.image || `https://i.pravatar.cc/120?u=${encodeURIComponent(user.id)}`,
+            city: user?.location?.city || 'Cidade indisponivel',
+            bio: '',
+            showMusicHistory: true,
+            recentTracks: [remoteNowPlaying?.trackName || 'Musica indisponivel']
+          }
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+    if (!matches.length) return null;
+    return {
+      artistName: localArtistName,
+      artistKey: localArtistKey,
+      users: matches
+    };
+  }, [activeUser?.id, activeUser?.nowPlaying, users]);
+
+  useEffect(() => {
+    if (!currentArtistMatch?.users?.length) return;
+    const signature = `${currentArtistMatch.artistKey}:${currentArtistMatch.users.map((user) => user.id).join(',')}`;
+    const now = Date.now();
+    const previous = lastMatchToastRef.current;
+    if (previous.signature === signature && now - previous.at < MUSIC_MATCH_TOAST_COOLDOWN_MS) {
+      return;
+    }
+
+    lastMatchToastRef.current = { signature, at: now };
+    const [firstUser, ...restUsers] = currentArtistMatch.users;
+    setPriorityLiveNotification({
+      id: `music-match-${now}`,
+      kind: 'music-match',
+      type: 'music-match',
+      variant: 'match',
+      artistName: currentArtistMatch.artistName,
+      matchUsers: currentArtistMatch.users,
+      username: firstUser?.name || 'Usuario',
+      profile: firstUser
+        ? {
+            ...firstUser.profile,
+            recentTracks: firstUser.profile?.recentTracks || []
+          }
+        : null,
+      extraMatchesCount: restUsers.length
+    });
+  }, [currentArtistMatch]);
+
   if (authBooting) {
     return (
       <div className="auth-loading-screen">
@@ -551,6 +674,7 @@ export default function App() {
       <LiveNotificationToastLite
         enabled={Boolean(activeUser)}
         paused={notificationsPanelOpen}
+        priorityNotification={priorityLiveNotification}
         onCountryClick={(payload) => {
           if (!payload?.coords) return;
           focusFeedItem({

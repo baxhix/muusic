@@ -100,6 +100,7 @@ function createNotification(excludedType = null) {
 export default function LiveNotificationToastLite({
   enabled = true,
   paused = false,
+  priorityNotification = null,
   onCountryClick,
   onUserClick
 }) {
@@ -108,6 +109,7 @@ export default function LiveNotificationToastLite({
   const hideTimerRef = useRef(null);
   const removeTimerRef = useRef(null);
   const prevTypeRef = useRef(null);
+  const lastPriorityIdRef = useRef('');
 
   const clearLocalTimers = useCallback(() => {
     if (hideTimerRef.current) {
@@ -120,10 +122,12 @@ export default function LiveNotificationToastLite({
     }
   }, []);
 
-  const showToast = useCallback(() => {
+  const showToast = useCallback((next) => {
     clearLocalTimers();
-    const next = createNotification(prevTypeRef.current);
-    prevTypeRef.current = next.type;
+    if (!next) return;
+    if (next.type && next.type !== 'music-match') {
+      prevTypeRef.current = next.type;
+    }
 
     setExiting(false);
     setActiveNotification(next);
@@ -138,6 +142,11 @@ export default function LiveNotificationToastLite({
     }, VISIBLE_MS + EXIT_MS);
   }, [clearLocalTimers]);
 
+  const showRandomToast = useCallback(() => {
+    const next = createNotification(prevTypeRef.current);
+    showToast(next);
+  }, [showToast]);
+
   useEffect(() => {
     if (!enabled || paused) {
       clearLocalTimers();
@@ -146,14 +155,27 @@ export default function LiveNotificationToastLite({
       return undefined;
     }
 
-    showToast();
-    const intervalId = window.setInterval(showToast, 7000);
+    if (!priorityNotification) {
+      showRandomToast();
+    }
+    const intervalId = window.setInterval(() => {
+      if (priorityNotification) return;
+      showRandomToast();
+    }, 7000);
 
     return () => {
       window.clearInterval(intervalId);
       clearLocalTimers();
     };
-  }, [enabled, paused, showToast, clearLocalTimers]);
+  }, [enabled, paused, priorityNotification, showRandomToast, clearLocalTimers]);
+
+  useEffect(() => {
+    if (!enabled || paused) return;
+    const priorityId = String(priorityNotification?.id || '');
+    if (!priorityId || priorityId === lastPriorityIdRef.current) return;
+    lastPriorityIdRef.current = priorityId;
+    showToast(priorityNotification);
+  }, [enabled, paused, priorityNotification, showToast]);
 
   if (!activeNotification) return null;
 
@@ -196,6 +218,24 @@ export default function LiveNotificationToastLite({
             </button>{' '}
             <span>{activeNotification.prefix}</span>{' '}
             <strong>{activeNotification.highlight}</strong>
+          </>
+        ) : activeNotification.kind === 'music-match' ? (
+          <>
+            <span>Match musical com </span>
+            <button
+              type="button"
+              className="live-notif-token"
+              onClick={() => onUserClick?.(activeNotification.profile)}
+            >
+              {activeNotification.username}
+            </button>
+            {activeNotification.extraMatchesCount > 0 ? (
+              <>
+                <span>{` e mais ${activeNotification.extraMatchesCount}`}</span>
+              </>
+            ) : null}{' '}
+            <span>ouvindo </span>
+            <strong>{activeNotification.artistName || 'o mesmo artista'}</strong>
           </>
         ) : (
           <>

@@ -45,7 +45,8 @@ export function sanitizeUserResponse(user) {
 }
 
 export async function determineRoleForNewUser(email, adminEmails, userService) {
-  if (adminEmails.has(email)) return 'ADMIN';
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (adminEmails.has(normalizedEmail)) return 'ADMIN';
   const totalUsers = await userService.countUsers();
   return totalUsers === 0 ? 'ADMIN' : 'USER';
 }
