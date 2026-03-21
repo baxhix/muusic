@@ -1232,6 +1232,162 @@
   text-align: center;
 }
 
+.landing-waitlist-celebration {
+  position: relative;
+  width: min(720px, calc(100vw - 72px));
+  margin-top: 14px;
+  padding: 22px 24px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(233, 240, 255, 0.16);
+  background:
+    radial-gradient(circle at top, rgba(255, 233, 163, 0.18), transparent 46%),
+    linear-gradient(145deg, rgba(23, 34, 24, 0.95), rgba(12, 20, 28, 0.96));
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  overflow: hidden;
+  animation: waitlistCelebrationIn 620ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.landing-waitlist-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.landing-waitlist-burst-piece {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff4bf, #d8dee8 72%, rgba(216, 222, 232, 0));
+  opacity: 0;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--burst-angle))
+    translateY(0)
+    scaleY(0.3);
+  transform-origin: center top;
+  animation: waitlistBurstOut 1.6s cubic-bezier(0.16, 1, 0.3, 1) var(--burst-delay) infinite;
+}
+
+.landing-waitlist-celebration-core {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+}
+
+.landing-waitlist-celebration-ring,
+.landing-waitlist-celebration-check {
+  grid-area: 1 / 1;
+}
+
+.landing-waitlist-celebration-ring {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 240, 179, 0.26), rgba(255, 240, 179, 0.04) 58%, transparent 66%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(244, 233, 185, 0.42);
+  box-shadow:
+    0 0 0 12px rgba(255, 240, 179, 0.06),
+    0 14px 34px rgba(0, 0, 0, 0.24);
+  animation: waitlistCorePulse 2.4s ease-in-out infinite;
+}
+
+.landing-waitlist-celebration-check {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #f7f2d0, #dfe6ef);
+  color: #17210f;
+  font-size: 30px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+.landing-waitlist-celebration-copy {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  text-align: center;
+}
+
+.landing-waitlist-celebration-copy strong {
+  color: #f6f8fb;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.landing-waitlist-celebration-copy p {
+  margin: 0;
+  max-width: 520px;
+  color: #d0d6df;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+@keyframes waitlistCelebrationIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes waitlistBurstOut {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--burst-angle))
+      translateY(0)
+      scaleY(0.2);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--burst-angle))
+      translateY(calc(var(--burst-distance) * -1))
+      scaleY(1);
+  }
+}
+
+@keyframes waitlistCorePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 12px rgba(255, 240, 179, 0.06),
+      0 14px 34px rgba(0, 0, 0, 0.24);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow:
+      0 0 0 18px rgba(255, 240, 179, 0.03),
+      0 18px 44px rgba(0, 0, 0, 0.28);
+  }
+}
+
 .landing-platforms {
   width: min(720px, calc(100vw - 72px));
   margin-top: 54px;

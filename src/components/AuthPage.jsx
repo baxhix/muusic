@@ -26,6 +26,7 @@ export default function AuthPage({
 }) {
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistMessage, setWaitlistMessage] = useState('');
+  const [waitlistStatus, setWaitlistStatus] = useState('idle');
   const [typedPhraseIndex, setTypedPhraseIndex] = useState(0);
   const [typedLineIndex, setTypedLineIndex] = useState(0);
   const [typedCharCount, setTypedCharCount] = useState(0);
@@ -42,6 +43,16 @@ export default function AuthPage({
       })),
     []
   );
+  const successBursts = useMemo(
+    () =>
+      Array.from({ length: 18 }, (_, index) => ({
+        id: index,
+        angle: `${index * 20}deg`,
+        delay: `${(index % 6) * 0.08}s`,
+        distance: `${68 + (index % 4) * 16}px`
+      })),
+    []
+  );
   const activeTypedPhrase = LANDING_TYPED_PHRASES[typedPhraseIndex];
   const activeTypedLine = activeTypedPhrase[typedLineIndex] || '';
   const typedTitleLines = activeTypedPhrase.map((line, index) => {
@@ -51,10 +62,10 @@ export default function AuthPage({
   });
 
   useEffect(() => {
-    const typingDelay = isDeletingTitle ? 28 : 52;
-    const pauseBeforeNextLineMs = 220;
-    const pauseBeforeDeleteMs = 1700;
-    const pauseBeforeNextPhraseMs = 320;
+    const typingDelay = isDeletingTitle ? 42 : 82;
+    const pauseBeforeNextLineMs = 360;
+    const pauseBeforeDeleteMs = 4000;
+    const pauseBeforeNextPhraseMs = 520;
 
     const timerId = window.setTimeout(() => {
       if (!isDeletingTitle) {
@@ -103,6 +114,7 @@ export default function AuthPage({
     event.preventDefault();
     const email = waitlistEmail.trim().toLowerCase();
     if (!email || !email.includes('@') || !email.includes('.')) {
+      setWaitlistStatus('error');
       setWaitlistMessage('Informe um e-mail valido.');
       return;
     }
@@ -112,7 +124,8 @@ export default function AuthPage({
       currentList.push(email);
       localStorage.setItem(key, JSON.stringify(currentList));
     }
-    setWaitlistMessage('E-mail cadastrado na lista de acesso antecipado.');
+    setWaitlistStatus('success');
+    setWaitlistMessage('Cadastro confirmado. Voce vai receber novidades da plataforma em breve.');
     setWaitlistEmail('');
   };
 
@@ -279,13 +292,45 @@ export default function AuthPage({
               <input
                 type="email"
                 value={waitlistEmail}
-                onChange={(event) => setWaitlistEmail(event.target.value)}
+                onChange={(event) => {
+                  setWaitlistEmail(event.target.value);
+                  if (waitlistStatus !== 'idle') {
+                    setWaitlistStatus('idle');
+                    setWaitlistMessage('');
+                  }
+                }}
                 placeholder="seu@email.com"
                 aria-label="Cadastrar e-mail na lista de espera"
               />
               <button type="submit">Entrar na lista</button>
             </form>
-            {waitlistMessage && <p className="landing-waitlist-msg">{waitlistMessage}</p>}
+            {waitlistStatus === 'success' ? (
+              <div className="landing-waitlist-celebration" role="status" aria-live="polite">
+                <div className="landing-waitlist-burst" aria-hidden="true">
+                  {successBursts.map((piece) => (
+                    <span
+                      key={piece.id}
+                      className="landing-waitlist-burst-piece"
+                      style={{
+                        '--burst-angle': piece.angle,
+                        '--burst-delay': piece.delay,
+                        '--burst-distance': piece.distance
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="landing-waitlist-celebration-core" aria-hidden="true">
+                  <span className="landing-waitlist-celebration-ring" />
+                  <span className="landing-waitlist-celebration-check">✓</span>
+                </div>
+                <div className="landing-waitlist-celebration-copy">
+                  <strong>Voce entrou para a plataforma.</strong>
+                  <p>{waitlistMessage}</p>
+                </div>
+              </div>
+            ) : waitlistMessage ? (
+              <p className="landing-waitlist-msg">{waitlistMessage}</p>
+            ) : null}
 
             <div className="landing-platforms" aria-hidden>
               <span className="landing-platform-item">
