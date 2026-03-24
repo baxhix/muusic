@@ -539,7 +539,7 @@
   bottom: 18px;
   z-index: 2;
   display: grid;
-  gap: 8px;
+  gap: 16px;
 }
 
 .artist-detail-copy h3 {
@@ -623,6 +623,9 @@
 .artist-detail-tabs .feed-tab {
   padding-bottom: 18px;
   align-self: end;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .artist-detail-tabs .feed-tab.active {
@@ -631,6 +634,8 @@
 
 .artist-detail-tabs .feed-tab.active::after {
   background: #ffffff;
+  transform-origin: center;
+  animation: artistActiveTabUnderline 260ms ease-out;
 }
 
 .artist-detail-search-btn {
@@ -708,7 +713,7 @@
 .artist-single-row,
 .artist-show-row {
   display: grid;
-  align-items: center;
+  align-items: start;
   gap: 14px;
 }
 
@@ -760,6 +765,7 @@
 
 .artist-show-row {
   grid-template-columns: 118px minmax(0, 1fr) auto;
+  column-gap: 8px;
   padding: 18px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -784,6 +790,7 @@
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
+  align-self: start;
 }
 
 .artist-tracks-panel {
@@ -823,7 +830,7 @@
   width: 44px;
   height: 44px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.75);
   display: grid;
@@ -865,6 +872,17 @@
 .artist-track-listeners i::before,
 .artist-track-listeners i::after {
   content: '';
+}
+
+@keyframes artistActiveTabUnderline {
+  0% {
+    transform: scaleX(0.72);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
 }
 
 @keyframes artistListeningBars {
