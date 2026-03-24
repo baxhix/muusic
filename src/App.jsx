@@ -76,8 +76,21 @@ function slugifyArtist(value) {
 function buildArtistSections(name) {
   const safeName = name || 'Artista';
   const baseKey = slugifyArtist(safeName);
+  const isAnaCastela = baseKey === 'ana-castela';
   return {
     albums: [
+      ...(isAnaCastela
+        ? [
+            {
+              id: `${baseKey}-album-embed`,
+              title: 'Lets Go Rodeo',
+              subtitle: 'Spotify embed',
+              meta: '2025',
+              image: 'https://picsum.photos/seed/artist-album-2/520/520',
+              embedUrl: 'https://open.spotify.com/embed/album/4NqeEHz29Ime2EZV8AUHkh?utm_source=generator'
+            }
+          ]
+        : []),
       { id: `${baseKey}-album-1`, title: 'Herança Boiadeira Rodeio (Ao Vivo)', subtitle: 'Último lançamento', meta: '2025', image: 'https://picsum.photos/seed/artist-album-1/520/520' },
       { id: `${baseKey}-album-2`, title: 'Lets Go Rodeo', subtitle: 'Álbum', meta: '2025', image: 'https://picsum.photos/seed/artist-album-2/520/520' },
       { id: `${baseKey}-album-3`, title: 'Boiadeira Internacional', subtitle: 'Ao vivo', meta: '2024', image: 'https://picsum.photos/seed/artist-album-3/520/520' },

@@ -174,6 +174,19 @@ export default function RealFeedLite({
         longitude: -43.364,
         startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
         thumbUrl: 'https://picsum.photos/seed/fallback-show-2/112/112'
+      },
+      {
+        id: 'fallback-show-3',
+        artist: 'Ana Castela',
+        venue: 'Rio Expo Music',
+        city: 'São José do Rio Pardo',
+        country: 'Brasil',
+        address: 'Parque de Exposições - São José do Rio Pardo',
+        description: 'Show especial com repertório da era Lets Go Rodeo.',
+        latitude: -21.596,
+        longitude: -46.888,
+        startsAt: new Date(Date.now() + 10 * 86400000).toISOString(),
+        thumbUrl: 'https://picsum.photos/seed/ana-castela-fallback-show/112/112'
       }
     ],
     []
@@ -676,12 +689,30 @@ export default function RealFeedLite({
                 {artistDetailTab === 'albums' &&
                   artistItems.map((item) => (
                     <article key={item.id} className="artist-detail-item">
-                      <img src={item.image} alt={item.title} className="artist-detail-item-cover" />
-                      <div className="artist-detail-item-copy">
-                        <h4>{item.title}</h4>
-                        <p className="artist-detail-item-subtitle">{item.subtitle}</p>
-                        <p className="artist-detail-item-meta">{item.meta}</p>
-                      </div>
+                      {item.embedUrl ? (
+                        <div className="artist-album-embed-wrap">
+                          <iframe
+                            data-testid="spotify-embed-iframe"
+                            title={`Spotify embed ${item.title}`}
+                            src={item.embedUrl}
+                            width="100%"
+                            height="352"
+                            frameBorder="0"
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy"
+                            className="artist-album-embed"
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <img src={item.image} alt={item.title} className="artist-detail-item-cover" />
+                          <div className="artist-detail-item-copy">
+                            <h4>{item.title}</h4>
+                            <p className="artist-detail-item-subtitle">{item.subtitle}</p>
+                            <p className="artist-detail-item-meta">{item.meta}</p>
+                          </div>
+                        </>
+                      )}
                     </article>
                   ))}
 

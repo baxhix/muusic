@@ -669,6 +669,19 @@
   align-content: start;
 }
 
+.artist-album-embed-wrap {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.artist-album-embed {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .artist-detail-item-cover {
   width: 100%;
   aspect-ratio: 1 / 1;
