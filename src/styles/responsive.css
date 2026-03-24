@@ -110,8 +110,57 @@
     padding: 100px 0 134px;
   }
 
+  .landing-main-success {
+    padding: 94px 0 28px;
+  }
+
   .landing-main-inner {
     gap: 11px;
+  }
+
+  .landing-success-shell {
+    min-height: calc(100dvh - 122px);
+  }
+
+  .landing-success-stage {
+    min-height: calc(100dvh - 136px);
+    padding: 46px 18px 28px;
+    border-radius: 24px;
+  }
+
+  .landing-success-core {
+    width: 154px;
+    height: 154px;
+    margin-bottom: 10px;
+  }
+
+  .landing-success-ring-outer {
+    width: 154px;
+    height: 154px;
+  }
+
+  .landing-success-ring-inner {
+    width: 112px;
+    height: 112px;
+  }
+
+  .landing-success-check {
+    width: 72px;
+    height: 72px;
+    font-size: 34px;
+  }
+
+  .landing-success-copy h1 {
+    font-size: clamp(34px, 12vw, 54px);
+  }
+
+  .landing-success-copy p {
+    font-size: 16px;
+  }
+
+  .landing-success-reset {
+    width: 100%;
+    max-width: 320px;
   }
 
   .landing-title {

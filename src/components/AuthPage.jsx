@@ -52,6 +52,18 @@ export default function AuthPage({
       })),
     []
   );
+  const successConfetti = useMemo(
+    () =>
+      Array.from({ length: 32 }, (_, index) => ({
+        id: index,
+        left: `${4 + ((index * 9.2) % 92)}%`,
+        delay: `${(index % 8) * 0.18}s`,
+        duration: `${4.6 + (index % 5) * 0.45}s`,
+        rotate: `${(index % 2 === 0 ? 1 : -1) * (16 + (index % 7) * 8)}deg`,
+        colorClass: `is-tone-${(index % 4) + 1}`
+      })),
+    []
+  );
   const activeTypedPhrase = LANDING_TYPED_PHRASES[typedPhraseIndex];
   const activeTypedLine = activeTypedPhrase[typedLineIndex] || '';
   const typedTitleLines = activeTypedPhrase.map((line, index) => {
@@ -232,6 +244,66 @@ export default function AuthPage({
     </form>
   );
 
+  const waitlistSuccessView = (
+    <main className="landing-main landing-main-success">
+      <div className="landing-shell landing-success-shell">
+        <div className="landing-success-stage" role="status" aria-live="polite">
+          <div className="landing-success-confetti" aria-hidden="true">
+            {successConfetti.map((piece) => (
+              <span
+                key={piece.id}
+                className={`landing-success-confetti-piece ${piece.colorClass}`}
+                style={{
+                  left: piece.left,
+                  animationDelay: piece.delay,
+                  animationDuration: piece.duration,
+                  '--confetti-rotate': piece.rotate
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="landing-success-burst" aria-hidden="true">
+            {successBursts.map((piece) => (
+              <span
+                key={piece.id}
+                className="landing-success-burst-piece"
+                style={{
+                  '--burst-angle': piece.angle,
+                  '--burst-delay': piece.delay,
+                  '--burst-distance': piece.distance
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="landing-success-core" aria-hidden="true">
+            <span className="landing-success-ring landing-success-ring-outer" />
+            <span className="landing-success-ring landing-success-ring-inner" />
+            <span className="landing-success-check">✓</span>
+          </div>
+
+          <div className="landing-success-copy">
+            <p className="landing-success-kicker">Cadastro confirmado</p>
+            <h1>Você entrou para a plataforma.</h1>
+            <p>{waitlistMessage}</p>
+          </div>
+
+          <button
+            type="button"
+            className="landing-success-reset"
+            onClick={() => {
+              setWaitlistStatus('idle');
+              setWaitlistMessage('');
+            }}
+          >
+            Cadastrar outro e-mail
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+
   if (simpleAccess) {
     return (
       <div className="landing-page">
@@ -260,6 +332,7 @@ export default function AuthPage({
           </div>
         </header>
 
+        {waitlistStatus === 'success' ? waitlistSuccessView : (
         <main className="landing-main">
           <div className="landing-shell landing-main-inner">
             <h1 className="landing-title">
@@ -325,31 +398,36 @@ export default function AuthPage({
             ) : null}
           </div>
         </main>
+        )}
 
-        <section id="login" className="landing-auth-section">
-          <div className="landing-shell landing-auth-inner">{authFormCard}</div>
-        </section>
+        {waitlistStatus !== 'success' ? (
+          <>
+            <section id="login" className="landing-auth-section">
+              <div className="landing-shell landing-auth-inner">{authFormCard}</div>
+            </section>
 
-        <footer className="landing-footer">
-          <div className="landing-shell landing-footer-inner">
-            <div className="landing-footer-left">
-              <button type="button">
-                Blog
-              </button>
-            </div>
-            <p className="landing-footer-center">© 2026 Muusic. Todos os direitos reservados.</p>
-            <div className="landing-footer-right">
-              <button type="button" aria-label="Instagram">
-                <Instagram size={16} />
-              </button>
-              <button type="button" aria-label="Spotify">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-                  <path d="M12 1.6a10.4 10.4 0 1 0 10.4 10.4A10.41 10.41 0 0 0 12 1.6Zm4.77 14.95a.65.65 0 0 1-.9.22 9.87 9.87 0 0 0-8.15-.87.65.65 0 1 1-.39-1.24 11.16 11.16 0 0 1 9.27.98.65.65 0 0 1 .17.91Zm1.27-2.8a.8.8 0 0 1-1.09.27 12.18 12.18 0 0 0-10.09-1.05.8.8 0 1 1-.49-1.52 13.77 13.77 0 0 1 11.43 1.2.8.8 0 0 1 .24 1.1Zm.1-2.94A14.54 14.54 0 0 0 6.32 9.6a.95.95 0 1 1-.57-1.81 16.44 16.44 0 0 1 13.37 1.35.95.95 0 1 1-.98 1.67Z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </footer>
+            <footer className="landing-footer">
+              <div className="landing-shell landing-footer-inner">
+                <div className="landing-footer-left">
+                  <button type="button">
+                    Blog
+                  </button>
+                </div>
+                <p className="landing-footer-center">© 2026 Muusic. Todos os direitos reservados.</p>
+                <div className="landing-footer-right">
+                  <button type="button" aria-label="Instagram">
+                    <Instagram size={16} />
+                  </button>
+                  <button type="button" aria-label="Spotify">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                      <path d="M12 1.6a10.4 10.4 0 1 0 10.4 10.4A10.41 10.41 0 0 0 12 1.6Zm4.77 14.95a.65.65 0 0 1-.9.22 9.87 9.87 0 0 0-8.15-.87.65.65 0 1 1-.39-1.24 11.16 11.16 0 0 1 9.27.98.65.65 0 0 1 .17.91Zm1.27-2.8a.8.8 0 0 1-1.09.27 12.18 12.18 0 0 0-10.09-1.05.8.8 0 1 1-.49-1.52 13.77 13.77 0 0 1 11.43 1.2.8.8 0 0 1 .24 1.1Zm.1-2.94A14.54 14.54 0 0 0 6.32 9.6a.95.95 0 1 1-.57-1.81 16.44 16.44 0 0 1 13.37 1.35.95.95 0 1 1-.98 1.67Z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </footer>
+          </>
+        ) : null}
       </div>
     );
   }
