@@ -536,10 +536,10 @@
   position: absolute;
   left: 38px;
   right: 38px;
-  bottom: 34px;
+  bottom: 18px;
   z-index: 2;
   display: grid;
-  gap: 14px;
+  gap: 8px;
 }
 
 .artist-detail-copy h3 {
@@ -554,7 +554,7 @@
 .artist-detail-listener-row {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .artist-detail-listener-row p {
@@ -575,13 +575,13 @@
 .artist-detail-listeners-avatars {
   display: flex;
   align-items: center;
-  padding-left: 10px;
+  padding-left: 8px;
 }
 
 .artist-detail-listeners-avatars span {
-  width: 28px;
-  height: 28px;
-  margin-left: -10px;
+  width: 20px;
+  height: 20px;
+  margin-left: -8px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background-size: cover;
