@@ -106,13 +106,6 @@
     width: 34px;
   }
 
-  .landing-login-btn {
-    min-width: 88px;
-    min-height: 36px;
-    font-size: 15px;
-    gap: 6px;
-  }
-
   .landing-main {
     padding: 100px 0 134px;
   }
@@ -148,17 +141,6 @@
 
   .landing-waitlist-msg {
     width: calc(100vw - 24px);
-  }
-
-  .landing-platforms {
-    width: calc(100vw - 24px);
-    margin-top: 32px;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
-
-  .landing-platform-item {
-    font-size: 20px;
   }
 
   .landing-footer {
