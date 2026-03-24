@@ -754,7 +754,7 @@ export default function RealFeedLite({
               <div className="artist-detail-grid">
                 {artistDetailTab === 'albums' &&
                   artistItems.map((item) => (
-                    <article key={item.id} className="artist-detail-item">
+                    <article key={item.id} className={item.embedUrl ? 'artist-detail-item artist-detail-item-embed' : 'artist-detail-item'}>
                       {item.embedUrl ? (
                         <div className="artist-album-embed-wrap">
                           <iframe

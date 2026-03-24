@@ -669,8 +669,12 @@
   align-content: start;
 }
 
-.artist-album-embed-wrap {
+.artist-detail-item-embed {
   grid-column: 1 / -1;
+  gap: 0;
+}
+
+.artist-album-embed-wrap {
   width: 100%;
 }
 
