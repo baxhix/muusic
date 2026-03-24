@@ -836,12 +836,16 @@ export default function RealFeedLite({
                         <div className="artist-tracks-list">
                           {artistTracksState.status === 'loading' && <p className="artist-tracks-loading">Carregando faixas do Spotify...</p>}
 
-                          {tracksToRender.map((track) =>
-                            track.spotifyUrl ? (
+                          {tracksToRender.map((track) => {
+                            const trackLink =
+                              track.spotifyUrl ||
+                              `https://open.spotify.com/search/${encodeURIComponent(`${track.title || ''} ${track.subtitle || track.artists || ''}`.trim())}`;
+
+                            return (
                               <a
                                 key={track.id}
                                 className="artist-track-row artist-track-link-row"
-                                href={track.spotifyUrl}
+                                href={trackLink}
                                 target="_blank"
                                 rel="noreferrer"
                               >
@@ -860,24 +864,8 @@ export default function RealFeedLite({
                                   <span className="artist-track-duration">{track.duration}</span>
                                 </div>
                               </a>
-                            ) : (
-                            <div key={track.id} className="artist-track-row">
-                              <span className={track.active ? 'artist-track-play active' : 'artist-track-play'} aria-hidden="true">
-                                <Play size={16} fill="currentColor" />
-                              </span>
-                              <div className="artist-track-copy">
-                                <h5>{track.title}</h5>
-                                <p>{track.subtitle || track.artists}</p>
-                              </div>
-                              <div className="artist-track-metrics">
-                                <span className="artist-track-listeners">
-                                  <i />
-                                  {track.listeners || 'Spotify'}
-                                </span>
-                                <span className="artist-track-duration">{track.duration}</span>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </article>
                     );
