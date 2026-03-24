@@ -40,7 +40,17 @@ export function sanitizeUserResponse(user) {
     id: user.id,
     name: user.name || user.displayName || user.username || 'Usuario',
     email: user.email,
-    role: sanitizeRole(user.role)
+    role: sanitizeRole(user.role),
+    avatarUrl: user.avatarUrl || null,
+    musicProvider: user.musicProvider || null,
+    onboardingMusicCompleted: Boolean(user.onboardingMusicCompleted),
+    lastfm: user.lastfmUsername
+      ? {
+          username: user.lastfmUsername,
+          connectedAt: user.lastfmConnectedAt || null,
+          profileUrl: `https://www.last.fm/user/${encodeURIComponent(user.lastfmUsername)}`
+        }
+      : null
   };
 }
 
