@@ -3157,29 +3157,6 @@
   line-height: 1.5;
 }
 
-.account-history-recent {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.account-history-recent span {
-  color: #92a0b5;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.account-history-recent strong {
-  color: #eef2f8;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .account-history-list {
   display: grid;
   gap: 12px;

@@ -58,7 +58,6 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
   const tabRefs = useRef([]);
   const cardRef = useRef(null);
   const musicHistory = Array.isArray(authUser?.musicHistory) ? authUser.musicHistory : [];
-  const recentTracks = Array.isArray(authUser?.recentTracks) ? authUser.recentTracks : [];
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -406,12 +405,6 @@ export default function MyAccountPage({ authUser, onBack, onSettingsChange, onLo
                 <h3>Histórico musical</h3>
                 <p>Essas são as músicas detectadas e salvas pelo Muusic na sua conta.</p>
               </div>
-              {recentTracks.length ? (
-                <div className="account-history-recent">
-                  <span>Recentes</span>
-                  <strong>{recentTracks.join(' • ')}</strong>
-                </div>
-              ) : null}
             </div>
 
             {!showMusicHistory ? (
