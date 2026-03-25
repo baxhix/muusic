@@ -1,6 +1,6 @@
 import { Card, CardContent } from './Card';
 
-export default function KpiCard({ label, value, align = 'center' }) {
+export default function KpiCard({ label, value, hint = '', align = 'center' }) {
   const isLeft = align === 'left';
 
   return (
@@ -9,6 +9,7 @@ export default function KpiCard({ label, value, align = 'center' }) {
         <div className={isLeft ? 'text-left' : 'text-center'}>
           <span className="block text-4xl font-semibold tracking-tight text-white">{value}</span>
           <p className="mt-4 text-sm text-muted-foreground">{label}</p>
+          {hint ? <p className="mt-2 text-xs text-muted-foreground/80">{hint}</p> : null}
         </div>
       </CardContent>
     </Card>

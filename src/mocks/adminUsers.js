@@ -15,10 +15,25 @@ export const mockUsers = [
 export const DEFAULT_USERS_PAGE_SIZE = 8;
 
 export function calculateUsersKpis(users) {
+  const topMusicUser = users.reduce(
+    (best, user) => {
+      const count = Number(user?.music?.historyCount || 0);
+      if (count > best.count) {
+        return {
+          name: user.name || user.email || 'Usuario',
+          count
+        };
+      }
+      return best;
+    },
+    { name: 'Sem dados', count: 0 }
+  );
+
   return {
     total: users.length,
     admins: users.filter((user) => user.role === 'ADMIN').length,
-    standard: users.filter((user) => user.role !== 'ADMIN').length
+    standard: users.filter((user) => user.role !== 'ADMIN').length,
+    topMusicUser
   };
 }
 

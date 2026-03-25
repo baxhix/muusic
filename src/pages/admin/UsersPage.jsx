@@ -66,7 +66,7 @@ export default function UsersPage({ apiFetch }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [source, setSource] = useState('mock');
-  const [kpis, setKpis] = useState({ total: 0, admins: 0, standard: 0 });
+  const [kpis, setKpis] = useState({ total: 0, admins: 0, standard: 0, topMusicUser: { name: 'Sem dados', count: 0 } });
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -126,10 +126,16 @@ export default function UsersPage({ apiFetch }) {
         subtitle="Gestao de acesso administrativo e cadastro de contas"
       />
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-4">
         <KpiCard icon={Users} label="Total de usuarios" value={kpis.total} />
         <KpiCard icon={Shield} label="Administradores" value={kpis.admins} />
         <KpiCard icon={UserCircle2} label="Usuarios padrao" value={kpis.standard} />
+        <KpiCard
+          label="Maior volume de reproducoes"
+          value={kpis.topMusicUser?.count || 0}
+          hint={kpis.topMusicUser?.name || 'Sem dados'}
+          align="left"
+        />
       </section>
 
       <Card>
