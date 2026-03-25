@@ -1,7 +1,7 @@
 export const USER_ROLE_OPTIONS = [
   { value: 'all', label: 'Todos os perfis' },
   { value: 'ADMIN', label: 'Admin' },
-  { value: 'USER', label: 'Usuario' }
+  { value: 'USER', label: 'Usuário' }
 ];
 
 export const mockUsers = [
@@ -37,7 +37,7 @@ export function calculateUsersKpis(users) {
       const count = Number(user?.music?.historyCount || 0);
       if (count > best.count) {
         return {
-          name: user.name || user.email || 'Usuario',
+          name: user.name || user.email || 'Usuário',
           count
         };
       }
@@ -89,7 +89,7 @@ export function queryUsers({ users, search = '', role = 'all', page = 1, pageSiz
 export async function fetchUsersMock({ users = mockUsers, search, role, page, pageSize, shouldFail = false }) {
   await new Promise((resolve) => setTimeout(resolve, 360));
   if (shouldFail) {
-    throw new Error('Nao foi possivel carregar usuarios.');
+    throw new Error('Não foi possível carregar usuários.');
   }
 
   return {

@@ -21,7 +21,7 @@ const navSections = [
     label: 'Management',
     items: [
       { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { key: 'usuarios', label: 'Usuarios', icon: Users },
+      { key: 'usuarios', label: 'Usuários', icon: Users },
       { key: 'shows', label: 'Shows', icon: CalendarDays },
       { key: 'trendings', label: 'Trendings', icon: BarChart3 },
       { key: 'moderacao', label: 'Moderação', icon: ShieldCheck },

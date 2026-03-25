@@ -150,7 +150,7 @@ export default function AdminApp() {
       <div className="dark grid min-h-screen place-items-center bg-background p-4 text-foreground">
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-sm">
           <h1 className="text-xl font-semibold">Painel Muusic</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Seu usuario nao possui permissao administrativa.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Seu usuário não possui permissão administrativa.</p>
           <Button className="mt-5" onClick={() => logout().catch(() => {})}>
             Sair
           </Button>
@@ -160,7 +160,7 @@ export default function AdminApp() {
   }
 
   const pageByNav = {
-    dashboard: <DashboardPage />,
+    dashboard: <DashboardPage apiFetch={adminFetch} />,
     usuarios: <UsersPage apiFetch={adminFetch} />,
     shows: <ShowsPage apiFetch={adminFetch} />,
     trendings: <TrendingsPage apiFetch={adminFetch} />,

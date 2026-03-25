@@ -176,7 +176,7 @@ function HistoryPanel({ music, musicHistory }) {
       <div className="mt-4 space-y-3">
         {musicHistory.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-            Nenhum historico musical salvo para este usuario.
+            Nenhum histórico musical salvo para este usuário.
           </div>
         ) : (
           musicHistory.map((entry) => (
@@ -270,12 +270,12 @@ export default function UsersPage({ apiFetch }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Usuarios" subtitle="Gestao de acesso administrativo, conexoes musicais e historico dos usuarios" />
+      <PageHeader title="Usuários" subtitle="Gestão de acesso administrativo, conexões musicais e histórico dos usuários" />
 
       <section className="grid gap-4 lg:grid-cols-4">
-        <KpiCard label="Total de usuarios" value={kpis.total} />
+        <KpiCard label="Total de usuários" value={kpis.total} />
         <KpiCard label="Administradores" value={kpis.admins} />
-        <KpiCard label="Usuarios padrao" value={kpis.standard} />
+        <KpiCard label="Usuários padrão" value={kpis.standard} />
         <KpiCard label="Maior volume de reproducoes" value={kpis.topMusicUser?.count || 0} hint={kpis.topMusicUser?.name || 'Sem dados'} align="left" />
       </section>
 
@@ -283,8 +283,8 @@ export default function UsersPage({ apiFetch }) {
         <CardHeader className="space-y-0 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-1">
-              <CardTitle className="text-2xl">Usuarios</CardTitle>
-              <p className="text-sm text-muted-foreground">Uma linha limpa por usuario e detalhes expandidos quando voce quiser investigar o historico musical.</p>
+              <CardTitle className="text-2xl">Usuários</CardTitle>
+              <p className="text-sm text-muted-foreground">Uma linha limpa por usuário e detalhes expandidos quando você quiser investigar o histórico musical.</p>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">{source === 'api' ? 'API' : 'Mock'}</Badge>
@@ -295,7 +295,7 @@ export default function UsersPage({ apiFetch }) {
 
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <SearchInput value={search} placeholder="Buscar por nome ou e-mail..." onChange={(event) => setSearch(event.target.value)} aria-label="Buscar usuarios" />
+            <SearchInput value={search} placeholder="Buscar por nome ou e-mail..." onChange={(event) => setSearch(event.target.value)} aria-label="Buscar usuários" />
             <Select ariaLabel="Filtrar por perfil" value={roleFilter} onValueChange={setRoleFilter} options={USER_ROLE_OPTIONS} />
             <Button variant="secondary" className="md:ml-auto" onClick={() => exportUsersCsv(items)}>
               <Download className="h-4 w-4" />
@@ -313,8 +313,8 @@ export default function UsersPage({ apiFetch }) {
             </div>
           ) : items.length === 0 ? (
             <EmptyState
-              title="Nenhum usuario encontrado"
-              description="Ajuste os filtros para encontrar usuarios cadastrados."
+              title="Nenhum usuário encontrado"
+              description="Ajuste os filtros para encontrar usuários cadastrados."
               actionLabel="Limpar filtros"
               onAction={() => {
                 setSearch('');
@@ -326,7 +326,7 @@ export default function UsersPage({ apiFetch }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Usuario</TableHead>
+                    <TableHead>Usuário</TableHead>
                     <TableHead>Status musical</TableHead>
                     <TableHead>Conexao</TableHead>
                     <TableHead className="text-right">Detalhes</TableHead>
@@ -345,7 +345,7 @@ export default function UsersPage({ apiFetch }) {
                           <TableCell>
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <div className="font-medium text-foreground">{user.name || 'Usuario'}</div>
+                                <div className="font-medium text-foreground">{user.name || 'Usuário'}</div>
                                 {isUserPlayingNow(user) ? (
                                   <span className="relative inline-flex h-2.5 w-2.5 shrink-0">
                                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />

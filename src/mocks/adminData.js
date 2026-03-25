@@ -1,7 +1,6 @@
 export const dashboardKpis = [
-  { key: 'usuarios', label: 'Usuarios Ativos', value: '4.820', delta: '+8.2%' },
-  { key: 'convites', label: 'Convites Enviados', value: '1.204', delta: '+5.1%' },
-  { key: 'conversao', label: 'Taxa de Conversao', value: '31.7%', delta: '+2.4%' }
+  { key: 'usuarios', label: 'Total de usuários', value: '4.820', delta: '+8.2%' },
+  { key: 'streaming', label: 'Usuários em streaming', value: '1.204', delta: '+5.1%' }
 ];
 
 export const originPerformance = [
