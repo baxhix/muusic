@@ -11,14 +11,17 @@ function bridgeRedisKey(userId) {
 }
 
 function buildApiBaseUrl(req, fallbackUrl = '') {
+  const fallback = String(fallbackUrl || '').replace(/\/+$/, '');
   const origin = String(req.headers.origin || '').trim();
   if (origin) return origin.replace(/\/+$/, '');
+
+  if (fallback) return fallback;
 
   const protoHeader = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
   const proto = protoHeader || req.protocol || 'https';
   const host = String(req.headers['x-forwarded-host'] || req.get('host') || '').trim();
   if (host) return `${proto}://${host}`;
-  return String(fallbackUrl || '').replace(/\/+$/, '');
+  return fallback;
 }
 
 function buildBookmarklet(apiBaseUrl, userId, bridgeKey) {
