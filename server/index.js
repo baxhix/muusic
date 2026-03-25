@@ -72,7 +72,12 @@ if (isProduction && (!configuredJwtSecret || configuredJwtSecret === 'change_me_
 }
 const JWT_SECRET = configuredJwtSecret || 'local-dev-secret';
 const nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 24);
-const allowedOrigins = new Set([...FRONTEND_URLS, 'http://localhost:5173', 'http://127.0.0.1:5173']);
+const allowedOrigins = new Set([
+  ...FRONTEND_URLS,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://open.spotify.com'
+]);
 const spotifyExchangeCodes = new Map();
 const SPOTIFY_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 const SOCKET_GEO_CELL_DEG = Math.max(1, Math.min(30, Number(process.env.SOCKET_GEO_CELL_DEG || 8)));
