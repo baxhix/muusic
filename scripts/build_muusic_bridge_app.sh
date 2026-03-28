@@ -85,9 +85,17 @@ if [[ -x "$NODE_BIN" ]]; then
   exec "$NODE_BIN" "$SCRIPT_PATH"
 fi
 
-if command -v node >/dev/null 2>&1; then
-  exec node "$SCRIPT_PATH"
-fi
+for candidate in \
+  "$(command -v node 2>/dev/null)" \
+  "/opt/homebrew/bin/node" \
+  "/usr/local/bin/node" \
+  "/opt/local/bin/node" \
+  "/Library/Frameworks/Node.framework/Versions/Current/bin/node"
+do
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    exec "$candidate" "$SCRIPT_PATH"
+  fi
+done
 
 osascript -e 'display dialog "Runtime do Muusic Bridge não encontrado dentro do app." buttons {"OK"} default button "OK" with icon caution'
 exit 1
