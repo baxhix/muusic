@@ -89,7 +89,7 @@ function getContentTypeMeta(contentType) {
 
 function EmptyPreview({ type }) {
   return (
-    <div className="grid h-[340px] place-items-center rounded-[12px] border border-dashed border-white/10 bg-black/30 text-sm text-slate-300">
+    <div className="grid h-[340px] place-items-center rounded-[12px] border border-dashed border-white/10 bg-black/20 text-sm text-slate-300">
       {type === 'video' ? 'Vídeo indisponível para preview.' : 'Imagem indisponível para preview.'}
     </div>
   );
@@ -103,7 +103,7 @@ function PreviewModal({ item, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
       <button type="button" className="admin-content-feed-overlay absolute inset-0" onClick={onClose} aria-label="Fechar preview" />
-      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/10 bg-slate-950 shadow-2xl">
+      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Preview do conteúdo</p>
@@ -117,7 +117,7 @@ function PreviewModal({ item, onClose }) {
               </span>
             </div>
           </div>
-          <Button type="button" variant="outline" className="border-white/15 text-white hover:bg-white/10" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Fechar
           </Button>
         </div>
@@ -285,7 +285,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
       <PageHeader
         title={draft.id ? 'Editar conteúdo' : 'Novo conteúdo'}
         actions={
-          <Button variant="outline" className="border-white/15 text-white hover:bg-white/10" onClick={onBack}>
+          <Button variant="outline" onClick={onBack}>
             Voltar para o feed
           </Button>
         }
@@ -299,7 +299,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
         <span>{draft.id ? 'Editar conteúdo' : 'Novo conteúdo'}</span>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="border-white/10 bg-slate-950 text-white">
           <CardContent className="space-y-8 pt-6">
             <section className="space-y-4">
@@ -308,7 +308,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
 
             <section className="admin-content-editor-section">
               <div className="admin-content-editor-section-head">
-                <h3 className="text-lg font-semibold text-white">Informações básicas</h3>
+                <h3 className="text-[18px] font-semibold leading-[26px] text-white">Informações básicas</h3>
               </div>
 
               <div className="grid gap-4">
@@ -335,7 +335,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
             <section className="admin-content-editor-section">
               <div className="admin-content-editor-section-head">
                 <div>
-                  <h3 className="mt-2 text-lg font-semibold text-white">{typeMeta.label}</h3>
+                  <h3 className="mt-2 text-[18px] font-semibold leading-[26px] text-white">{typeMeta.label}</h3>
                 </div>
               </div>
 
@@ -404,7 +404,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
             <CardContent className="space-y-5 pt-6">
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Resumo da publicação</p>
-                <h3 className="mt-2 text-lg font-semibold text-white">{draft.title || 'Novo conteúdo'}</h3>
+                <h3 className="mt-2 text-[18px] font-semibold leading-[26px] text-white">{draft.title || 'Novo conteúdo'}</h3>
                 <p className="mt-1 text-sm text-slate-400">{typeMeta.label}</p>
               </div>
 
@@ -467,7 +467,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full border-white/15 text-white hover:bg-white/10"
+                  className="w-full"
                   onClick={() => onSubmit('inactive')}
                 >
                   Salvar como rascunho
@@ -475,12 +475,12 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full border-white/15 text-white hover:bg-white/10"
+                  className="w-full"
                   onClick={() => onSubmit('scheduled')}
                 >
                   Agendar
                 </Button>
-                <Button type="button" className="w-full bg-sky-500 text-slate-950 hover:bg-sky-400" onClick={() => onSubmit('published')}>
+                <Button type="button" className="w-full" onClick={() => onSubmit('published')}>
                   Publicar agora
                 </Button>
               </div>
@@ -596,7 +596,7 @@ export default function ContentFeedPage() {
         title="Gestão de Conteúdo"
         subtitle="Operação editorial do time de marketing para o que aparece na plataforma."
         actions={
-          <Button className="bg-sky-500 text-slate-950 hover:bg-sky-400" onClick={openNewPage}>
+          <Button className="admin-cta-new" onClick={openNewPage}>
             <Plus className="h-4 w-4" />
             Adicionar novo
           </Button>
