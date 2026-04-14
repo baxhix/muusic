@@ -192,7 +192,7 @@ function makeInitialDraft() {
 
 function ContentTypeSelector({ value, onSelect }) {
   return (
-    <div className="flex flex-wrap justify-center gap-3">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {CONTENT_TYPES.map((option) => {
         const Icon = option.icon;
         const selected = option.value === value;
@@ -204,11 +204,11 @@ function ContentTypeSelector({ value, onSelect }) {
             onClick={() => onSelect(option.value)}
             className={`admin-content-type-option ${selected ? 'is-selected' : ''}`}
           >
-            <div className="flex flex-col items-center gap-4 text-center">
+            <div className="flex items-start gap-4 text-left">
               <div className={`admin-content-type-icon ${selected ? 'is-selected' : ''}`}>
                 <Icon className="h-4 w-4" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-white">{option.label}</p>
               </div>
             </div>
