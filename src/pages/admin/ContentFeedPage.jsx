@@ -173,6 +173,7 @@ function makeInitialDraft() {
   return {
     id: '',
     title: '',
+    description: '',
     creatorName: '',
     contentType: 'simple_image',
     type: 'image',
@@ -181,7 +182,7 @@ function makeInitialDraft() {
     mediaGallery: '',
     audioUrl: '',
     question: '',
-    pollOptions: 'Opção 1\nOpção 2',
+    pollOptions: ['Opção 1', 'Opção 2', '', ''],
     status: 'scheduled',
     publishedAt: '',
     likes: 0,
@@ -191,7 +192,7 @@ function makeInitialDraft() {
 
 function ContentTypeSelector({ value, onSelect }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="flex flex-wrap justify-center gap-3">
       {CONTENT_TYPES.map((option) => {
         const Icon = option.icon;
         const selected = option.value === value;
@@ -201,16 +202,14 @@ function ContentTypeSelector({ value, onSelect }) {
             key={option.value}
             type="button"
             onClick={() => onSelect(option.value)}
-            className={`admin-content-type-option text-left ${selected ? 'is-selected' : ''}`}
+            className={`admin-content-type-option ${selected ? 'is-selected' : ''}`}
           >
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col items-center gap-4 text-center">
               <div className={`admin-content-type-icon ${selected ? 'is-selected' : ''}`}>
                 <Icon className="h-4 w-4" />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-white">{option.label}</p>
-                </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-white">{option.label}</p>
               </div>
             </div>
           </button>
@@ -245,6 +244,27 @@ function MockUploadField({ label, helper, multiple = false }) {
   );
 }
 
+function PollOptionsFields({ values, onChange }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {[0, 1, 2, 3].map((index) => (
+        <EditorField key={index} label={`Opção ${index + 1}`}>
+          <input
+            className="admin-content-editor-input"
+            value={values[index] || ''}
+            onChange={(event) => {
+              const nextValues = [...values];
+              nextValues[index] = event.target.value;
+              onChange(nextValues);
+            }}
+            placeholder={`Digite a opção ${index + 1}`}
+          />
+        </EditorField>
+      ))}
+    </div>
+  );
+}
+
 function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
   const typeMeta = getContentTypeMeta(draft.contentType);
   const isPoll = draft.contentType === 'poll';
@@ -252,23 +272,18 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
   const isMultiMedia =
     draft.contentType === 'simple_image' || draft.contentType === 'photo_album' || draft.contentType === 'ana_stories';
   const previewMedia =
-    draft.thumbnail ||
     draft.mediaUrl ||
     draft.audioUrl ||
     draft.mediaGallery.split('\n').map((item) => item.trim()).find(Boolean) ||
     '';
   const previewKind =
     draft.contentType === 'ana_stories' || draft.contentType === 'tiktok_video' ? 'Vídeo' : draft.contentType === 'ana_audio' ? 'Áudio' : 'Imagem';
-  const pollOptions = draft.pollOptions
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const pollOptions = draft.pollOptions.map((item) => item.trim()).filter(Boolean);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={draft.id ? 'Editar conteúdo' : 'Novo conteúdo'}
-        subtitle="Escolha o formato e complete o restante dos campos abaixo."
         actions={
           <Button variant="outline" className="border-white/15 text-white hover:bg-white/10" onClick={onBack}>
             Voltar para o feed
@@ -296,7 +311,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                 <h3 className="text-lg font-semibold text-white">Informações básicas</h3>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4">
                 <EditorField label="Título">
                   <input
                     className="admin-content-editor-input"
@@ -306,7 +321,14 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                   />
                 </EditorField>
 
-                <MockUploadField label="Imagem de capa" helper="Mockup de upload. O envio real será implementado depois." />
+                <EditorField label="Descrição">
+                  <textarea
+                    className="admin-content-editor-input admin-content-editor-textarea admin-content-editor-textarea-compact"
+                    value={draft.description}
+                    onChange={(event) => onChange('description', event.target.value)}
+                    placeholder="Descreva o contexto e a mensagem principal da publicação."
+                  />
+                </EditorField>
               </div>
             </section>
 
@@ -338,14 +360,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                 ) : null}
 
                 {isAudio ? (
-                  <EditorField label="Link do áudio da Ana">
-                    <input
-                      className="admin-content-editor-input"
-                      value={draft.audioUrl}
-                      onChange={(event) => onChange('audioUrl', event.target.value)}
-                      placeholder="https://..."
-                    />
-                  </EditorField>
+                  <MockUploadField label="Upload do áudio" helper="Mockup de upload de áudio." />
                 ) : null}
 
                 {isPoll ? (
@@ -359,18 +374,13 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                       />
                     </EditorField>
 
-                    <EditorField label="Opções da enquete">
-                      <textarea
-                        className="admin-content-editor-input admin-content-editor-textarea"
-                        value={draft.pollOptions}
-                        onChange={(event) => onChange('pollOptions', event.target.value)}
-                        placeholder={'Opção 1\nOpção 2\nOpção 3'}
-                      />
-                    </EditorField>
+                    <div className="md:col-span-2">
+                      <PollOptionsFields values={draft.pollOptions} onChange={(nextValues) => onChange('pollOptions', nextValues)} />
+                    </div>
 
-                    <EditorField label="Imagem opcional da enquete">
+                    <div className="md:col-span-2">
                       <MockUploadField label="Imagem opcional da enquete" helper="Mockup de upload." />
-                    </EditorField>
+                    </div>
                   </>
                 ) : null}
 
@@ -429,7 +439,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                       <div>
                         <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Áudio da Ana</p>
                         <h4 className="mt-2 text-base font-semibold text-white">{draft.title || 'Novo áudio'}</h4>
-                        <p className="mt-1 text-sm text-slate-400">{draft.audioUrl ? 'Arquivo pronto para publicação.' : 'Adicione o link do áudio para visualizar este bloco.'}</p>
+                        <p className="mt-1 text-sm text-slate-400">{draft.description || 'Adicione uma descrição para contextualizar o áudio.'}</p>
                       </div>
                       <div className="admin-content-preview-audio-bar">
                         <span className="admin-content-preview-audio-progress" />
@@ -438,7 +448,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                   </div>
                 ) : previewMedia ? (
                   <div className="relative aspect-[4/3]">
-                    <img src={draft.thumbnail || previewMedia} alt={draft.title || 'Preview'} className="h-full w-full object-cover" />
+                    <img src={previewMedia} alt={draft.title || 'Preview'} className="h-full w-full object-cover" />
                     <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent px-4 pb-3 pt-8">
                       <span className="admin-content-feed-type-pill inline-flex items-center px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em]">
                         {previewKind}
@@ -490,7 +500,7 @@ function normalizeDraftForSave(draft, nextStatus) {
         ? draft.mediaUrl
         : draft.contentType === 'simple_image'
           ? draft.mediaUrl
-          : draft.mediaUrl || draft.thumbnail;
+          : draft.mediaUrl || '';
 
   const contentType = draft.contentType;
   const isVideoType = contentType === 'ana_stories' || contentType === 'tiktok_video';
@@ -500,7 +510,7 @@ function normalizeDraftForSave(draft, nextStatus) {
     id: draft.id || `feed-${Date.now()}`,
     status: nextStatus,
     type: isVideoType ? 'video' : 'image',
-    mediaUrl: mediaUrl || draft.thumbnail || '',
+    mediaUrl: mediaUrl || '',
     publishedAt: draft.publishedAt ? new Date(draft.publishedAt).toISOString() : new Date().toISOString(),
     likes: Number(draft.likes || 0),
     reach: Number(draft.reach || 0)
@@ -537,8 +547,9 @@ export default function ContentFeedPage() {
       likes: Number(item.likes || 0),
       reach: Number(item.reach || 0),
       contentType: item.contentType || 'simple_image',
+      description: item.description || '',
       mediaGallery: item.mediaGallery || '',
-      pollOptions: item.pollOptions || 'Opção 1\nOpção 2',
+      pollOptions: Array.isArray(item.pollOptions) ? item.pollOptions : ['Opção 1', 'Opção 2', '', ''],
       question: item.question || '',
       audioUrl: item.audioUrl || ''
     });
