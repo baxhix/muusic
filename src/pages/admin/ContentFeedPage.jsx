@@ -209,12 +209,15 @@ function ContentTypeSelector({ value, onSelect }) {
             onClick={() => onSelect(option.value)}
             className={`admin-content-type-option text-left ${selected ? 'is-selected' : ''}`}
           >
-            <div className="flex items-start gap-3">
-              <div className="admin-content-type-icon">
+            <div className="flex items-start gap-4">
+              <div className={`admin-content-type-icon ${selected ? 'is-selected' : ''}`}>
                 <Icon className="h-4 w-4" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-white">{option.label}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-white">{option.label}</p>
+                  {selected ? <span className="admin-content-type-selected">Selecionado</span> : null}
+                </div>
                 <p className="mt-1 text-sm text-slate-400">{option.description}</p>
               </div>
             </div>
@@ -234,12 +237,24 @@ function EditorField({ label, children }) {
   );
 }
 
-function ContentEditorPage({ draft, onChange, onBack, onSubmit, submitMode }) {
+function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
   const typeMeta = getContentTypeMeta(draft.contentType);
   const isPoll = draft.contentType === 'poll';
   const isAudio = draft.contentType === 'ana_audio';
   const isMultiMedia =
     draft.contentType === 'simple_image' || draft.contentType === 'photo_album' || draft.contentType === 'ana_stories';
+  const previewMedia =
+    draft.thumbnail ||
+    draft.mediaUrl ||
+    draft.audioUrl ||
+    draft.mediaGallery.split('\n').map((item) => item.trim()).find(Boolean) ||
+    '';
+  const previewKind =
+    draft.contentType === 'ana_stories' || draft.contentType === 'tiktok_video' ? 'Vídeo' : draft.contentType === 'ana_audio' ? 'Áudio' : 'Imagem';
+  const pollOptions = draft.pollOptions
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean);
 
   return (
     <div className="space-y-6">
@@ -253,147 +268,107 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit, submitMode }) {
         }
       />
 
-      <Card className="border-white/10 bg-slate-950 text-white">
-        <CardContent className="space-y-8 pt-6">
-          <section className="space-y-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Tipo de conteúdo</p>
-              <h2 className="mt-2 text-lg font-semibold text-white">Escolha o formato da publicação</h2>
-            </div>
-            <ContentTypeSelector value={draft.contentType} onSelect={(nextType) => onChange('contentType', nextType)} />
-          </section>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <Card className="border-white/10 bg-slate-950 text-white">
+          <CardContent className="space-y-8 pt-6">
+            <section className="space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Tipo de conteúdo</p>
+                <h2 className="mt-2 text-lg font-semibold text-white">Escolha o formato da publicação</h2>
+              </div>
+              <ContentTypeSelector value={draft.contentType} onSelect={(nextType) => onChange('contentType', nextType)} />
+            </section>
 
-          <section className="grid gap-4 md:grid-cols-2">
-            <EditorField label="Título">
-              <input
-                className="admin-content-editor-input"
-                value={draft.title}
-                onChange={(event) => onChange('title', event.target.value)}
-                placeholder="Ex: Highlights do fim de semana"
-              />
-            </EditorField>
+            <section className="admin-content-editor-section">
+              <div className="admin-content-editor-section-head">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Informações básicas</p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">Contexto editorial</h3>
+                </div>
+              </div>
 
-            <EditorField label="Criador">
-              <input
-                className="admin-content-editor-input"
-                value={draft.creatorName}
-                onChange={(event) => onChange('creatorName', event.target.value)}
-                placeholder="Nome da pessoa responsável"
-              />
-            </EditorField>
-
-            <EditorField label="Data da publicação">
-              <input
-                type="datetime-local"
-                className="admin-content-editor-input"
-                value={draft.publishedAt}
-                onChange={(event) => onChange('publishedAt', event.target.value)}
-              />
-            </EditorField>
-
-            <EditorField label="URL da miniatura">
-              <input
-                className="admin-content-editor-input"
-                value={draft.thumbnail}
-                onChange={(event) => onChange('thumbnail', event.target.value)}
-                placeholder="https://..."
-              />
-            </EditorField>
-
-            <EditorField label="Likes iniciais">
-              <input
-                type="number"
-                min="0"
-                className="admin-content-editor-input"
-                value={draft.likes}
-                onChange={(event) => onChange('likes', event.target.value)}
-              />
-            </EditorField>
-
-            <EditorField label="Alcance inicial">
-              <input
-                type="number"
-                min="0"
-                className="admin-content-editor-input"
-                value={draft.reach}
-                onChange={(event) => onChange('reach', event.target.value)}
-              />
-            </EditorField>
-          </section>
-
-          <section className="space-y-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Campos do formato selecionado</p>
-              <h3 className="mt-2 text-lg font-semibold text-white">{typeMeta.label}</h3>
-              <p className="mt-1 text-sm text-slate-400">{typeMeta.description}</p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {isMultiMedia ? (
-                <EditorField label={typeMeta.mediaHint}>
-                  <textarea
-                    className="admin-content-editor-input admin-content-editor-textarea"
-                    value={draft.mediaGallery}
-                    onChange={(event) => onChange('mediaGallery', event.target.value)}
-                    placeholder={'https://.../arquivo-1\nhttps://.../arquivo-2'}
-                  />
-                </EditorField>
-              ) : null}
-
-              {!isAudio && !isPoll && draft.contentType !== 'simple_image' && draft.contentType !== 'photo_album' && draft.contentType !== 'ana_stories' ? (
-                <EditorField label={typeMeta.mediaHint}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <EditorField label="Título">
                   <input
                     className="admin-content-editor-input"
-                    value={draft.mediaUrl}
-                    onChange={(event) => onChange('mediaUrl', event.target.value)}
+                    value={draft.title}
+                    onChange={(event) => onChange('title', event.target.value)}
+                    placeholder="Ex: Highlights do fim de semana"
+                  />
+                </EditorField>
+
+                <EditorField label="Criador">
+                  <input
+                    className="admin-content-editor-input"
+                    value={draft.creatorName}
+                    onChange={(event) => onChange('creatorName', event.target.value)}
+                    placeholder="Nome da pessoa responsável"
+                  />
+                </EditorField>
+
+                <EditorField label="Data da publicação">
+                  <input
+                    type="datetime-local"
+                    className="admin-content-editor-input"
+                    value={draft.publishedAt}
+                    onChange={(event) => onChange('publishedAt', event.target.value)}
+                  />
+                </EditorField>
+
+                <EditorField label="URL da miniatura">
+                  <input
+                    className="admin-content-editor-input"
+                    value={draft.thumbnail}
+                    onChange={(event) => onChange('thumbnail', event.target.value)}
                     placeholder="https://..."
                   />
                 </EditorField>
-              ) : null}
 
-              {draft.contentType === 'simple_image' ? (
-                <EditorField label="Link principal da imagem ou do carrossel">
+                <EditorField label="Likes iniciais">
                   <input
+                    type="number"
+                    min="0"
                     className="admin-content-editor-input"
-                    value={draft.mediaUrl}
-                    onChange={(event) => onChange('mediaUrl', event.target.value)}
-                    placeholder="https://..."
+                    value={draft.likes}
+                    onChange={(event) => onChange('likes', event.target.value)}
                   />
                 </EditorField>
-              ) : null}
 
-              {isAudio ? (
-                <EditorField label="Link do áudio da Ana">
+                <EditorField label="Alcance inicial">
                   <input
+                    type="number"
+                    min="0"
                     className="admin-content-editor-input"
-                    value={draft.audioUrl}
-                    onChange={(event) => onChange('audioUrl', event.target.value)}
-                    placeholder="https://..."
+                    value={draft.reach}
+                    onChange={(event) => onChange('reach', event.target.value)}
                   />
                 </EditorField>
-              ) : null}
+              </div>
+            </section>
 
-              {isPoll ? (
-                <>
-                  <EditorField label="Pergunta da enquete">
-                    <input
-                      className="admin-content-editor-input"
-                      value={draft.question}
-                      onChange={(event) => onChange('question', event.target.value)}
-                      placeholder="Qual lançamento deve abrir a semana?"
-                    />
-                  </EditorField>
+            <section className="admin-content-editor-section">
+              <div className="admin-content-editor-section-head">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Campos do formato selecionado</p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">{typeMeta.label}</h3>
+                  <p className="mt-1 text-sm text-slate-400">{typeMeta.description}</p>
+                </div>
+              </div>
 
-                  <EditorField label="Opções da enquete">
+              <div className="grid gap-4 md:grid-cols-2">
+                {isMultiMedia ? (
+                  <EditorField label={typeMeta.mediaHint}>
                     <textarea
                       className="admin-content-editor-input admin-content-editor-textarea"
-                      value={draft.pollOptions}
-                      onChange={(event) => onChange('pollOptions', event.target.value)}
-                      placeholder={'Opção 1\nOpção 2\nOpção 3'}
+                      value={draft.mediaGallery}
+                      onChange={(event) => onChange('mediaGallery', event.target.value)}
+                      placeholder={'https://.../arquivo-1\nhttps://.../arquivo-2'}
                     />
                   </EditorField>
+                ) : null}
 
-                  <EditorField label="Imagem opcional da enquete">
+                {!isAudio && !isPoll && draft.contentType !== 'simple_image' && draft.contentType !== 'photo_album' && draft.contentType !== 'ana_stories' ? (
+                  <EditorField label={typeMeta.mediaHint}>
                     <input
                       className="admin-content-editor-input"
                       value={draft.mediaUrl}
@@ -401,45 +376,180 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit, submitMode }) {
                       placeholder="https://..."
                     />
                   </EditorField>
-                </>
-              ) : null}
+                ) : null}
 
-              {draft.contentType === 'tiktok_video' ? (
-                <EditorField label="URL do vídeo TikTok">
-                  <input
-                    className="admin-content-editor-input"
-                    value={draft.mediaUrl}
-                    onChange={(event) => onChange('mediaUrl', event.target.value)}
-                    placeholder="https://..."
-                  />
-                </EditorField>
-              ) : null}
-            </div>
-          </section>
+                {draft.contentType === 'simple_image' ? (
+                  <EditorField label="Link principal da imagem ou do carrossel">
+                    <input
+                      className="admin-content-editor-input"
+                      value={draft.mediaUrl}
+                      onChange={(event) => onChange('mediaUrl', event.target.value)}
+                      placeholder="https://..."
+                    />
+                  </EditorField>
+                ) : null}
 
-          <section className="flex flex-wrap justify-end gap-3 border-t border-white/10 pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              className="border-white/15 text-white hover:bg-white/10"
-              onClick={() => onSubmit('inactive')}
-            >
-              Salvar como rascunho
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-white/15 text-white hover:bg-white/10"
-              onClick={() => onSubmit('scheduled')}
-            >
-              Agendar
-            </Button>
-            <Button type="button" className="bg-sky-500 text-slate-950 hover:bg-sky-400" onClick={() => onSubmit('published')}>
-              Publicar agora
-            </Button>
-          </section>
-        </CardContent>
-      </Card>
+                {isAudio ? (
+                  <EditorField label="Link do áudio da Ana">
+                    <input
+                      className="admin-content-editor-input"
+                      value={draft.audioUrl}
+                      onChange={(event) => onChange('audioUrl', event.target.value)}
+                      placeholder="https://..."
+                    />
+                  </EditorField>
+                ) : null}
+
+                {isPoll ? (
+                  <>
+                    <EditorField label="Pergunta da enquete">
+                      <input
+                        className="admin-content-editor-input"
+                        value={draft.question}
+                        onChange={(event) => onChange('question', event.target.value)}
+                        placeholder="Qual lançamento deve abrir a semana?"
+                      />
+                    </EditorField>
+
+                    <EditorField label="Opções da enquete">
+                      <textarea
+                        className="admin-content-editor-input admin-content-editor-textarea"
+                        value={draft.pollOptions}
+                        onChange={(event) => onChange('pollOptions', event.target.value)}
+                        placeholder={'Opção 1\nOpção 2\nOpção 3'}
+                      />
+                    </EditorField>
+
+                    <EditorField label="Imagem opcional da enquete">
+                      <input
+                        className="admin-content-editor-input"
+                        value={draft.mediaUrl}
+                        onChange={(event) => onChange('mediaUrl', event.target.value)}
+                        placeholder="https://..."
+                      />
+                    </EditorField>
+                  </>
+                ) : null}
+
+                {draft.contentType === 'tiktok_video' ? (
+                  <EditorField label="URL do vídeo TikTok">
+                    <input
+                      className="admin-content-editor-input"
+                      value={draft.mediaUrl}
+                      onChange={(event) => onChange('mediaUrl', event.target.value)}
+                      placeholder="https://..."
+                    />
+                  </EditorField>
+                ) : null}
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+
+        <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+          <Card className="border-white/10 bg-slate-950 text-white">
+            <CardContent className="space-y-5 pt-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Resumo da publicação</p>
+                <h3 className="mt-2 text-lg font-semibold text-white">{draft.title || 'Novo conteúdo'}</h3>
+                <p className="mt-1 text-sm text-slate-400">{draft.creatorName || 'Defina quem está criando o conteúdo.'}</p>
+              </div>
+
+              <div className="overflow-hidden rounded-[12px] border border-white/10 bg-white/[0.03]">
+                {isPoll ? (
+                  <div className="admin-content-preview-poll">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Enquete</p>
+                        <h4 className="mt-2 text-base font-semibold text-white">{draft.question || 'Pergunta da enquete'}</h4>
+                      </div>
+
+                      <div className="space-y-2">
+                        {pollOptions.length ? (
+                          pollOptions.map((option, index) => (
+                            <div key={`${option}-${index}`} className="admin-content-preview-poll-option">
+                              <span>{option}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="admin-content-preview-poll-empty">Adicione as opções da enquete.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : isAudio ? (
+                  <div className="admin-content-preview-audio">
+                    <div className="admin-content-preview-audio-art">
+                      {draft.thumbnail ? <img src={draft.thumbnail} alt={draft.title || 'Capa do áudio'} className="h-full w-full object-cover" /> : <Mic2 className="h-8 w-8 text-slate-300" />}
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Áudio da Ana</p>
+                        <h4 className="mt-2 text-base font-semibold text-white">{draft.title || 'Novo áudio'}</h4>
+                        <p className="mt-1 text-sm text-slate-400">{draft.audioUrl ? 'Arquivo pronto para publicação.' : 'Adicione o link do áudio para visualizar este bloco.'}</p>
+                      </div>
+                      <div className="admin-content-preview-audio-bar">
+                        <span className="admin-content-preview-audio-progress" />
+                      </div>
+                    </div>
+                  </div>
+                ) : previewMedia ? (
+                  <div className="relative aspect-[4/3]">
+                    <img src={draft.thumbnail || previewMedia} alt={draft.title || 'Preview'} className="h-full w-full object-cover" />
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent px-4 pb-3 pt-8">
+                      <span className="admin-content-feed-type-pill inline-flex items-center px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em]">
+                        {previewKind}
+                      </span>
+                      <span className="admin-content-feed-type-pill inline-flex items-center px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em]">
+                        {typeMeta.label}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid aspect-[4/3] place-items-center text-sm text-slate-400">Preview do conteúdo</div>
+                )}
+              </div>
+
+              <div className="space-y-3 rounded-[12px] border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-slate-400">Publicação</span>
+                  <span className="text-sm text-white">{draft.publishedAt ? formatDate(new Date(draft.publishedAt).toISOString()) : 'Sem data'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-slate-400">Likes iniciais</span>
+                  <span className="text-sm text-white">{formatCompact(draft.likes)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-slate-400">Alcance inicial</span>
+                  <span className="text-sm text-white">{formatCompact(draft.reach)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 border-t border-white/10 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-white/15 text-white hover:bg-white/10"
+                  onClick={() => onSubmit('inactive')}
+                >
+                  Salvar como rascunho
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-white/15 text-white hover:bg-white/10"
+                  onClick={() => onSubmit('scheduled')}
+                >
+                  Agendar
+                </Button>
+                <Button type="button" className="w-full bg-sky-500 text-slate-950 hover:bg-sky-400" onClick={() => onSubmit('published')}>
+                  Publicar agora
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
