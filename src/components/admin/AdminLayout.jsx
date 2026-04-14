@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Clapperboard,
   LayoutDashboard,
   Menu,
   ShieldCheck,
@@ -27,6 +28,10 @@ const navSections = [
       { key: 'moderacao', label: 'Moderação', icon: ShieldCheck },
       { key: 'performance', label: 'Performance', icon: Activity }
     ]
+  },
+  {
+    label: 'Gestão de Conteúdo',
+    items: [{ key: 'feed', label: 'Feed', icon: Clapperboard }]
   },
   {
     label: 'Growth',

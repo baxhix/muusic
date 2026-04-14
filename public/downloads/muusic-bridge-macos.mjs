@@ -28,6 +28,11 @@ let lastNowPlaying = null;
 let cachedConfig = null;
 let lastError = null;
 
+function describeError(error, fallbackMessage) {
+  const rawMessage = String(error?.message || fallbackMessage || '').trim();
+  return rawMessage || fallbackMessage;
+}
+
 async function ensureConfigDir() {
   await mkdir(dirname(CONFIG_PATH), { recursive: true });
 }
@@ -160,7 +165,15 @@ async function pushNowPlaying() {
     throw new Error('Muusic Bridge não está pareado.');
   }
 
-  const track = await readSpotifyDesktop().catch(() => null);
+  let track = null;
+  try {
+    track = await readSpotifyDesktop();
+  } catch (error) {
+    lastNowPlaying = null;
+    lastError = `Falha ao ler o Spotify desktop: ${describeError(error, 'verifique se o Spotify está aberto e se o macOS permitiu o controle do app.')}`;
+    throw new Error(lastError);
+  }
+
   const response = await fetch(`${String(config.apiBaseUrl).replace(/\/+$/, '')}/api/bridge/device-push`, {
     method: 'POST',
     headers: {
@@ -176,6 +189,9 @@ async function pushNowPlaying() {
 
   lastSyncAt = new Date().toISOString();
   lastNowPlaying = payload.nowPlaying || null;
+  if (!payload.nowPlaying) {
+    lastNowPlaying = null;
+  }
   lastError = null;
   return payload.nowPlaying || null;
 }
@@ -203,7 +219,7 @@ async function startLoop() {
   if (!syncTimer) {
     syncTimer = setInterval(() => {
       pushNowPlaying().catch((error) => {
-        lastError = error?.message || 'Falha ao sincronizar o Spotify desktop.';
+        lastError = describeError(error, 'Falha ao sincronizar o Spotify desktop.');
       });
     }, 5000);
   }
@@ -211,7 +227,7 @@ async function startLoop() {
   if (!heartbeatTimer) {
     heartbeatTimer = setInterval(() => {
       sendHeartbeat().catch((error) => {
-        lastError = error?.message || 'Falha ao atualizar heartbeat.';
+        lastError = describeError(error, 'Falha ao atualizar heartbeat.');
       });
     }, HEARTBEAT_INTERVAL_MS);
   }
@@ -300,7 +316,10 @@ const server = createServer(async (req, res) => {
       const nowPlaying = await pushNowPlaying();
       sendJson(res, 200, { ok: true, nowPlaying });
     } catch (error) {
-      sendJson(res, 409, { error: error.message || 'Falha ao sincronizar o app Spotify.' });
+      sendJson(res, 409, {
+        error: describeError(error, 'Falha ao sincronizar o app Spotify.'),
+        lastError
+      });
     }
     return;
   }
