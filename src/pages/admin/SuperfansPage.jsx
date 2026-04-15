@@ -122,12 +122,12 @@ export default function SuperfansPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Movimento</TableHead>
                 <TableHead>#</TableHead>
                 <TableHead>Usuário</TableHead>
+                <TableHead>Movimento</TableHead>
+                <TableHead>Cidade-estado</TableHead>
                 <TableHead>Reproduções</TableHead>
                 <TableHead>Atividade</TableHead>
-                <TableHead>Cidade-estado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,12 +137,6 @@ export default function SuperfansPage() {
 
                 return (
                   <TableRow key={user.id}>
-                    <TableCell className="w-[110px]">
-                      <div className={`inline-flex items-center gap-1 text-sm font-medium ${movement.className}`}>
-                        <MovementIcon className="h-4 w-4" />
-                        <span>{movement.label}</span>
-                      </div>
-                    </TableCell>
                     <TableCell className="w-[72px] font-medium text-foreground">{user.rank}</TableCell>
                     <TableCell className="min-w-[280px]">
                       <div className="flex items-center gap-3">
@@ -158,9 +152,15 @@ export default function SuperfansPage() {
                         </div>
                       </div>
                     </TableCell>
+                    <TableCell className="w-[110px]">
+                      <div className={`inline-flex items-center gap-1 text-sm font-medium ${movement.className}`}>
+                        <MovementIcon className="h-4 w-4" />
+                        <span>{movement.label}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.cityState}</TableCell>
                     <TableCell>{formatNumber(user.plays)}</TableCell>
                     <TableCell>{formatNumber(user.activityCount)}</TableCell>
-                    <TableCell>{user.cityState}</TableCell>
                   </TableRow>
                 );
               })}
