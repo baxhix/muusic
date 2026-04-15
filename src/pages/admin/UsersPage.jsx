@@ -199,7 +199,7 @@ export default function UsersPage() {
       {selectedUser ? (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)}>
           <aside
-            className="ml-auto flex h-full w-full max-w-[520px] flex-col overflow-y-auto border-l border-border bg-[var(--color-bg-app)] p-6 shadow-2xl"
+            className="ml-auto flex h-full w-full max-w-[520px] flex-col overflow-y-auto border-l border-border bg-background p-6 text-foreground shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
@@ -219,6 +219,8 @@ export default function UsersPage() {
               <PreviewPanel
                 title="Dados completos"
                 description="Registro cadastral principal do usuário selecionado."
+                className="bg-card text-card-foreground"
+                contentClassName="space-y-4"
                 footer={
                   <Button type="button" variant="outline" className="justify-start">
                     <ShieldAlert className="h-4 w-4" />
@@ -227,34 +229,40 @@ export default function UsersPage() {
                 }
               >
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                  <div className="rounded-xl border border-border bg-secondary/35 p-4">
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Contato</div>
                     <div className="mt-3 space-y-2 text-sm text-foreground">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        {selectedUser.email}
+                      <div className="flex items-start gap-2">
+                        <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 break-all leading-6">{selectedUser.email}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        {selectedUser.registeredData.cidadeEstado}
+                      <div className="flex items-start gap-2">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="leading-6">{selectedUser.registeredData.cidadeEstado}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                  <div className="rounded-xl border border-border bg-secondary/35 p-4">
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Dados cadastrados</div>
                     <div className="mt-3 space-y-2 text-sm text-foreground">
-                      <div>Idade: <span className="text-muted-foreground">{selectedUser.registeredData.idade} anos</span></div>
-                      <div>Sexo: <span className="text-muted-foreground">{selectedUser.registeredData.sexo}</span></div>
-                      <div>Telefone: <span className="text-muted-foreground">{selectedUser.registeredData.telefone}</span></div>
+                      <div className="leading-6">
+                        Idade: <span className="font-medium text-foreground/85">{selectedUser.registeredData.idade} anos</span>
+                      </div>
+                      <div className="leading-6">
+                        Sexo: <span className="font-medium text-foreground/85">{selectedUser.registeredData.sexo}</span>
+                      </div>
+                      <div className="leading-6">
+                        Telefone: <span className="font-medium text-foreground/85 break-all">{selectedUser.registeredData.telefone}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </PreviewPanel>
 
-              <PreviewPanel title="Logs" description="Eventos principais para auditoria e análise rápida.">
+              <PreviewPanel title="Logs" description="Eventos principais para auditoria e análise rápida." className="bg-card text-card-foreground" contentClassName="space-y-3">
                 <div className="space-y-3">
-                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                  <div className="rounded-xl border border-border bg-secondary/35 p-4">
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       <CalendarClock className="h-4 w-4" />
                       Aceite dos termos
@@ -262,11 +270,11 @@ export default function UsersPage() {
                     <div className="mt-2 text-sm text-foreground">{formatDateTime(selectedUser.acceptedTermsAt)}</div>
                   </div>
 
-                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                  <div className="rounded-xl border border-border bg-secondary/35 p-4">
                     <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Últimos streams</div>
                     <div className="mt-3 space-y-3">
                       {selectedUser.streams.map((stream) => (
-                        <div key={stream.id} className="rounded-lg border border-border/80 bg-card/70 p-3">
+                        <div key={stream.id} className="rounded-lg border border-border/80 bg-background p-3">
                           <div className="font-medium text-foreground">{stream.song}</div>
                           <div className="mt-1 text-xs text-muted-foreground">{stream.displayDate}</div>
                         </div>
