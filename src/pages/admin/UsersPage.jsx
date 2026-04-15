@@ -1,396 +1,309 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Clock3, Download, Laptop2, Radio } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Ban, CalendarClock, Mail, MapPin, ShieldAlert, X } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Alert from '../../components/ui/Alert';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
+import Input from '../../components/ui/Input';
 import KpiCard from '../../components/ui/KpiCard';
 import LoadingState from '../../components/ui/LoadingState';
-import Pagination from '../../components/ui/Pagination';
 import PreviewPanel from '../../components/ui/PreviewPanel';
 import SearchInput from '../../components/ui/SearchInput';
 import Select from '../../components/ui/Select';
 import StatusDot from '../../components/ui/StatusDot';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
-import { DEFAULT_USERS_PAGE_SIZE, fetchUsersFromApi, fetchUsersMock, mockUsers, USER_ROLE_OPTIONS } from '../../mocks/adminUsers';
+import {
+  calculateUsersKpis,
+  fetchUsersFromApi,
+  fetchUsersMock,
+  INITIAL_USERS_BATCH,
+  mockUsers,
+  queryUsers,
+  USER_AGE_RANGE_OPTIONS,
+  USER_GENDER_OPTIONS
+} from '../../mocks/adminUsers';
 
-function formatDate(value) {
-  if (!value) return '-';
+function MiniAvatar({ initials }) {
+  return (
+    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
+      {initials}
+    </span>
+  );
+}
+
+function formatDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
-
-function formatSourceLabel(source, bridgeMode) {
-  if (source === 'bridge' && bridgeMode === 'desktop') return 'App instalado';
-  if (source === 'bridge' && bridgeMode === 'browser') return 'Navegador';
-  if (source === 'bridge') return 'Bridge';
-  if (source === 'spotify') return 'Spotify OAuth';
-  return source || '-';
-}
-
-function getMusicStatus(user) {
-  const nowPlaying = user?.music?.nowPlaying;
-  if (!nowPlaying?.trackName && !nowPlaying?.artistName) return 'Sem leitura ativa';
-  return `${nowPlaying.trackName || 'Faixa desconhecida'} • ${nowPlaying.artistName || 'Artista nao informado'}`;
-}
-
-function getUserMeta(user) {
-  const totalReproductions = Number(user?.music?.historyCount || 0);
-  if (totalReproductions === 1) return '1 reproducao salva';
-  return `${totalReproductions} reproducoes salvas`;
-}
-
-function isUserPlayingNow(user) {
-  const expiresAt = user?.music?.nowPlaying?.expiresAt ? new Date(user.music.nowPlaying.expiresAt).getTime() : 0;
-  if (!Number.isFinite(expiresAt) || !expiresAt) return false;
-  return expiresAt > Date.now();
-}
-
-function exportUsersCsv(items) {
-  const header = ['name', 'email', 'role', 'createdAt', 'spotifyId', 'bridgeConnectedAt', 'nowPlaying', 'musicSource', 'historyCount'];
-  const rows = items.map((item) => [
-    item.name || '',
-    item.email,
-    item.role,
-    item.createdAt || '',
-    item.music?.spotifyId || '',
-    item.music?.spotifyBridgeConnectedAt || '',
-    getMusicStatus(item),
-    formatSourceLabel(item.music?.nowPlaying?.source, item.music?.nowPlaying?.bridgeMode),
-    item.music?.historyCount || 0
-  ]);
-  const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(',')).join('\n');
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'usuarios.csv';
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-function SourceBadge({ source, bridgeMode }) {
-  return <Badge variant="info">{formatSourceLabel(source, bridgeMode)}</Badge>;
-}
-
-function MusicSnapshotCard({ music }) {
-  const nowPlaying = music?.nowPlaying || null;
-
-  return (
-    <PreviewPanel
-      title="Leitura atual"
-      description={nowPlaying ? 'Estado atual salvo para mapa, feed e histórico.' : 'Nenhuma reprodução ativa detectada no momento.'}
-      contentClassName="pt-0"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <SourceBadge source={nowPlaying?.source} bridgeMode={nowPlaying?.bridgeMode} />
-      </div>
-
-      {nowPlaying ? (
-        <div className="mt-4 flex gap-4">
-          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary/50">
-            {nowPlaying.albumImageUrl ? (
-              <img src={nowPlaying.albumImageUrl} alt={nowPlaying.trackName || 'Capa'} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                <Radio className="h-6 w-6" />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-lg font-semibold text-foreground">{nowPlaying.trackName || 'Faixa desconhecida'}</div>
-            <div className="mt-1 truncate text-sm text-muted-foreground">{nowPlaying.artistName || 'Artista nao informado'}</div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <span>Inicio: {formatDate(nowPlaying.startedAt)}</span>
-              <span>Expira: {formatDate(nowPlaying.expiresAt)}</span>
-              {nowPlaying.externalUrl ? (
-                <a href={nowPlaying.externalUrl} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
-                  Abrir origem
-                </a>
-              ) : null}
-            </div>
-            {typeof nowPlaying.latitude === 'number' && typeof nowPlaying.longitude === 'number' ? (
-              <div className="mt-2 text-xs text-muted-foreground">
-                Localizacao: {nowPlaying.latitude.toFixed(4)}, {nowPlaying.longitude.toFixed(4)}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-    </PreviewPanel>
-  );
-}
-
-function ConnectionSnapshotCard({ music, bridgeDevices }) {
-  return (
-    <PreviewPanel title="Conexões e dispositivos" contentClassName="pt-0">
-      <div className="mt-4 flex flex-col gap-3">
-        <div className="rounded-xl border border-border bg-background/40 p-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conta</div>
-          <div className="mt-3 space-y-2 text-sm text-foreground">
-            <div>Spotify ID: <span className="text-muted-foreground">{music.spotifyId || 'nao conectado'}</span></div>
-            <div>Bridge conectado em: <span className="text-muted-foreground">{formatDate(music.spotifyBridgeConnectedAt)}</span></div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background/40 p-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Agentes locais</div>
-          <div className="mt-3 space-y-2">
-            {bridgeDevices.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nenhum dispositivo ativo.</div>
-            ) : (
-              bridgeDevices.map((device) => (
-                <div key={device.id} className="rounded-lg border border-border/80 bg-card/70 p-2.5">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <Laptop2 className="h-4 w-4 text-muted-foreground" />
-                    {device.deviceName}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {device.platform || 'plataforma nao informada'} • ultimo sinal {formatDate(device.lastSeenAt)}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </PreviewPanel>
-  );
-}
-
-function HistoryPanel({ music, musicHistory }) {
-  return (
-    <PreviewPanel title="Histórico musical" description={`${music.historyCount || 0} reproduções salvas no banco`} contentClassName="pt-0">
-      <div className="mt-4 space-y-3">
-        {musicHistory.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-            Nenhum histórico musical salvo para este usuário.
-          </div>
-        ) : (
-          musicHistory.map((entry) => (
-            <div key={entry.id} className="flex gap-3 rounded-xl border border-border bg-background/40 p-3">
-              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-secondary/40">
-                {entry.cover ? <img src={entry.cover} alt={entry.title} className="h-full w-full object-cover" /> : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-foreground">{entry.title}</div>
-                <div className="truncate text-sm text-muted-foreground">{entry.artist}</div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <Clock3 className="h-3.5 w-3.5" />
-                    {formatDate(entry.playedAt)}
-                  </span>
-                  <SourceBadge source={entry.source} bridgeMode={entry.bridgeMode} />
-                  {entry.externalUrl ? (
-                    <a href={entry.externalUrl} target="_blank" rel="noreferrer" className="text-primary underline-offset-4 hover:underline">
-                      Abrir
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </PreviewPanel>
-  );
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
 }
 
 export default function UsersPage({ apiFetch }) {
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [source, setSource] = useState('mock');
-  const [kpis, setKpis] = useState({ total: 0, admins: 0, standard: 0, topMusicUser: { name: 'Sem dados', count: 0 } });
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [expandedUserId, setExpandedUserId] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_USERS_BATCH);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [filters, setFilters] = useState({
+    name: '',
+    cityState: '',
+    ageRange: 'all',
+    gender: 'all',
+    lastStreamDate: '',
+    lastStreamSong: ''
+  });
 
-  const shouldFail = useMemo(() => typeof window !== 'undefined' && window.location.search.includes('adminError=1'), []);
-
-  const loadData = useCallback(
-    async (nextPage = page) => {
-      setLoading(true);
-      setError('');
-      try {
-        let payload;
-        if (apiFetch) {
-          try {
-            payload = await fetchUsersFromApi({ apiFetch, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE });
-            setSource('api');
-          } catch {
-            payload = await fetchUsersMock({ users: mockUsers, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
-            setSource('mock');
-          }
-        } else {
-          payload = await fetchUsersMock({ users: mockUsers, search, role: roleFilter, page: nextPage, pageSize: DEFAULT_USERS_PAGE_SIZE, shouldFail });
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      let payload;
+      if (apiFetch) {
+        try {
+          payload = await fetchUsersFromApi({ apiFetch });
+          setSource('api');
+        } catch {
+          payload = await fetchUsersMock({ users: mockUsers });
           setSource('mock');
         }
-
-        setKpis(payload.kpis);
-        setItems(payload.items);
-        setTotal(payload.total);
-        setTotalPages(payload.totalPages);
-        setPage(payload.page);
-      } catch (fetchError) {
-        setError(fetchError.message);
-      } finally {
-        setLoading(false);
+      } else {
+        payload = await fetchUsersMock({ users: mockUsers });
+        setSource('mock');
       }
-    },
-    [apiFetch, page, roleFilter, search, shouldFail]
-  );
+
+      setUsers(payload.users);
+    } catch (fetchError) {
+      setError(fetchError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiFetch]);
 
   useEffect(() => {
-    loadData(page);
-  }, [loadData, page]);
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
-    setPage(1);
-  }, [search, roleFilter]);
+    setVisibleCount(INITIAL_USERS_BATCH);
+  }, [filters]);
 
-  useEffect(() => {
-    setExpandedUserId(null);
-  }, [search, roleFilter, page]);
+  const filteredUsers = useMemo(() => queryUsers({ users, ...filters }), [filters, users]);
+  const visibleUsers = useMemo(() => filteredUsers.slice(0, visibleCount), [filteredUsers, visibleCount]);
+  const selectedUser = useMemo(() => visibleUsers.find((user) => user.id === selectedUserId) || filteredUsers.find((user) => user.id === selectedUserId) || null, [filteredUsers, selectedUserId, visibleUsers]);
+  const userKpis = useMemo(() => calculateUsersKpis(users), [users]);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Usuários" subtitle="Gestão de acesso administrativo, conexões musicais e histórico dos usuários" />
+      <PageHeader
+        title="Usuários"
+        subtitle="Base detalhada para leitura compacta, filtros operacionais e investigação individual sem perder contexto."
+      />
 
-      <section className="grid gap-4 lg:grid-cols-4">
-        <KpiCard label="Total de usuários" value={kpis.total} />
-        <KpiCard label="Administradores" value={kpis.admins} />
-        <KpiCard label="Usuários padrão" value={kpis.standard} />
-        <KpiCard label="Maior volume de reproducoes" value={kpis.topMusicUser?.count || 0} hint={kpis.topMusicUser?.name || 'Sem dados'} align="left" />
+      <section className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
+        <KpiCard label="Total de usuários" value={userKpis.total} size="compact" align="left" />
+        <KpiCard label="Usuários ativos" value={`${userKpis.active} · ${userKpis.activePercentage}%`} size="compact" align="left" />
+        <KpiCard label="Menores de idade" value={`${userKpis.minors} · ${userKpis.minorsPercentage}%`} size="compact" align="left" />
+        <KpiCard label="Média de reproduções por usuário" value={userKpis.averagePlays} size="compact" align="left" />
       </section>
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
-              <CardTitle className="text-2xl">Usuários</CardTitle>
-              <p className="text-sm text-muted-foreground">Uma linha limpa por usuário e detalhes expandidos quando você quiser investigar o histórico musical.</p>
+              <CardTitle>Base de usuários</CardTitle>
+              <p className="text-sm text-muted-foreground">Lista compacta com filtros analíticos e acesso rápido ao histórico individual.</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="neutral">{source === 'api' ? 'API' : 'Mock'}</Badge>
-              <span className="text-sm text-muted-foreground">{total} registros</span>
-            </div>
+            <Badge variant="neutral">{source === 'api' ? 'Fonte: API' : 'Fonte: Mock'}</Badge>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <SearchInput value={search} placeholder="Buscar por nome ou e-mail..." onChange={(event) => setSearch(event.target.value)} aria-label="Buscar usuários" />
-            <Select ariaLabel="Filtrar por perfil" value={roleFilter} onValueChange={setRoleFilter} options={USER_ROLE_OPTIONS} />
-            <Button variant="secondary" className="md:ml-auto" onClick={() => exportUsersCsv(items)}>
-              <Download className="h-4 w-4" />
-              Exportar CSV
-            </Button>
-          </div>
-
           {error ? <Alert>{error}</Alert> : null}
 
+          <div className="grid gap-3 xl:grid-cols-6">
+            <SearchInput value={filters.name} onChange={(event) => setFilters((prev) => ({ ...prev, name: event.target.value }))} placeholder="Nome do usuário" />
+            <Input value={filters.cityState} onChange={(event) => setFilters((prev) => ({ ...prev, cityState: event.target.value }))} placeholder="Cidade/Estado" />
+            <Select ariaLabel="Filtrar por faixa etária" value={filters.ageRange} onValueChange={(value) => setFilters((prev) => ({ ...prev, ageRange: value }))} options={USER_AGE_RANGE_OPTIONS} />
+            <Select ariaLabel="Filtrar por sexo" value={filters.gender} onValueChange={(value) => setFilters((prev) => ({ ...prev, gender: value }))} options={USER_GENDER_OPTIONS} />
+            <Input value={filters.lastStreamDate} onChange={(event) => setFilters((prev) => ({ ...prev, lastStreamDate: event.target.value }))} placeholder="Último stream (DD/MM/AA)" />
+            <Input value={filters.lastStreamSong} onChange={(event) => setFilters((prev) => ({ ...prev, lastStreamSong: event.target.value }))} placeholder="Música do último stream" />
+          </div>
+
           {loading ? (
-            <LoadingState title="Carregando usuários" description="Buscando usuários, conexões musicais e histórico da base administrativa." rows={3} />
-          ) : items.length === 0 ? (
+            <LoadingState title="Carregando usuários" description="Montando a base, filtros e histórico mais recente da audiência." rows={6} />
+          ) : filteredUsers.length === 0 ? (
             <EmptyState
               title="Nenhum usuário encontrado"
-              description="Ajuste os filtros para encontrar usuários cadastrados."
+              description="Ajuste os filtros para visualizar outro recorte da base."
               actionLabel="Limpar filtros"
-              onAction={() => {
-                setSearch('');
-                setRoleFilter('all');
-              }}
+              onAction={() =>
+                setFilters({
+                  name: '',
+                  cityState: '',
+                  ageRange: 'all',
+                  gender: 'all',
+                  lastStreamDate: '',
+                  lastStreamSong: ''
+                })
+              }
             />
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Status musical</TableHead>
-                    <TableHead>Conexao</TableHead>
-                    <TableHead className="text-right">Detalhes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((user) => {
-                    const isExpanded = expandedUserId === user.id;
-                    const music = user.music || {};
-                    const musicHistory = Array.isArray(music.musicHistory) ? music.musicHistory : [];
-                    const bridgeDevices = Array.isArray(music.bridgeDevices) ? music.bridgeDevices : [];
-
-                    return (
-                      <Fragment key={user.id}>
-                        <TableRow>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <div className="font-medium text-foreground">{user.name || 'Usuário'}</div>
-                                {isUserPlayingNow(user) ? (
-                                  <StatusDot variant="success" pulse />
-                                ) : null}
-                              </div>
-                              <div className="text-xs text-muted-foreground">{getUserMeta(user)}</div>
+              <div className="rounded-2xl border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Cidade-estado</TableHead>
+                      <TableHead>Idade</TableHead>
+                      <TableHead>Último stream</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleUsers.map((user) => (
+                      <TableRow key={user.id} className="cursor-pointer" onClick={() => setSelectedUserId(user.id)}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <MiniAvatar initials={user.avatarInitials} />
+                            <div className="min-w-0">
+                              <div className="truncate font-medium text-foreground">{user.name}</div>
+                              <div className="truncate text-xs text-muted-foreground">{user.email}</div>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium text-foreground">{getMusicStatus(user)}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="text-sm text-foreground">{music.spotifyId ? 'Spotify conectado' : 'Sem Spotify OAuth'}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {music.spotifyBridgeConnectedAt ? `Bridge desde ${formatDate(music.spotifyBridgeConnectedAt)}` : 'Sem bridge conectado'}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant={isExpanded ? 'outline' : 'ghost'}
-                              size="sm"
-                              onClick={() => setExpandedUserId((current) => (current === user.id ? null : user.id))}
-                              aria-expanded={isExpanded}
-                              className={isExpanded ? 'text-white hover:text-white' : 'text-white hover:text-white'}
-                            >
-                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              {isExpanded ? 'Ocultar' : 'Abrir'}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.cityState}</TableCell>
+                        <TableCell>{user.age} anos</TableCell>
+                        <TableCell>
+                          <div className="space-y-0.5">
+                            <div className="text-sm text-foreground">{user.lastStream.displayDate}</div>
+                            <div className="text-xs text-muted-foreground">{user.lastStream.song}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <StatusDot variant={user.isOnline ? 'success' : 'neutral'} size="xs" />
+                            <span className="text-sm text-muted-foreground">{user.isOnline ? 'Online' : 'Offline'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedUserId(user.id);
+                            }}
+                          >
+                            <Ban className="h-4 w-4" />
+                            Banir / bloquear
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-                        {isExpanded ? (
-                          <TableRow className="hover:bg-transparent">
-                            <TableCell colSpan={4} className="bg-secondary/15">
-                              <div className="space-y-4">
-                                <MusicSnapshotCard music={music} />
-                                <ConnectionSnapshotCard music={music} bridgeDevices={bridgeDevices} />
-                                <HistoryPanel music={music} musicHistory={musicHistory} />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : null}
-                      </Fragment>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-
-              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              {filteredUsers.length > visibleCount ? (
+                <div className="flex justify-center pt-2">
+                  <Button type="button" variant="secondary" onClick={() => setVisibleCount((count) => count + INITIAL_USERS_BATCH)}>
+                    Carregar mais 50
+                  </Button>
+                </div>
+              ) : null}
             </>
           )}
         </CardContent>
       </Card>
+
+      {selectedUser ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm" onClick={() => setSelectedUserId(null)}>
+          <aside
+            className="ml-auto flex h-full w-full max-w-[520px] flex-col overflow-y-auto border-l border-border bg-[var(--color-bg-app)] p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <MiniAvatar initials={selectedUser.avatarInitials} />
+                <div>
+                  <div className="text-lg font-semibold text-foreground">{selectedUser.fullName}</div>
+                  <div className="text-sm text-muted-foreground">{selectedUser.cityState}</div>
+                </div>
+              </div>
+              <Button type="button" variant="ghost" size="icon" onClick={() => setSelectedUserId(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <PreviewPanel
+                title="Dados completos"
+                description="Registro cadastral principal do usuário selecionado."
+                footer={
+                  <Button type="button" variant="outline" className="justify-start">
+                    <ShieldAlert className="h-4 w-4" />
+                    Banir / bloquear usuário
+                  </Button>
+                }
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Contato</div>
+                    <div className="mt-3 space-y-2 text-sm text-foreground">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        {selectedUser.email}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        {selectedUser.registeredData.cidadeEstado}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Dados cadastrados</div>
+                    <div className="mt-3 space-y-2 text-sm text-foreground">
+                      <div>Idade: <span className="text-muted-foreground">{selectedUser.registeredData.idade} anos</span></div>
+                      <div>Sexo: <span className="text-muted-foreground">{selectedUser.registeredData.sexo}</span></div>
+                      <div>Telefone: <span className="text-muted-foreground">{selectedUser.registeredData.telefone}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </PreviewPanel>
+
+              <PreviewPanel title="Logs" description="Eventos principais para auditoria e análise rápida.">
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      <CalendarClock className="h-4 w-4" />
+                      Aceite dos termos
+                    </div>
+                    <div className="mt-2 text-sm text-foreground">{formatDateTime(selectedUser.acceptedTermsAt)}</div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background/30 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Últimos streams</div>
+                    <div className="mt-3 space-y-3">
+                      {selectedUser.streams.map((stream) => (
+                        <div key={stream.id} className="rounded-lg border border-border/80 bg-card/70 p-3">
+                          <div className="font-medium text-foreground">{stream.song}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">{stream.displayDate}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </PreviewPanel>
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

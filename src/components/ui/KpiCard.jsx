@@ -1,15 +1,24 @@
 import { Card, CardContent } from './Card';
+import { cn } from '../../lib/utils';
 
-export default function KpiCard({ label, value, hint = '', align = 'center' }) {
+export default function KpiCard({ label, value, hint = '', align = 'center', size = 'default' }) {
   const isLeft = align === 'left';
+  const compact = size === 'compact';
 
   return (
-    <Card className="min-h-[152px] border-0 bg-card/85 shadow-none transition duration-200 hover:-translate-y-0.5">
-      <CardContent className="flex h-full items-center justify-center p-6">
-        <div className={isLeft ? 'text-left' : 'text-center'}>
-          <span className="block text-4xl font-semibold tracking-tight text-white">{value}</span>
-          <p className="mt-4 text-sm text-muted-foreground">{label}</p>
-          {hint ? <p className="mt-2 text-xs text-muted-foreground/80">{hint}</p> : null}
+    <Card
+      className={cn(
+        'border-0 bg-card/85 shadow-none transition duration-200 hover:-translate-y-0.5',
+        compact ? 'min-h-[124px]' : 'min-h-[152px]'
+      )}
+    >
+      <CardContent className={cn('flex h-full p-6', compact ? 'items-start justify-start' : 'items-center justify-center')}>
+        <div className={cn(isLeft || compact ? 'text-left' : 'text-center')}>
+          <span className={cn('block font-semibold tracking-tight text-white', compact ? 'text-[32px] leading-[36px]' : 'text-4xl')}>
+            {value}
+          </span>
+          <p className={cn('text-muted-foreground', compact ? 'mt-3 text-xs uppercase tracking-[0.14em]' : 'mt-4 text-sm')}>{label}</p>
+          {hint ? <p className={cn('text-muted-foreground/80', compact ? 'mt-2 text-sm' : 'mt-2 text-xs')}>{hint}</p> : null}
         </div>
       </CardContent>
     </Card>
