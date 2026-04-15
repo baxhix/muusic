@@ -3,6 +3,7 @@ import {
   Activity,
   BarChart3,
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clapperboard,
@@ -19,6 +20,7 @@ import {
 import Button from '../ui/Button';
 import Tooltip from '../ui/Tooltip';
 import { cn } from '../../lib/utils';
+import fanverseAdminLogo from '../../assets/fanverse-admin-logo.svg';
 
 const navSections = [
   {
@@ -70,12 +72,10 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
     <>
       <div className="flex h-16 items-center justify-between border-b border-border px-4">
         <div className={cn('flex items-center gap-3 overflow-hidden', collapsed && 'justify-center')}>
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <Ticket className="h-4 w-4" />
-          </div>
+          <img src={fanverseAdminLogo} alt="Fanverse" className="h-8 w-auto shrink-0" />
           {!collapsed ? (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">Fanverse Admin</p>
+              <p className="truncate text-sm font-semibold text-foreground">Fanverse</p>
               <p className="truncate text-xs text-muted-foreground">Sistema operacional</p>
             </div>
           ) : null}
@@ -151,6 +151,7 @@ function SidebarContent({ activeItem, collapsed, onToggle, onNavigate, closeMobi
 export default function AdminLayout({ children, activeItem = 'usuarios', userName, onLogout, onNavigate }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'dark';
     const saved = window.localStorage.getItem('fanverse-admin-theme');
@@ -210,7 +211,7 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-b border-border/90 bg-background/80 backdrop-blur-xl">
-            <div className="flex h-16 items-center justify-between px-4 lg:px-8">
+            <div className="grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 lg:px-8">
               <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
                   <Menu className="h-5 w-5" />
@@ -221,15 +222,40 @@ export default function AdminLayout({ children, activeItem = 'usuarios', userNam
                 </div>
               </div>
 
-              <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex justify-center">
                 <Button variant="outline" size="sm" onClick={toggleTheme} aria-label="Alternar tema">
                   {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   {theme === 'dark' ? 'Light' : 'Dark'}
                 </Button>
-                <span className="hidden sm:inline">{userName}</span>
-                <Button variant="ghost" size="sm" className="admin-neutral-control" onClick={onLogout}>
-                  Sair
-                </Button>
+              </div>
+
+              <div className="relative flex justify-end">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm transition-colors hover:bg-secondary/60"
+                  onClick={() => setUserMenuOpen((current) => !current)}
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen}
+                >
+                  <span className="hidden sm:inline">Usuário: {userName}</span>
+                  <span className="sm:hidden">{userName}</span>
+                  <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', userMenuOpen && 'rotate-180')} />
+                </button>
+
+                {userMenuOpen ? (
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[220px] rounded-xl border border-border bg-popover p-2 shadow-lg">
+                    <button
+                      type="button"
+                      className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-secondary/70"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        onLogout?.();
+                      }}
+                    >
+                      Sair
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
