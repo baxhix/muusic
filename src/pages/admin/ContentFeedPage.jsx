@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronRight, Eye, Heart, Images, Mic2, Pencil, Plus, Upload, Users, Video } from 'lucide-react';
+import { CalendarDays, ChevronRight, Eye, Heart, Images, Mic2, Pencil, Plus, Search, Trash2, Upload, Users, Video } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { Card, CardContent, CardHeader } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
 import PreviewPanel from '../../components/ui/PreviewPanel';
 import StatusDot from '../../components/ui/StatusDot';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
@@ -88,6 +89,25 @@ function toDateTimeLocalValue(value) {
 
 function getContentTypeMeta(contentType) {
   return CONTENT_TYPES.find((item) => item.value === contentType) || CONTENT_TYPES[0];
+}
+
+function getEngagementMeta(item) {
+  const likes = Number(item.likes || 0);
+  const reach = Number(item.reach || 0);
+
+  if (reach >= 100000 || likes >= 15000) {
+    return { label: 'Bombando', variant: 'success' };
+  }
+
+  if (reach >= 50000 || likes >= 7000) {
+    return { label: 'Alto', variant: 'info' };
+  }
+
+  if (reach >= 20000 || likes >= 2000) {
+    return { label: 'Médio', variant: 'accent' };
+  }
+
+  return { label: 'Baixo', variant: 'neutral' };
 }
 
 function EmptyPreview({ type }) {
@@ -507,19 +527,30 @@ export default function ContentFeedPage() {
   const [items, setItems] = useState(() => {
     try {
       const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
-      return Array.isArray(stored) && stored.length ? stored : mockAdminFeedItems;
+      const baseItems = Array.isArray(stored) && stored.length ? stored : mockAdminFeedItems;
+      return baseItems.filter((item) => item.id !== 'feed-001');
     } catch {
-      return mockAdminFeedItems;
+      return mockAdminFeedItems.filter((item) => item.id !== 'feed-001');
     }
   });
   const [previewItem, setPreviewItem] = useState(null);
   const [editorDraft, setEditorDraft] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
-  const listItems = useMemo(() => items, [items]);
+  const listItems = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return items.filter((item) => {
+      if (!normalizedSearch) return true;
+
+      const haystack = [item.title, item.creatorName, getContentTypeMeta(item.contentType).label].join(' ').toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [items, searchTerm]);
 
   function openNewPage() {
     setEditorDraft(makeInitialDraft());
@@ -572,6 +603,11 @@ export default function ContentFeedPage() {
     );
   }
 
+  function deleteItem(item) {
+    setItems((current) => current.filter((entry) => entry.id !== item.id));
+    setPreviewItem((current) => (current?.id === item.id ? null : current));
+  }
+
   if (editorDraft) {
     return <ContentEditorPage draft={editorDraft} onChange={updateDraft} onBack={() => setEditorDraft(null)} onSubmit={submitDraft} />;
   }
@@ -589,19 +625,29 @@ export default function ContentFeedPage() {
         }
       />
 
-      <Card className="bg-card text-card-foreground">
-        <CardHeader className="pb-0" />
-        <CardContent className="pt-6">
-          <Table className="bg-transparent text-foreground">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar posts no feed"
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      <Table className="bg-transparent text-foreground">
             <TableHeader className="bg-secondary/40">
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-muted-foreground">Conteúdo</TableHead>
                 <TableHead className="text-muted-foreground">Criador</TableHead>
+                <TableHead className="text-muted-foreground">Engajamento</TableHead>
                 <TableHead className="text-muted-foreground">Data</TableHead>
                 <TableHead className="text-muted-foreground">Likes</TableHead>
                 <TableHead className="text-muted-foreground">Alcance</TableHead>
-                <TableHead className="text-muted-foreground">Edição</TableHead>
+                <TableHead className="text-muted-foreground">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -609,6 +655,7 @@ export default function ContentFeedPage() {
                 const status = STATUS_META[item.status] || STATUS_META.inactive;
                 const isActive = item.status !== 'inactive';
                 const typeMeta = getContentTypeMeta(item.contentType);
+                const engagement = getEngagementMeta(item);
 
                 return (
                   <TableRow key={item.id} className="border-border hover:bg-secondary/35">
@@ -645,6 +692,10 @@ export default function ContentFeedPage() {
 
                     <TableCell className="w-[160px] text-sm text-muted-foreground">{item.creatorName || '-'}</TableCell>
 
+                    <TableCell className="w-[140px]">
+                      <Badge variant={engagement.variant}>{engagement.label}</Badge>
+                    </TableCell>
+
                     <TableCell className="w-[180px]">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarDays className="h-4 w-4 text-muted-foreground" />
@@ -666,23 +717,31 @@ export default function ContentFeedPage() {
                       </div>
                     </TableCell>
 
-                    <TableCell className="w-[96px]">
-                      <button
-                        type="button"
-                        onClick={() => openEditPage(item)}
-                        className="admin-content-feed-edit-btn inline-flex h-10 w-10 items-center justify-center text-foreground transition"
-                        aria-label={`Editar ${item.title}`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
+                    <TableCell className="w-[124px]">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditPage(item)}
+                          className="admin-content-feed-edit-btn inline-flex h-10 w-10 items-center justify-center rounded-[4px] text-foreground transition"
+                          aria-label={`Editar ${item.title}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteItem(item)}
+                          className="admin-content-feed-edit-btn inline-flex h-10 w-10 items-center justify-center rounded-[4px] text-foreground transition"
+                          aria-label={`Apagar ${item.title}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      </Table>
 
       <PreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
     </div>
