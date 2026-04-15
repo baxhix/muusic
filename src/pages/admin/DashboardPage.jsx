@@ -192,7 +192,7 @@ export default function DashboardPage() {
 
       <section className="grid gap-4 xl:grid-cols-6 md:grid-cols-3">
         {kpiCards.map((item) => (
-          <KpiCard key={item.label} label={item.label} value={item.value} hint={item.hint} size="compact" align="left" />
+          <KpiCard key={item.label} label={item.label} value={item.value} hint={item.hint} icon={item.icon} size="compact" />
         ))}
       </section>
 

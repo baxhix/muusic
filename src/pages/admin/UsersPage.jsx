@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Ban, CalendarClock, Mail, MapPin, ShieldAlert, X } from 'lucide-react';
+import { Activity, Ban, CalendarClock, Mail, MapPin, PlayCircle, ShieldAlert, Users2, X } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -79,10 +79,10 @@ export default function UsersPage() {
       />
 
       <section className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
-        <KpiCard label="Total de usuários" value={userKpis.total} size="compact" align="left" />
-        <KpiCard label="Usuários ativos" value={`${userKpis.active} · ${userKpis.activePercentage}%`} size="compact" align="left" />
-        <KpiCard label="Menores de idade" value={`${userKpis.minors} · ${userKpis.minorsPercentage}%`} size="compact" align="left" />
-        <KpiCard label="Média de reproduções por usuário" value={userKpis.averagePlays} size="compact" align="left" />
+        <KpiCard label="Total de usuários" value={userKpis.total} icon={Users2} size="compact" />
+        <KpiCard label="Usuários ativos" value={userKpis.active} hint={`${userKpis.activePercentage}%`} icon={Activity} size="compact" />
+        <KpiCard label="Menores de idade" value={userKpis.minors} hint={`${userKpis.minorsPercentage}%`} icon={ShieldAlert} size="compact" />
+        <KpiCard label="Média de reproduções por usuário" value={userKpis.averagePlays} icon={PlayCircle} size="compact" />
       </section>
 
       <Card>
