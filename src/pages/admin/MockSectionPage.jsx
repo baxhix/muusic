@@ -12,7 +12,7 @@ function MockBarChart({ labels = [], values = [] }) {
         {values.map((value, index) => (
           <div key={`bar-${index}`} className="flex flex-1 flex-col items-center justify-end gap-2">
             <div
-              className="w-full rounded-sm bg-white/70"
+              className="w-full rounded-sm bg-primary/75"
               style={{
                 height: `${Math.max(8, (Number(value || 0) / max) * 100)}%`
               }}

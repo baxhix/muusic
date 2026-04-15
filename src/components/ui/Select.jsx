@@ -95,7 +95,7 @@ export default function Select({ value, onValueChange, options = [], placeholder
                 }}
               >
                 <span>{option.label}</span>
-                {option.value === value && <Check className="h-4 w-4 text-slate-500" />}
+                {option.value === value && <Check className="h-4 w-4 text-muted-foreground" />}
               </button>
             </li>
           ))}

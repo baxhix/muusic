@@ -2,7 +2,7 @@ import Skeleton from './Skeleton';
 
 export default function LoadingState({ title = 'Carregando dados', description = 'Aguarde um instante enquanto atualizamos esta seção.', rows = 3 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card/70 p-5">
+    <div className="rounded-2xl border border-border bg-card/70 p-5 shadow-sm">
       <div className="mb-4 space-y-1">
         <p className="text-[14px] font-semibold leading-[22px] text-foreground">{title}</p>
         <p className="text-[13px] leading-[20px] text-muted-foreground">{description}</p>

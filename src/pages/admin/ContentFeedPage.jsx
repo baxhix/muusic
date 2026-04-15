@@ -92,7 +92,7 @@ function getContentTypeMeta(contentType) {
 
 function EmptyPreview({ type }) {
   return (
-    <div className="grid h-[340px] place-items-center rounded-[12px] border border-dashed border-white/10 bg-black/30 text-sm text-slate-300">
+    <div className="grid h-[340px] place-items-center rounded-[12px] border border-dashed border-border bg-background/40 text-sm text-muted-foreground">
       {type === 'video' ? 'Vídeo indisponível para preview.' : 'Imagem indisponível para preview.'}
     </div>
   );
@@ -104,21 +104,21 @@ function PreviewModal({ item, onClose }) {
   const typeMeta = getContentTypeMeta(item.contentType);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
       <button type="button" className="admin-content-feed-overlay absolute inset-0" onClick={onClose} aria-label="Fechar preview" />
-      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/10 bg-slate-950 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[28px] border border-border bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Preview do conteúdo</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Preview do conteúdo</p>
             <div className="mt-1 flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+              <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
               <span className="admin-content-feed-type-pill inline-flex items-center px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.18em]">
                 {item.type === 'video' ? 'Vídeo' : 'Imagem'}
               </span>
               <Badge variant="neutral">{typeMeta.label}</Badge>
             </div>
           </div>
-          <Button type="button" variant="outline" className="border-white/15 text-white hover:bg-white/10" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Fechar
           </Button>
         </div>
@@ -133,14 +133,14 @@ function PreviewModal({ item, onClose }) {
                 controls
                 autoPlay
                 playsInline
-                className="max-h-[70vh] w-full rounded-[12px] bg-black object-contain"
+                className="max-h-[70vh] w-full rounded-[12px] bg-background object-contain"
                 style={{ accentColor: '#94a3b8' }}
               />
             ) : (
               <EmptyPreview type="video" />
             )
           ) : item.mediaUrl ? (
-            <img src={item.mediaUrl} alt={item.title} className="max-h-[70vh] w-full rounded-[12px] bg-black object-contain" />
+            <img src={item.mediaUrl} alt={item.title} className="max-h-[70vh] w-full rounded-[12px] bg-background object-contain" />
           ) : (
             <EmptyPreview type="image" />
           )}
@@ -210,7 +210,7 @@ function ContentTypeSelector({ value, onSelect }) {
                 <Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white">{option.label}</p>
+                <p className="text-sm font-medium text-foreground">{option.label}</p>
               </div>
             </div>
           </button>
@@ -236,9 +236,9 @@ function MockUploadField({ label, helper, multiple = false }) {
         <span className="admin-content-upload-icon">
           <Upload className="h-4 w-4" />
         </span>
-        <span className="text-left">
-          <span className="block text-sm font-medium text-white">{multiple ? 'Selecionar arquivos' : 'Selecionar arquivo'}</span>
-          {helper ? <span className="mt-1 block text-sm text-slate-400">{helper}</span> : null}
+      <span className="text-left">
+          <span className="block text-sm font-medium text-foreground">{multiple ? 'Selecionar arquivos' : 'Selecionar arquivo'}</span>
+          {helper ? <span className="mt-1 block text-sm text-muted-foreground">{helper}</span> : null}
         </span>
       </button>
     </EditorField>
@@ -286,7 +286,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
       <PageHeader
         title={draft.id ? 'Editar conteúdo' : 'Novo conteúdo'}
         actions={
-          <Button variant="outline" className="border-white/15 text-white hover:bg-white/10" onClick={onBack}>
+          <Button variant="outline" onClick={onBack}>
             Voltar para o feed
           </Button>
         }
@@ -301,7 +301,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <Card className="border-white/10 bg-slate-950 text-white">
+        <Card className="bg-card text-card-foreground">
           <CardContent className="space-y-8 pt-6">
             <section className="space-y-4">
               <ContentTypeSelector value={draft.contentType} onSelect={(nextType) => onChange('contentType', nextType)} />
@@ -309,7 +309,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
 
             <section className="admin-content-editor-section">
               <div className="admin-content-editor-section-head">
-                <h3 className="text-lg font-semibold text-white">Informações básicas</h3>
+                <h3 className="text-lg font-semibold text-foreground">Informações básicas</h3>
               </div>
 
               <div className="grid gap-4">
@@ -336,7 +336,7 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
             <section className="admin-content-editor-section">
               <div className="admin-content-editor-section-head">
                 <div>
-                  <h3 className="mt-2 text-lg font-semibold text-white">{typeMeta.label}</h3>
+                  <h3 className="mt-2 text-lg font-semibold text-foreground">{typeMeta.label}</h3>
                 </div>
               </div>
 
@@ -405,39 +405,29 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
             eyebrow="Resumo da publicação"
             title={draft.title || 'Novo conteúdo'}
             description={typeMeta.label}
-            className="border-white/10 bg-slate-950 text-white"
+            className="bg-card text-card-foreground"
             contentClassName="space-y-5 pt-0"
             footer={
               <div className="space-y-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full border-white/15 text-white hover:bg-white/10"
-                  onClick={() => onSubmit('inactive')}
-                >
+                <Button type="button" variant="outline" className="w-full" onClick={() => onSubmit('inactive')}>
                   Salvar como rascunho
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full border-white/15 text-white hover:bg-white/10"
-                  onClick={() => onSubmit('scheduled')}
-                >
+                <Button type="button" variant="outline" className="w-full" onClick={() => onSubmit('scheduled')}>
                   Agendar
                 </Button>
-                <Button type="button" className="w-full bg-sky-500 text-slate-950 hover:bg-sky-400" onClick={() => onSubmit('published')}>
+                <Button type="button" className="w-full" onClick={() => onSubmit('published')}>
                   Publicar agora
                 </Button>
               </div>
             }
           >
-              <div className="overflow-hidden rounded-[12px] border border-white/10 bg-white/[0.03]">
+              <div className="overflow-hidden rounded-[12px] border border-border bg-secondary/30">
                 {isPoll ? (
                   <div className="admin-content-preview-poll">
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Enquete</p>
-                        <h4 className="mt-2 text-base font-semibold text-white">{draft.question || 'Pergunta da enquete'}</h4>
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Enquete</p>
+                        <h4 className="mt-2 text-base font-semibold text-foreground">{draft.question || 'Pergunta da enquete'}</h4>
                       </div>
 
                       <div className="space-y-2">
@@ -460,9 +450,9 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                     </div>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Áudio da Ana</p>
-                        <h4 className="mt-2 text-base font-semibold text-white">{draft.title || 'Novo áudio'}</h4>
-                        <p className="mt-1 text-sm text-slate-400">{draft.description || 'Adicione uma descrição para contextualizar o áudio.'}</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Áudio da Ana</p>
+                        <h4 className="mt-2 text-base font-semibold text-foreground">{draft.title || 'Novo áudio'}</h4>
+                        <p className="mt-1 text-sm text-muted-foreground">{draft.description || 'Adicione uma descrição para contextualizar o áudio.'}</p>
                       </div>
                       <div className="admin-content-preview-audio-bar">
                         <span className="admin-content-preview-audio-progress" />
@@ -472,13 +462,13 @@ function ContentEditorPage({ draft, onChange, onBack, onSubmit }) {
                 ) : previewMedia ? (
                   <div className="relative aspect-[4/3]">
                     <img src={previewMedia} alt={draft.title || 'Preview'} className="h-full w-full object-cover" />
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent px-4 pb-3 pt-8">
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-background/95 via-background/50 to-transparent px-4 pb-3 pt-8">
                       <Badge variant="neutral">{previewKind}</Badge>
                       <Badge variant="outline">{typeMeta.label}</Badge>
                     </div>
                   </div>
                 ) : (
-                  <div className="grid aspect-[4/3] place-items-center text-sm text-slate-400">Preview do conteúdo</div>
+                  <div className="grid aspect-[4/3] place-items-center text-sm text-muted-foreground">Preview do conteúdo</div>
                 )}
               </div>
           </PreviewPanel>
@@ -592,26 +582,26 @@ export default function ContentFeedPage() {
         title="Gestão de Conteúdo"
         subtitle="Operação editorial do time de marketing para o que aparece na plataforma."
         actions={
-          <Button className="bg-sky-500 text-slate-950 hover:bg-sky-400" onClick={openNewPage}>
+          <Button onClick={openNewPage}>
             <Plus className="h-4 w-4" />
             Adicionar novo
           </Button>
         }
       />
 
-      <Card className="border-white/10 bg-slate-950 text-white">
+      <Card className="bg-card text-card-foreground">
         <CardHeader className="pb-0" />
         <CardContent className="pt-6">
-          <Table className="bg-transparent text-white">
-            <TableHeader className="bg-white/[0.03]">
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="text-slate-500">Status</TableHead>
-                <TableHead className="text-slate-500">Conteúdo</TableHead>
-                <TableHead className="text-slate-500">Criador</TableHead>
-                <TableHead className="text-slate-500">Data</TableHead>
-                <TableHead className="text-slate-500">Likes</TableHead>
-                <TableHead className="text-slate-500">Alcance</TableHead>
-                <TableHead className="text-slate-500">Edição</TableHead>
+          <Table className="bg-transparent text-foreground">
+            <TableHeader className="bg-secondary/40">
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">Status</TableHead>
+                <TableHead className="text-muted-foreground">Conteúdo</TableHead>
+                <TableHead className="text-muted-foreground">Criador</TableHead>
+                <TableHead className="text-muted-foreground">Data</TableHead>
+                <TableHead className="text-muted-foreground">Likes</TableHead>
+                <TableHead className="text-muted-foreground">Alcance</TableHead>
+                <TableHead className="text-muted-foreground">Edição</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -621,9 +611,9 @@ export default function ContentFeedPage() {
                 const typeMeta = getContentTypeMeta(item.contentType);
 
                 return (
-                  <TableRow key={item.id} className="border-white/10 hover:bg-white/[0.03]">
+                  <TableRow key={item.id} className="border-border hover:bg-secondary/35">
                     <TableCell className="w-[118px]">
-                      <div className="flex items-center gap-3 text-sm text-slate-200">
+                      <div className="flex items-center gap-3 text-sm text-foreground">
                         <StatusDot variant={status.dot} />
                         <StatusSwitch checked={isActive} onClick={() => toggleItem(item)} />
                       </div>
@@ -638,8 +628,8 @@ export default function ContentFeedPage() {
                           aria-label={`Abrir preview de ${item.title}`}
                         >
                           <img src={item.thumbnail} alt={item.title} className="h-full w-full object-cover transition duration-200 group-hover:scale-105" />
-                          <span className="absolute inset-0 flex items-center justify-center bg-slate-950/10 opacity-0 transition group-hover:opacity-100">
-                            {item.type === 'video' ? <Video className="h-6 w-6 text-white" /> : <Eye className="h-6 w-6 text-white" />}
+                          <span className="absolute inset-0 flex items-center justify-center bg-background/20 opacity-0 transition group-hover:opacity-100">
+                            {item.type === 'video' ? <Video className="h-6 w-6 text-foreground" /> : <Eye className="h-6 w-6 text-foreground" />}
                           </span>
                           <span className="absolute bottom-2 left-2">
                             <Badge variant="neutral">{item.type === 'video' ? 'Vídeo' : 'Imagem'}</Badge>
@@ -647,31 +637,31 @@ export default function ContentFeedPage() {
                         </button>
 
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-white">{item.title}</p>
-                          <p className="mt-1 text-sm text-slate-400">{typeMeta.label}</p>
+                          <p className="text-sm font-medium text-foreground">{item.title}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{typeMeta.label}</p>
                         </div>
                       </div>
                     </TableCell>
 
-                    <TableCell className="w-[160px] text-sm text-slate-300">{item.creatorName || '-'}</TableCell>
+                    <TableCell className="w-[160px] text-sm text-muted-foreground">{item.creatorName || '-'}</TableCell>
 
                     <TableCell className="w-[180px]">
-                      <div className="flex items-center gap-2 text-sm text-slate-300">
-                        <CalendarDays className="h-4 w-4 text-slate-500" />
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
                         <span>{formatDate(item.publishedAt)}</span>
                       </div>
                     </TableCell>
 
                     <TableCell className="w-[120px]">
-                      <div className="flex items-center gap-2 text-sm text-slate-200">
-                        <Heart className="h-4 w-4 text-slate-400" />
+                      <div className="flex items-center gap-2 text-sm text-foreground">
+                        <Heart className="h-4 w-4 text-muted-foreground" />
                         <span>{formatCompact(item.likes)}</span>
                       </div>
                     </TableCell>
 
                     <TableCell className="w-[120px]">
-                      <div className="flex items-center gap-2 text-sm text-slate-200">
-                        <Users className="h-4 w-4 text-slate-400" />
+                      <div className="flex items-center gap-2 text-sm text-foreground">
+                        <Users className="h-4 w-4 text-muted-foreground" />
                         <span>{formatCompact(item.reach)}</span>
                       </div>
                     </TableCell>
@@ -680,7 +670,7 @@ export default function ContentFeedPage() {
                       <button
                         type="button"
                         onClick={() => openEditPage(item)}
-                        className="admin-content-feed-edit-btn inline-flex h-10 w-10 items-center justify-center text-slate-200 transition"
+                        className="admin-content-feed-edit-btn inline-flex h-10 w-10 items-center justify-center text-foreground transition"
                         aria-label={`Editar ${item.title}`}
                       >
                         <Pencil className="h-4 w-4" />

@@ -1,160 +1,221 @@
 @import './tokens.css';
 
-.admin-root.dark {
-  --background: 224 34% 4%;
-  --background-alt: 224 30% 7%;
-  --foreground: 220 20% 95%;
-
-  --card: 223 25% 8%;
-  --card-foreground: 220 20% 95%;
-  --popover: 223 25% 9%;
-  --popover-foreground: 220 20% 95%;
-
-  --primary: 220 20% 98%;
-  --primary-foreground: 224 34% 4%;
-  --secondary: 223 18% 14%;
-  --secondary-foreground: 220 20% 92%;
-  --muted: 224 14% 20%;
-  --muted-foreground: 220 12% 62%;
-  --accent: 223 18% 14%;
-  --accent-foreground: 220 20% 95%;
-
-  --destructive: 350 84% 60%;
-  --destructive-foreground: 220 20% 98%;
-  --border: 220 20% 100% / 0.1;
-  --input: 220 20% 100% / 0.1;
-  --ring: 220 15% 80%;
-
-  --radius: 12px;
-  --radius-button: 3px;
-}
-
 .admin-root {
+  --radius: 12px;
+  --radius-button: 8px;
+  --admin-sidebar-width: 16rem;
+  --admin-sidebar-width-collapsed: 5rem;
   font-family: var(--admin-font-family);
-  background:
-    radial-gradient(900px 420px at 0% -20%, rgba(110, 231, 255, 0.08), transparent 50%),
-    radial-gradient(900px 420px at 100% -20%, rgba(148, 163, 184, 0.1), transparent 55%),
-    hsl(var(--background));
+  min-height: 100vh;
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(720px 320px at 0% -10%, hsl(var(--primary) / 0.08), transparent 52%),
+    radial-gradient(760px 340px at 100% -10%, hsl(var(--foreground) / 0.04), transparent 56%);
 }
 
-.admin-root * {
+.admin-root *,
+.admin-root *::before,
+.admin-root *::after {
   box-sizing: border-box;
 }
 
+.admin-root.light {
+  --background: 210 40% 98%;
+  --background-alt: 210 40% 96%;
+  --foreground: 222.2 47.4% 11.2%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 47.4% 11.2%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 47.4% 11.2%;
+
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+
+  --sidebar-surface: 0 0% 100% / 0.72;
+  --sidebar-border: 214.3 31.8% 91.4%;
+  --sidebar-item: 215.4 16.3% 46.9%;
+  --sidebar-item-hover: 222.2 47.4% 11.2%;
+  --sidebar-item-bg-hover: 222.2 47.4% 11.2% / 0.04;
+  --sidebar-item-active: 221.2 83.2% 53.3%;
+  --sidebar-item-bg-active: 221.2 83.2% 53.3% / 0.1;
+  --sidebar-item-border-active: 221.2 83.2% 53.3% / 0.22;
+
+  --admin-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --admin-shadow-sm: 0 8px 28px rgba(15, 23, 42, 0.06);
+  --admin-shadow-md: 0 16px 36px rgba(15, 23, 42, 0.1);
+}
+
+.admin-root.dark {
+  --background: 222.2 47.4% 5.6%;
+  --background-alt: 223 41% 8%;
+  --foreground: 210 40% 98%;
+
+  --card: 222.2 40% 8%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 40% 8%;
+  --popover-foreground: 210 40% 98%;
+
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 62.8% 50.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 213 93.9% 67.8%;
+
+  --sidebar-surface: 222.2 40% 8% / 0.82;
+  --sidebar-border: 217.2 32.6% 17.5%;
+  --sidebar-item: 215 20.2% 65.1%;
+  --sidebar-item-hover: 210 40% 98%;
+  --sidebar-item-bg-hover: 217.2 32.6% 17.5%;
+  --sidebar-item-active: 210 40% 98%;
+  --sidebar-item-bg-active: 213 93.9% 67.8% / 0.12;
+  --sidebar-item-border-active: 213 93.9% 67.8% / 0.18;
+
+  --admin-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --admin-shadow-sm: 0 14px 34px rgba(0, 0, 0, 0.22);
+  --admin-shadow-md: 0 18px 44px rgba(0, 0, 0, 0.32);
+}
+
 .admin-root button,
-.admin-root input {
-  transition: all 180ms ease-out;
+.admin-root input,
+.admin-root textarea,
+.admin-root select {
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-fast);
 }
 
 .admin-root .ui-button {
-  border-radius: var(--radius-button) !important;
+  border-radius: var(--radius-button);
+  box-shadow: none;
+}
+
+.admin-root .ui-button--default {
+  box-shadow: var(--admin-shadow-xs);
+}
+
+.admin-root .ui-button--secondary,
+.admin-root .ui-button--outline {
+  backdrop-filter: blur(12px);
 }
 
 .admin-root .admin-cta-new {
-  border: 1px solid rgb(203 213 225);
-  background: #fff;
-  color: #000;
-  border-radius: var(--radius-button) !important;
-}
-
-.admin-root .admin-cta-new:hover {
-  background: rgb(241 245 249);
-  border-color: rgb(148 163 184);
-  color: #000;
-}
-
-.admin-root .admin-cta-new:focus-visible {
-  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.45);
+  border-radius: var(--radius-button);
 }
 
 .admin-root .admin-neutral-control {
-  color: rgb(148 163 184 / 0.78) !important;
+  color: hsl(var(--muted-foreground)) !important;
   border-color: transparent !important;
   background: transparent !important;
 }
 
 .admin-root .admin-neutral-control:hover {
-  color: rgb(226 232 240) !important;
-  background: rgb(148 163 184 / 0.12) !important;
-}
-
-.admin-root .ui-button--default,
-.admin-root .ui-button--secondary,
-.admin-root .ui-button--outline {
-  background: #fff !important;
-  color: rgb(15 23 42) !important;
-  border-color: rgb(203 213 225) !important;
-}
-
-.admin-root .ui-button--default:hover,
-.admin-root .ui-button--secondary:hover,
-.admin-root .ui-button--outline:hover {
-  background: rgb(248 250 252) !important;
-  border-color: rgb(148 163 184) !important;
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--accent)) !important;
 }
 
 .admin-root .admin-select-trigger,
-.admin-root .admin-select-list {
-  border-radius: var(--radius-button) !important;
+.admin-root .admin-select-list,
+.admin-root .admin-select-item,
+.admin-root .admin-pagination-link {
+  border-radius: var(--radius-button);
 }
 
 .admin-root .admin-select-trigger {
-  border-color: rgb(203 213 225 / 0.45) !important;
-  background: rgb(15 23 42 / 0.18) !important;
+  border-color: hsl(var(--input));
+  background: hsl(var(--background));
 }
 
 .admin-root .admin-select-trigger:hover {
-  border-color: rgb(203 213 225 / 0.75) !important;
+  border-color: hsl(var(--ring) / 0.35);
 }
 
 .admin-root .admin-select-list {
-  border-color: rgb(203 213 225 / 0.35) !important;
-  background: rgb(15 23 42 / 0.98) !important;
+  border-color: hsl(var(--border));
+  background: hsl(var(--popover));
+  box-shadow: var(--admin-shadow-sm);
 }
 
-.admin-root .admin-select-item {
-  border-radius: var(--radius-button) !important;
+.admin-root .admin-select-item:hover,
+.admin-root .admin-select-item:focus-visible {
+  background: hsl(var(--accent));
 }
 
 .admin-root .admin-pagination-link {
   background: transparent !important;
   border-color: transparent !important;
-  color: rgb(148 163 184) !important;
+  color: hsl(var(--muted-foreground)) !important;
 }
 
 .admin-root .admin-pagination-link:hover {
-  background: rgb(148 163 184 / 0.1) !important;
-  color: rgb(226 232 240) !important;
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.admin-root .admin-sidebar-shell {
+  background: hsl(var(--sidebar-surface));
+  backdrop-filter: blur(16px);
 }
 
 .admin-root .admin-sidebar-item {
-  color: rgb(148 163 184) !important;
+  color: hsl(var(--sidebar-item)) !important;
   background: transparent !important;
+  border: 1px solid transparent;
 }
 
 .admin-root .admin-sidebar-item:hover {
-  color: rgb(248 250 252) !important;
-  background: transparent !important;
+  color: hsl(var(--sidebar-item-hover)) !important;
+  background: hsl(var(--sidebar-item-bg-hover)) !important;
 }
 
 .admin-root .admin-sidebar-item.is-active {
-  color: rgb(255 255 255) !important;
-  background: transparent !important;
+  color: hsl(var(--sidebar-item-active)) !important;
+  background: hsl(var(--sidebar-item-bg-active)) !important;
+  border-color: hsl(var(--sidebar-item-border-active)) !important;
+}
+
+.admin-root .admin-sidebar-section-label {
+  color: hsl(var(--muted-foreground));
 }
 
 .admin-root .admin-trendings-tab {
-  color: rgb(148 163 184) !important;
-  background: transparent !important;
   border-color: transparent !important;
+  color: hsl(var(--muted-foreground)) !important;
+  background: transparent !important;
 }
 
 .admin-root .admin-trendings-tab:hover {
-  color: rgb(255 255 255) !important;
-  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--accent)) !important;
 }
 
 .admin-root .admin-trendings-tab.is-active {
-  color: rgb(255 255 255) !important;
-  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--accent)) !important;
   border-color: hsl(var(--border)) !important;
 }

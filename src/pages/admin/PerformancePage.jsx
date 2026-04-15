@@ -37,7 +37,7 @@ function MetricRow({ label, description, value, level = 'healthy' }) {
       <Tooltip content={description}>
         <span className="cursor-help text-muted-foreground">{label}:</span>
       </Tooltip>
-      <span className="font-medium text-white">{value}</span>
+      <span className="font-medium text-foreground">{value}</span>
     </p>
   );
 }

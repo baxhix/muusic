@@ -4,15 +4,15 @@ import { cn } from '../../lib/utils';
 const variants = {
   error: {
     icon: AlertTriangle,
-    className: 'border-rose-400/25 bg-rose-400/10 text-rose-100'
+    className: 'border-rose-500/20 bg-rose-500/10 text-rose-500'
   },
   success: {
     icon: CheckCircle2,
-    className: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-100'
+    className: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
   },
   info: {
     icon: Info,
-    className: 'border-sky-400/25 bg-sky-400/10 text-sky-100'
+    className: 'border-sky-500/20 bg-sky-500/10 text-sky-500'
   }
 };
 
