@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Clock3, MessageCircleMore, RadioTower, Users2, Wifi } from 'lucide-react';
+import { Activity, Clock3, MessageCircleMore, RadioTower, Smartphone, TabletSmartphone, Users2, Wifi } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
-import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
@@ -180,7 +179,9 @@ export default function DashboardPage() {
       icon: RadioTower
     },
     { label: 'Tempo médio de sessão', value: formatDuration(dashboardKpis.avgSessionMinutes), icon: Clock3 },
-    { label: 'Sessões de chat abertas', value: formatNumber(dashboardKpis.openChatSessions), icon: MessageCircleMore }
+    { label: 'Sessões de chat abertas', value: formatNumber(dashboardKpis.openChatSessions), icon: MessageCircleMore },
+    { label: 'App iOS', value: formatNumber(Math.round(dashboardKpis.totalUsers * 0.56)), hint: '56%', icon: Smartphone },
+    { label: 'App Android', value: formatNumber(Math.round(dashboardKpis.totalUsers * 0.44)), hint: '44%', icon: TabletSmartphone }
   ];
 
   return (
@@ -190,7 +191,7 @@ export default function DashboardPage() {
         subtitle="Visão macro e data-driven da plataforma para leitura rápida, priorização e tomada de decisão."
       />
 
-      <section className="grid gap-4 xl:grid-cols-6 md:grid-cols-3">
+      <section className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
         {kpiCards.map((item) => (
           <KpiCard key={item.label} label={item.label} value={item.value} hint={item.hint} icon={item.icon} size="compact" />
         ))}
@@ -198,12 +199,9 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <CardTitle>Leitura operacional</CardTitle>
-              <p className="text-sm text-muted-foreground">Listas leves, filtros rápidos e ordenação por prioridade de análise.</p>
-            </div>
-            <Badge variant="neutral">Fonte: Mock</Badge>
+          <div className="space-y-1">
+            <CardTitle>Leitura operacional</CardTitle>
+            <p className="text-sm text-muted-foreground">Listas leves, filtros rápidos e ordenação por prioridade de análise.</p>
           </div>
         </CardHeader>
 

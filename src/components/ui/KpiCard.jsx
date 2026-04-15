@@ -17,7 +17,7 @@ export default function KpiCard({ label, value, hint = '', icon: Icon, align = '
         <div className={cn('flex h-full flex-col', centeredCompact ? 'justify-between' : 'justify-center', isLeft ? 'text-left' : 'text-center')}>
           {compact && !isLeft ? (
             <>
-              <div className="flex min-h-7 items-start justify-end">
+              <div className="flex min-h-7 items-start justify-end pt-1">
                 {Icon ? (
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-secondary/55 text-muted-foreground">
                     <Icon className="h-3.5 w-3.5" />
@@ -28,7 +28,7 @@ export default function KpiCard({ label, value, hint = '', icon: Icon, align = '
               <div className="flex flex-1 flex-col items-center justify-center">
                 <div className="flex items-start justify-center gap-2">
                   <span className="block text-[32px] font-semibold leading-[36px] tracking-tight text-foreground">{value}</span>
-                  {hint ? <span className="pt-1 text-sm font-medium text-muted-foreground">{hint}</span> : null}
+                  {hint ? <span className="pt-1 text-base font-medium text-muted-foreground">{hint}</span> : null}
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">{label}</p>
               </div>

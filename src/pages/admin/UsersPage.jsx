@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, Ban, CalendarClock, Mail, MapPin, PlayCircle, ShieldAlert, Users2, X } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
-import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
@@ -87,12 +86,9 @@ export default function UsersPage() {
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <CardTitle>Base de usuários</CardTitle>
-              <p className="text-sm text-muted-foreground">Lista compacta com filtros analíticos e acesso rápido ao histórico individual.</p>
-            </div>
-            <Badge variant="neutral">Fonte: Mock</Badge>
+          <div className="space-y-1">
+            <CardTitle>Base de usuários</CardTitle>
+            <p className="text-sm text-muted-foreground">Lista compacta com filtros analíticos e acesso rápido ao histórico individual.</p>
           </div>
         </CardHeader>
 

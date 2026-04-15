@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { EyeOff, Flag, ShieldMinus, ShieldAlert, TriangleAlert } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
-import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
@@ -96,12 +95,9 @@ export default function ModerationPage() {
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <CardTitle>Fila moderável</CardTitle>
-              <p className="text-sm text-muted-foreground">Posts e comentários com leitura rápida, contexto e ações operacionais.</p>
-            </div>
-            <Badge variant="neutral">Tempo real mockado</Badge>
+          <div className="space-y-1">
+            <CardTitle>Fila moderável</CardTitle>
+            <p className="text-sm text-muted-foreground">Posts e comentários com leitura rápida, contexto e ações operacionais.</p>
           </div>
         </CardHeader>
 

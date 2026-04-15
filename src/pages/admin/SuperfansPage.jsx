@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, Minus, Trophy, Users2 } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
-import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import KpiCard from '../../components/ui/KpiCard';
@@ -96,12 +95,9 @@ export default function SuperfansPage() {
 
       <Card>
         <CardHeader className="space-y-0 pb-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <CardTitle>Ranking de atividade</CardTitle>
-              <p className="text-sm text-muted-foreground">Top 50 usuários com maior atividade combinada na plataforma.</p>
-            </div>
-            <Badge variant="neutral">Fonte: Mock</Badge>
+          <div className="space-y-1">
+            <CardTitle>Ranking de atividade</CardTitle>
+            <p className="text-sm text-muted-foreground">Top 50 usuários com maior atividade combinada na plataforma.</p>
           </div>
         </CardHeader>
 
@@ -126,13 +122,12 @@ export default function SuperfansPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Movimento</TableHead>
                 <TableHead>#</TableHead>
                 <TableHead>Usuário</TableHead>
-                <TableHead>Score</TableHead>
                 <TableHead>Reproduções</TableHead>
                 <TableHead>Atividade</TableHead>
                 <TableHead>Cidade-estado</TableHead>
-                <TableHead>Movimento</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -142,6 +137,12 @@ export default function SuperfansPage() {
 
                 return (
                   <TableRow key={user.id}>
+                    <TableCell className="w-[110px]">
+                      <div className={`inline-flex items-center gap-1 text-sm font-medium ${movement.className}`}>
+                        <MovementIcon className="h-4 w-4" />
+                        <span>{movement.label}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="w-[72px] font-medium text-foreground">{user.rank}</TableCell>
                     <TableCell className="min-w-[280px]">
                       <div className="flex items-center gap-3">
@@ -157,16 +158,9 @@ export default function SuperfansPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{formatNumber(user.score)}</TableCell>
                     <TableCell>{formatNumber(user.plays)}</TableCell>
                     <TableCell>{formatNumber(user.activityCount)}</TableCell>
                     <TableCell>{user.cityState}</TableCell>
-                    <TableCell>
-                      <div className={`inline-flex items-center gap-1 text-sm font-medium ${movement.className}`}>
-                        <MovementIcon className="h-4 w-4" />
-                        <span>{movement.label}</span>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 );
               })}
