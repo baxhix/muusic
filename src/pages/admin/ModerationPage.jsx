@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { EyeOff, Flag, ShieldAlert, ShieldMinus, Siren, TriangleAlert } from 'lucide-react';
+import { EyeOff, Flag, ShieldAlert, ShieldMinus, TriangleAlert } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -167,40 +167,15 @@ export default function ModerationPage() {
 
                         <div className="max-w-4xl text-[15px] leading-7 text-foreground">{highlightTerms(item.text, item.suspiciousTerms)}</div>
 
-                        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
-                          <div className="rounded-xl border border-border bg-background/30 p-4">
-                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                              <Siren className="h-4 w-4" />
-                              Termos suspeitos
-                            </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {item.suspiciousTerms.length > 0 ? (
-                                item.suspiciousTerms.map((term) => (
-                                  <Badge key={term} variant="warning">
-                                    {term}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-sm text-muted-foreground">Nenhum termo suspeito identificado.</span>
-                              )}
-                            </div>
+                        {item.suspiciousTerms.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {item.suspiciousTerms.map((term) => (
+                              <Badge key={term} variant="warning">
+                                {term}
+                              </Badge>
+                            ))}
                           </div>
-
-                          <div className="rounded-xl border border-border bg-background/30 p-4">
-                            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Motivos da sinalização</div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {item.reportReasons.length > 0 ? (
-                                item.reportReasons.map((reason) => (
-                                  <Badge key={reason} variant="outline">
-                                    {reason}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-sm text-muted-foreground">Sem denúncia formal, apenas varredura por termos.</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        ) : null}
                       </div>
 
                       <div className="flex w-full shrink-0 flex-col gap-3 xl:w-[220px]">

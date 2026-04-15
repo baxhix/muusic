@@ -195,11 +195,11 @@ export default function DashboardPage() {
             })}
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_190px_190px_190px]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(220px,0.9fr)_170px_170px_minmax(260px,0.9fr)]">
             <SearchInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, música ou cidade" />
             <Select ariaLabel="Filtrar por período" value={period} onValueChange={setPeriod} options={DASHBOARD_PERIOD_OPTIONS} />
             <Select ariaLabel="Filtrar por região" value={region} onValueChange={setRegion} options={DASHBOARD_REGION_OPTIONS} />
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-2">
+            <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-2">
               <Select ariaLabel="Filtrar por volume" value={volume} onValueChange={setVolume} options={DASHBOARD_VOLUME_OPTIONS} />
               <Select ariaLabel="Ordenar por" value={sortBy} onValueChange={setSortBy} options={sortOptions} />
             </div>
