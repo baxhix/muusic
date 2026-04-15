@@ -32,7 +32,7 @@ function highlightTerms(text, terms) {
     }
 
     return (
-      <mark key={`${part}-${index}`} className="rounded bg-amber-400/15 px-1 py-0.5 text-amber-100">
+      <mark key={`${part}-${index}`} className="rounded bg-sky-500/12 px-1 py-0.5 text-sky-700 dark:text-sky-200">
         {part}
       </mark>
     );
@@ -80,10 +80,10 @@ export default function ModerationPage() {
       />
 
       <section className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
-        <KpiCard label="Conteúdos monitorados" value={kpis.total} size="compact" align="left" />
-        <KpiCard label="Denunciados" value={kpis.reported} size="compact" align="left" />
-        <KpiCard label="Prioridade crítica" value={kpis.critical} size="compact" align="left" />
-        <KpiCard label="Termos suspeitos" value={kpis.suspicious} size="compact" align="left" />
+        <KpiCard label="Mensagens totais" value={kpis.total} size="compact" />
+        <KpiCard label="Denúncias" value={kpis.reported} size="compact" />
+        <KpiCard label="Termos suspeitos" value={kpis.suspicious} size="compact" />
+        <KpiCard label="Críticas" value={kpis.critical} size="compact" />
       </section>
 
       <Card>
@@ -98,10 +98,26 @@ export default function ModerationPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_220px_220px]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_220px]">
             <SearchInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuário, origem, texto ou termo suspeito" />
             <Select ariaLabel="Filtrar por tipo" value={typeFilter} onValueChange={setTypeFilter} options={moderationTypeOptions} />
-            <Select ariaLabel="Filtrar por prioridade" value={priorityFilter} onValueChange={setPriorityFilter} options={moderationPriorityOptions} />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {moderationPriorityOptions.map((option) => {
+              const active = option.value === priorityFilter;
+              return (
+                <Button
+                  key={option.value}
+                  type="button"
+                  variant={active ? 'secondary' : 'ghost'}
+                  className={active ? 'border border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-100' : ''}
+                  onClick={() => setPriorityFilter(option.value)}
+                >
+                  {option.label}
+                </Button>
+              );
+            })}
           </div>
 
           {moderationItems.length === 0 ? (
@@ -130,7 +146,7 @@ export default function ModerationPage() {
                       <div className="min-w-0 flex-1 space-y-4">
                         <div className="flex flex-wrap items-center gap-2">
                           {isReported ? (
-                            <Badge variant={isCritical ? 'warning' : 'info'}>
+                            <Badge variant="info">
                               <Flag className="mr-1 h-3 w-3" />
                               Denunciado
                             </Badge>
@@ -170,7 +186,7 @@ export default function ModerationPage() {
                         {item.suspiciousTerms.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {item.suspiciousTerms.map((term) => (
-                              <Badge key={term} variant="warning">
+                              <Badge key={term} variant="accent">
                                 {term}
                               </Badge>
                             ))}
@@ -181,7 +197,7 @@ export default function ModerationPage() {
                       <div className="flex w-full shrink-0 flex-col gap-3 xl:w-[220px]">
                         <div className="rounded-xl border border-border bg-background/30 p-4">
                           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                            <StatusDot variant={isCritical ? 'warning' : isReported ? 'info' : 'neutral'} />
+                            <StatusDot variant={isCritical ? 'info' : isReported ? 'info' : 'neutral'} />
                             Prioridade
                           </div>
                           <div className="mt-2 text-sm font-medium text-foreground">
