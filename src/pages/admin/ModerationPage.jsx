@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { EyeOff, Flag, ShieldAlert, ShieldMinus, TriangleAlert } from 'lucide-react';
+import { EyeOff, ShieldMinus } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -9,7 +9,6 @@ import Input from '../../components/ui/Input';
 import KpiCard from '../../components/ui/KpiCard';
 import SearchInput from '../../components/ui/SearchInput';
 import Select from '../../components/ui/Select';
-import StatusDot from '../../components/ui/StatusDot';
 import { mockModerationContent, moderationPriorityOptions, moderationTypeOptions } from '../../mocks/moderationContent';
 
 function formatDate(value) {
@@ -134,9 +133,6 @@ export default function ModerationPage() {
           ) : (
             <div className="space-y-3">
               {moderationItems.map((item) => {
-                const isReported = item.reports > 0;
-                const isCritical = item.priority === 'critical';
-
                 return (
                   <article
                     key={item.id}
@@ -144,23 +140,6 @@ export default function ModerationPage() {
                   >
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                       <div className="min-w-0 flex-1 space-y-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {isReported ? (
-                            <Badge variant="info">
-                              <Flag className="mr-1 h-3 w-3" />
-                              Denunciado
-                            </Badge>
-                          ) : null}
-                          {item.suspiciousTerms.length > 0 ? (
-                            <Badge variant="outline">
-                              <TriangleAlert className="mr-1 h-3 w-3" />
-                              Termos suspeitos
-                            </Badge>
-                          ) : null}
-                          <Badge variant="neutral">{item.contentLabel}</Badge>
-                          <Badge variant="origin">{item.source}</Badge>
-                        </div>
-
                         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2 font-medium text-foreground">
                             <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
@@ -182,29 +161,9 @@ export default function ModerationPage() {
                         </div>
 
                         <div className="max-w-4xl text-[15px] leading-7 text-foreground">{highlightTerms(item.text, item.suspiciousTerms)}</div>
-
-                        {item.suspiciousTerms.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {item.suspiciousTerms.map((term) => (
-                              <Badge key={term} variant="accent">
-                                {term}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : null}
                       </div>
 
                       <div className="flex w-full shrink-0 flex-col gap-3 xl:w-[220px]">
-                        <div className="rounded-xl border border-border bg-background/30 p-4">
-                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                            <StatusDot variant={isCritical ? 'info' : isReported ? 'info' : 'neutral'} />
-                            Prioridade
-                          </div>
-                          <div className="mt-2 text-sm font-medium text-foreground">
-                            {isCritical ? 'Crítica' : isReported ? 'Revisar agora' : 'Monitoramento'}
-                          </div>
-                        </div>
-
                         <Button type="button" variant="secondary" className="justify-start">
                           <EyeOff className="h-4 w-4" />
                           Ocultar conteúdo
