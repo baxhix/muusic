@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, Clock3, ExternalLink, MessageCircleMore, Pause, Play, RadioTower, Smartphone, TabletSmartphone, Users2, Wifi } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Activity, Clock3, ExternalLink, MessageCircleMore, Play, RadioTower, Smartphone, TabletSmartphone, Users2, Wifi } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -59,204 +59,26 @@ function formatPlayerTime(seconds) {
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
-function loadYouTubeIframeApi() {
-  if (typeof window === 'undefined') return Promise.reject(new Error('window indisponível'));
-  if (window.YT?.Player) return Promise.resolve(window.YT);
-
-  if (!window.__fanverseYouTubeApiPromise) {
-    window.__fanverseYouTubeApiPromise = new Promise((resolve) => {
-      const existingScript = document.querySelector('script[data-youtube-iframe-api="true"]');
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.src = 'https://www.youtube.com/iframe_api';
-        script.async = true;
-        script.dataset.youtubeIframeApi = 'true';
-        document.head.appendChild(script);
-      }
-
-      const previous = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        previous?.();
-        resolve(window.YT);
-      };
-    });
-  }
-
-  return window.__fanverseYouTubeApiPromise;
-}
-
 function YouTubeAudioCard() {
-  const playerHostRef = useRef(null);
-  const playerRef = useRef(null);
-  const progressTimerRef = useRef(null);
-  const [activeTrackId, setActiveTrackId] = useState(YOUTUBE_AUDIO_TRACKS[0].id);
-  const [ready, setReady] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const activeTrack = YOUTUBE_AUDIO_TRACKS.find((track) => track.id === activeTrackId) || YOUTUBE_AUDIO_TRACKS[0];
-
-  useEffect(() => {
-    let mounted = true;
-
-    loadYouTubeIframeApi()
-      .then((YT) => {
-        if (!mounted || !playerHostRef.current || playerRef.current) return;
-
-        playerRef.current = new YT.Player(playerHostRef.current, {
-          videoId: activeTrack.videoId,
-          width: '240',
-          height: '135',
-          playerVars: {
-            autoplay: 0,
-            controls: 0,
-            disablekb: 1,
-            enablejsapi: 1,
-            fs: 0,
-            modestbranding: 1,
-            playsinline: 1,
-            rel: 0
-          },
-          events: {
-            onReady: () => {
-              if (!mounted) return;
-              setReady(true);
-              setDuration(playerRef.current?.getDuration?.() || 0);
-              playerRef.current?.cueVideoById({
-                videoId: activeTrack.videoId,
-                startSeconds: activeTrack.startSeconds || 0
-              });
-            },
-            onStateChange: (event) => {
-              const state = event.data;
-              const isPlaying = state === YT.PlayerState.PLAYING;
-              setPlaying(isPlaying);
-              setDuration(playerRef.current?.getDuration?.() || 0);
-
-              if (isPlaying) {
-                clearInterval(progressTimerRef.current);
-                progressTimerRef.current = window.setInterval(() => {
-                  setCurrentTime(playerRef.current?.getCurrentTime?.() || 0);
-                  setDuration(playerRef.current?.getDuration?.() || 0);
-                }, 1000);
-              } else {
-                clearInterval(progressTimerRef.current);
-                progressTimerRef.current = null;
-                setCurrentTime(playerRef.current?.getCurrentTime?.() || 0);
-              }
-            }
-          }
-        });
-      })
-      .catch(() => {});
-
-    return () => {
-      mounted = false;
-      clearInterval(progressTimerRef.current);
-      progressTimerRef.current = null;
-      playerRef.current?.destroy?.();
-      playerRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!playerRef.current || !ready) return;
-
-    setCurrentTime(0);
-    setDuration(0);
-
-    if (playing) {
-      playerRef.current.loadVideoById({
-        videoId: activeTrack.videoId,
-        startSeconds: activeTrack.startSeconds || 0
-      });
-    } else {
-      playerRef.current.cueVideoById({
-        videoId: activeTrack.videoId,
-        startSeconds: activeTrack.startSeconds || 0
-      });
-    }
-  }, [activeTrack.videoId, activeTrack.startSeconds, playing, ready]);
-
-  const progress = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
-
-  function togglePlayback() {
-    if (!playerRef.current) return;
-    if (playing) {
-      playerRef.current.pauseVideo();
-    } else {
-      playerRef.current.playVideo();
-    }
-  }
-
-  function selectTrack(trackId) {
-    setActiveTrackId(trackId);
-  }
-
   return (
     <Card className="overflow-hidden border-border bg-card/90">
       <CardContent className="flex flex-col gap-5 p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="min-w-0 space-y-3">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Player embutido</p>
-              <h3 className="text-lg font-semibold text-foreground">{activeTrack.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {activeTrack.artist} · Embed do YouTube com reprodução em formato de áudio, sem exibir thumbnail do vídeo.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button type="button" onClick={togglePlayback} disabled={!ready}>
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                {playing ? 'Pausar' : 'Reproduzir'}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => window.open(activeTrack.url, '_blank', 'noopener,noreferrer')}>
-                <ExternalLink className="h-4 w-4" />
-                Abrir no YouTube
-              </Button>
-            </div>
-          </div>
-
-          <div className="w-full max-w-xl space-y-3">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>YouTube</span>
-              <span>
-                {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
-              </span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-secondary">
-              <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Playlist de teste</p>
+          <p className="text-sm text-muted-foreground">Cada faixa agora tem seu próprio embed do YouTube, para tornar o teste de reprodução mais confiável.</p>
         </div>
 
-        <div className="space-y-3 border-t border-border pt-4">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Outras URLs para teste</p>
-            <p className="text-sm text-muted-foreground">Clique em uma faixa para trocar a fonte do player sem exibir a imagem do vídeo.</p>
-          </div>
+        <div className="overflow-hidden rounded-2xl border border-border bg-background/70">
+          {YOUTUBE_AUDIO_TRACKS.map((track, index) => {
+            const embedUrl = `https://www.youtube-nocookie.com/embed/${track.videoId}?start=${track.startSeconds || 0}&controls=1&rel=0&modestbranding=1&playsinline=1`;
 
-          <div className="overflow-hidden rounded-2xl border border-border bg-background/70">
-            {YOUTUBE_AUDIO_TRACKS.map((track, index) => {
-              const active = track.id === activeTrackId;
-              return (
-                <button
-                  key={track.id}
-                  type="button"
-                  onClick={() => selectTrack(track.id)}
-                  className={`flex w-full items-center gap-4 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 ${
-                    active ? 'bg-sky-500/10' : 'bg-transparent hover:bg-secondary/40'
-                  }`}
-                >
-                  <div className="w-8 shrink-0 text-sm font-semibold text-muted-foreground">{String(index + 1).padStart(2, '0')}</div>
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${
-                        active ? 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-300' : 'border-border bg-secondary/50 text-muted-foreground'
-                      }`}
-                    >
-                      {active && playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            return (
+              <div key={track.id} className="border-b border-border px-4 py-4 last:border-b-0">
+                <div className="mb-3 flex items-start gap-4">
+                  <div className="w-8 shrink-0 pt-1 text-sm font-semibold text-muted-foreground">{String(index + 1).padStart(2, '0')}</div>
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-secondary/50 text-muted-foreground">
+                      <Play className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
                       <div className="truncate font-medium text-foreground">{track.title}</div>
@@ -267,12 +89,29 @@ function YouTubeAudioCard() {
                     <div className="text-xs text-muted-foreground">YouTube</div>
                     <div className="text-xs text-muted-foreground">{formatPlayerTime(track.startSeconds || 0)}</div>
                   </div>
-                </button>
-              );
-            })}
-          </div>
+                </div>
 
-          <div ref={playerHostRef} className="fixed -left-[9999px] top-0 h-[135px] w-[240px] overflow-hidden" aria-hidden="true" />
+                <div className="ml-12 space-y-3">
+                  <div className="overflow-hidden rounded-xl border border-border bg-black">
+                    <iframe
+                      title={`${track.title} - ${track.artist}`}
+                      src={embedUrl}
+                      className="block h-24 w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="button" variant="outline" onClick={() => window.open(track.url, '_blank', 'noopener,noreferrer')}>
+                      <ExternalLink className="h-4 w-4" />
+                      Abrir no YouTube
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
