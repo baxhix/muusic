@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Clock3, MessageCircleMore, RadioTower, Smartphone, TabletSmartphone, Users2, Wifi } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, Clock3, ExternalLink, MessageCircleMore, Pause, Play, RadioTower, Smartphone, TabletSmartphone, Users2, Wifi } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -24,6 +24,161 @@ import {
   mockDashboardMusic,
   mockUsers
 } from '../../mocks/adminUsers';
+
+const YOUTUBE_AUDIO = {
+  videoId: 'h_aRZwzjYxs',
+  title: 'Fanverse Session',
+  source: 'YouTube'
+};
+
+function formatPlayerTime(seconds) {
+  const safe = Number.isFinite(Number(seconds)) ? Math.floor(Number(seconds)) : 0;
+  const mins = Math.floor(safe / 60);
+  const secs = safe % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function loadYouTubeIframeApi() {
+  if (typeof window === 'undefined') return Promise.reject(new Error('window indisponível'));
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+
+  if (!window.__fanverseYouTubeApiPromise) {
+    window.__fanverseYouTubeApiPromise = new Promise((resolve) => {
+      const existingScript = document.querySelector('script[data-youtube-iframe-api="true"]');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        script.dataset.youtubeIframeApi = 'true';
+        document.head.appendChild(script);
+      }
+
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        previous?.();
+        resolve(window.YT);
+      };
+    });
+  }
+
+  return window.__fanverseYouTubeApiPromise;
+}
+
+function YouTubeAudioCard() {
+  const playerHostRef = useRef(null);
+  const playerRef = useRef(null);
+  const progressTimerRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadYouTubeIframeApi()
+      .then((YT) => {
+        if (!mounted || !playerHostRef.current || playerRef.current) return;
+
+        playerRef.current = new YT.Player(playerHostRef.current, {
+          videoId: YOUTUBE_AUDIO.videoId,
+          width: '1',
+          height: '1',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0
+          },
+          events: {
+            onReady: () => {
+              if (!mounted) return;
+              setReady(true);
+              setDuration(playerRef.current?.getDuration?.() || 0);
+            },
+            onStateChange: (event) => {
+              const state = event.data;
+              const isPlaying = state === YT.PlayerState.PLAYING;
+              setPlaying(isPlaying);
+              setDuration(playerRef.current?.getDuration?.() || 0);
+
+              if (isPlaying) {
+                clearInterval(progressTimerRef.current);
+                progressTimerRef.current = window.setInterval(() => {
+                  setCurrentTime(playerRef.current?.getCurrentTime?.() || 0);
+                  setDuration(playerRef.current?.getDuration?.() || 0);
+                }, 1000);
+              } else {
+                clearInterval(progressTimerRef.current);
+                progressTimerRef.current = null;
+                setCurrentTime(playerRef.current?.getCurrentTime?.() || 0);
+              }
+            }
+          }
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+      playerRef.current?.destroy?.();
+      playerRef.current = null;
+    };
+  }, []);
+
+  const progress = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
+
+  function togglePlayback() {
+    if (!playerRef.current) return;
+    if (playing) {
+      playerRef.current.pauseVideo();
+    } else {
+      playerRef.current.playVideo();
+    }
+  }
+
+  return (
+    <Card className="overflow-hidden border-border bg-card/90">
+      <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0 space-y-3">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Player embutido</p>
+            <h3 className="text-lg font-semibold text-foreground">{YOUTUBE_AUDIO.title}</h3>
+            <p className="text-sm text-muted-foreground">Embed do YouTube com reprodução em formato de áudio, sem exibir thumbnail do vídeo.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button type="button" onClick={togglePlayback} disabled={!ready}>
+              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              {playing ? 'Pausar' : 'Reproduzir'}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => window.open(`https://www.youtube.com/watch?v=${YOUTUBE_AUDIO.videoId}`, '_blank', 'noopener,noreferrer')}>
+              <ExternalLink className="h-4 w-4" />
+              Abrir no YouTube
+            </Button>
+          </div>
+        </div>
+
+        <div className="w-full max-w-xl space-y-3">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>{YOUTUBE_AUDIO.source}</span>
+            <span>
+              {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-secondary">
+            <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
+          </div>
+          <div ref={playerHostRef} className="pointer-events-none absolute left-[-9999px] top-[-9999px] h-px w-px overflow-hidden opacity-0" aria-hidden="true" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function formatNumber(value) {
   return new Intl.NumberFormat('pt-BR').format(Number.isFinite(Number(value)) ? Number(value) : 0);
@@ -190,6 +345,8 @@ export default function DashboardPage() {
         title="Dashboard Geral"
         subtitle="Visão macro e data-driven da plataforma para leitura rápida, priorização e tomada de decisão."
       />
+
+      <YouTubeAudioCard />
 
       <section className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
         {kpiCards.map((item) => (
