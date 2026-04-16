@@ -65,12 +65,12 @@ function YouTubeAudioCard() {
       <CardContent className="flex flex-col gap-5 p-6">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Playlist de teste</p>
-          <p className="text-sm text-muted-foreground">Cada faixa agora tem seu próprio embed do YouTube, para tornar o teste de reprodução mais confiável.</p>
+          <p className="text-sm text-muted-foreground">Cada faixa agora tem seu próprio embed visível do YouTube, com thumbnail e controles nativos para testar a reprodução com mais confiabilidade.</p>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-border bg-background/70">
           {YOUTUBE_AUDIO_TRACKS.map((track, index) => {
-            const embedUrl = `https://www.youtube-nocookie.com/embed/${track.videoId}?start=${track.startSeconds || 0}&controls=1&rel=0&modestbranding=1&playsinline=1`;
+            const embedUrl = `https://www.youtube.com/embed/${track.videoId}?start=${track.startSeconds || 0}&controls=1&rel=0&modestbranding=1&playsinline=1`;
 
             return (
               <div key={track.id} className="border-b border-border px-4 py-4 last:border-b-0">
@@ -96,8 +96,8 @@ function YouTubeAudioCard() {
                     <iframe
                       title={`${track.title} - ${track.artist}`}
                       src={embedUrl}
-                      className="block h-24 w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      className="block aspect-video w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
                       referrerPolicy="strict-origin-when-cross-origin"
                     />
