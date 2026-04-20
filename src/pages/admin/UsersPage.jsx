@@ -45,9 +45,7 @@ export default function UsersPage() {
     name: '',
     cityState: '',
     ageRange: 'all',
-    gender: 'all',
-    lastStreamDate: '',
-    lastStreamSong: ''
+    gender: 'all'
   });
 
   const loadData = useCallback(async () => {
@@ -93,13 +91,11 @@ export default function UsersPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="grid gap-3 xl:grid-cols-6">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <SearchInput value={filters.name} onChange={(event) => setFilters((prev) => ({ ...prev, name: event.target.value }))} placeholder="Nome do usuário" />
             <Input value={filters.cityState} onChange={(event) => setFilters((prev) => ({ ...prev, cityState: event.target.value }))} placeholder="Cidade/Estado" />
             <Select ariaLabel="Filtrar por faixa etária" value={filters.ageRange} onValueChange={(value) => setFilters((prev) => ({ ...prev, ageRange: value }))} options={USER_AGE_RANGE_OPTIONS} />
             <Select ariaLabel="Filtrar por sexo" value={filters.gender} onValueChange={(value) => setFilters((prev) => ({ ...prev, gender: value }))} options={USER_GENDER_OPTIONS} />
-            <Input value={filters.lastStreamDate} onChange={(event) => setFilters((prev) => ({ ...prev, lastStreamDate: event.target.value }))} placeholder="Último stream (DD/MM/AA)" />
-            <Input value={filters.lastStreamSong} onChange={(event) => setFilters((prev) => ({ ...prev, lastStreamSong: event.target.value }))} placeholder="Música do último stream" />
           </div>
 
           {loading ? (
@@ -114,9 +110,7 @@ export default function UsersPage() {
                   name: '',
                   cityState: '',
                   ageRange: 'all',
-                  gender: 'all',
-                  lastStreamDate: '',
-                  lastStreamSong: ''
+                  gender: 'all'
                 })
               }
             />
