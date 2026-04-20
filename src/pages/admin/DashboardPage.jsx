@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Clock3, ExternalLink, MessageCircleMore, Play, RadioTower, Smartphone, TabletSmartphone, Users2, Wifi } from 'lucide-react';
+import { Activity, Clock3, MessageCircleMore, RadioTower, Smartphone, TabletSmartphone, Users2, Wifi } from 'lucide-react';
 import PageHeader from '../../components/admin/PageHeader';
 import Button from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -24,99 +24,6 @@ import {
   mockDashboardMusic,
   mockUsers
 } from '../../mocks/adminUsers';
-
-const YOUTUBE_AUDIO_TRACKS = [
-  {
-    id: 'track-1',
-    videoId: 'h_aRZwzjYxs',
-    title: 'Faixa teste 01',
-    artist: 'Artista a confirmar',
-    url: 'https://www.youtube.com/watch?v=h_aRZwzjYxs',
-    startSeconds: 0
-  },
-  {
-    id: 'track-2',
-    videoId: 'WC5C9uYGtsQ',
-    title: 'Faixa teste 02',
-    artist: 'Artista a confirmar',
-    url: 'https://www.youtube.com/watch?v=WC5C9uYGtsQ&t=873s',
-    startSeconds: 873
-  },
-  {
-    id: 'track-3',
-    videoId: 'EQVAlcdPFes',
-    title: 'Faixa teste 03',
-    artist: 'Artista a confirmar',
-    url: 'https://www.youtube.com/watch?v=EQVAlcdPFes',
-    startSeconds: 0
-  }
-];
-
-function formatPlayerTime(seconds) {
-  const safe = Number.isFinite(Number(seconds)) ? Math.floor(Number(seconds)) : 0;
-  const mins = Math.floor(safe / 60);
-  const secs = safe % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
-}
-
-function YouTubeAudioCard() {
-  return (
-    <Card className="overflow-hidden border-border bg-card/90">
-      <CardContent className="flex flex-col gap-5 p-6">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Playlist de teste</p>
-          <p className="text-sm text-muted-foreground">Cada faixa agora tem seu próprio embed visível do YouTube, com thumbnail e controles nativos para testar a reprodução com mais confiabilidade.</p>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-border bg-background/70">
-          {YOUTUBE_AUDIO_TRACKS.map((track, index) => {
-            const embedUrl = `https://www.youtube.com/embed/${track.videoId}?start=${track.startSeconds || 0}&controls=1&rel=0&modestbranding=1&playsinline=1`;
-
-            return (
-              <div key={track.id} className="border-b border-border px-4 py-4 last:border-b-0">
-                <div className="mb-3 flex items-start gap-4">
-                  <div className="w-8 shrink-0 pt-1 text-sm font-semibold text-muted-foreground">{String(index + 1).padStart(2, '0')}</div>
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-secondary/50 text-muted-foreground">
-                      <Play className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-foreground">{track.title}</div>
-                      <div className="truncate text-sm text-muted-foreground">{track.artist}</div>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="text-xs text-muted-foreground">YouTube</div>
-                    <div className="text-xs text-muted-foreground">{formatPlayerTime(track.startSeconds || 0)}</div>
-                  </div>
-                </div>
-
-                <div className="ml-12 space-y-3">
-                  <div className="overflow-hidden rounded-xl border border-border bg-black">
-                    <iframe
-                      title={`${track.title} - ${track.artist}`}
-                      src={embedUrl}
-                      className="block aspect-video w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      referrerPolicy="strict-origin-when-cross-origin"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button type="button" variant="outline" onClick={() => window.open(track.url, '_blank', 'noopener,noreferrer')}>
-                      <ExternalLink className="h-4 w-4" />
-                      Abrir no YouTube
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function formatNumber(value) {
   return new Intl.NumberFormat('pt-BR').format(Number.isFinite(Number(value)) ? Number(value) : 0);
@@ -283,8 +190,6 @@ export default function DashboardPage() {
         title="Dashboard Geral"
         subtitle="Visão macro e data-driven da plataforma para leitura rápida, priorização e tomada de decisão."
       />
-
-      <YouTubeAudioCard />
 
       <section className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
         {kpiCards.map((item) => (
